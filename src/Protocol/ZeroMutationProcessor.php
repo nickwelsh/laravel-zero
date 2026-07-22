@@ -18,7 +18,7 @@ final readonly class ZeroMutationProcessor
         if (($body['pushVersion'] ?? null) !== 1) {
             return $this->failed('unsupportedPushVersion', 'Unsupported push version: '.($body['pushVersion'] ?? 'missing'), $body['mutations'] ?? []);
         }
-        if (! isset($body['clientGroupID']) || ! is_string($body['clientGroupID']) || ! isset($body['mutations']) || ! is_array($body['mutations'])) {
+        if (! isset($body['clientGroupID']) || ! is_string($body['clientGroupID']) || ! isset($body['requestID']) || ! is_string($body['requestID']) || ! is_numeric($body['timestamp'] ?? null) || ! isset($body['mutations']) || ! is_array($body['mutations'])) {
             return $this->failed('parse', 'Invalid mutate request.', $body['mutations'] ?? []);
         }
 
@@ -37,6 +37,8 @@ final readonly class ZeroMutationProcessor
                 $responses[] = $this->run($schema, $body['clientGroupID'], $mutation, $context);
             } catch (OutOfOrderMutation $error) {
                 return $this->failed('oooMutation', $error->getMessage(), array_slice($mutations, $index));
+            } catch (DatabaseMutationFailure $error) {
+                return $this->failed('database', $error->getMessage(), array_slice($mutations, $index));
             }
         }
 
@@ -48,7 +50,7 @@ final readonly class ZeroMutationProcessor
     {
         $clientID = $mutation['clientID'] ?? null;
         $id = $mutation['id'] ?? null;
-        if (! is_string($clientID) || ! is_int($id) || ! is_string($mutation['name'] ?? null) || ! is_array($mutation['args'] ?? null)) {
+        if (! is_string($clientID) || ! is_int($id) || ! is_string($mutation['name'] ?? null) || ! is_array($mutation['args'] ?? null) || ! array_is_list($mutation['args']) || ! is_numeric($mutation['timestamp'] ?? null)) {
             throw new OutOfOrderMutation('Malformed mutation.');
         }
         $identity = ['clientID' => $clientID, 'id' => $id];
@@ -78,6 +80,8 @@ final readonly class ZeroMutationProcessor
                 });
             } catch (AlreadyProcessedMutation) {
                 return ['id' => $identity, 'result' => ['error' => 'alreadyProcessed']];
+            } catch (Throwable $persistenceError) {
+                throw new DatabaseMutationFailure($persistenceError->getMessage(), previous: $persistenceError);
             }
 
             return ['id' => $identity, 'result' => $result];
@@ -115,10 +119,13 @@ final readonly class ZeroMutationProcessor
         }
     }
 
-    /** @param list<array<string, mixed>> $mutations @return array<string, mixed> */
+    /** @param list<mixed> $mutations @return array<string, mixed> */
     private function failed(string $reason, string $message, array $mutations): array
     {
-        return ['kind' => 'PushFailed', 'origin' => 'server', 'reason' => $reason, 'message' => $message, 'mutationIDs' => array_values(array_map(fn (array $mutation): array => ['id' => $mutation['id'] ?? 0, 'clientID' => $mutation['clientID'] ?? ''], $mutations))];
+        return ['kind' => 'PushFailed', 'origin' => 'server', 'reason' => $reason, 'message' => $message, 'mutationIDs' => array_values(array_map(
+            fn (mixed $mutation): array => ['id' => is_array($mutation) ? ($mutation['id'] ?? 0) : 0, 'clientID' => is_array($mutation) ? ($mutation['clientID'] ?? '') : ''],
+            $mutations,
+        ))];
     }
 
     private function connection(): ConnectionInterface

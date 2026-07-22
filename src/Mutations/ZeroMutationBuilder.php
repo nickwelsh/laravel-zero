@@ -52,7 +52,11 @@ final class ZeroMutationBuilder
     public function upsert(array $values): Model
     {
         $keys = $this->keyValues($values);
-        $model = $this->model()->newQuery()->firstOrNew($keys);
+        $query = $this->model()->newQuery();
+        foreach ($keys as $column => $value) {
+            $query->where($column, $value);
+        }
+        $model = $query->first() ?? $this->model()->forceFill($keys);
         $model->forceFill($values)->saveOrFail();
 
         return $model;

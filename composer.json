@@ -31,9 +31,8 @@
     },
     "repositories": [
         {
-            "type": "path",
-            "url": "../eloquent-zero",
-            "options": {"symlink": true}
+            "type": "vcs",
+            "url": "https://github.com/nickwelsh/eloquent-zero"
         }
     ],
     "scripts": {

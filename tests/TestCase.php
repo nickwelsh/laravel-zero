@@ -27,7 +27,7 @@ abstract class TestCase extends Orchestra
         $app['config']->set('laravel-zero.context.resolver', FakeContextResolver::class);
         $app['config']->set('laravel-zero.discovery.directories', [__DIR__.'/Fixtures/Zero']);
         $app['config']->set('laravel-zero.routes.middleware', []);
-        $app['config']->set('laravel-zero.generation.output_directory', sys_get_temp_dir().'/laravel-zero-tests/generated-'.spl_object_id($app));
+        $app['config']->set('laravel-zero.generation.output_directory', __DIR__.'/types/generated');
         $app['config']->set('laravel-zero.generation.generate_schema', false);
     }
 
@@ -46,6 +46,11 @@ abstract class TestCase extends Orchestra
             $table->string('user_id');
             $table->string('display_name');
             $table->string('reference_code')->nullable();
+        });
+        Schema::create('email_addresses', function (Blueprint $table): void {
+            $table->string('id')->primary();
+            $table->string('party_id');
+            $table->boolean('is_primary');
         });
         Schema::create('zero_clients', function (Blueprint $table): void {
             $table->id();

@@ -44,8 +44,8 @@ final readonly class ZeroTypeScriptGenerator
             'files' => [
                 'context.generated.ts' => self::HEADER.$context,
                 'inputs.generated.ts' => self::HEADER."import {z} from 'zod';\n\n".$inputSource,
-                'queries.generated.ts' => self::HEADER."import {defineQueries, defineQuery} from '@rocicorp/zero';\nimport {z} from 'zod';\nimport {zql} from '../schema';\nimport {".$this->inputImports($queryOperations)."} from './inputs.generated';\n\nexport const queries = defineQueries(".$this->renderTree($queryTree).");\n",
-                'mutations.generated.ts' => self::HEADER."import {defineMutators, defineMutator} from '@rocicorp/zero';\nimport {z} from 'zod';\nimport {".$this->inputImports($mutationOperations)."} from './inputs.generated';\n\nexport const mutations = defineMutators(".$this->renderTree($mutationTree).");\n",
+                'queries.generated.ts' => self::HEADER."import {defineQueries, defineQuery} from '@rocicorp/zero';\nimport {z} from 'zod';\nimport {zql} from '../schema';\n".$this->inputImportLine($queryOperations)."import './context.generated';\n\nexport const queries = defineQueries(".$this->renderTree($queryTree).");\n",
+                'mutations.generated.ts' => self::HEADER."import {defineMutators, defineMutator} from '@rocicorp/zero';\nimport {z} from 'zod';\n".$this->inputImportLine($mutationOperations)."import './context.generated';\n\nexport const mutations = defineMutators(".$this->renderTree($mutationTree).");\n",
                 'manifest.generated.json' => json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)."\n",
                 'index.ts' => self::HEADER."export * from './context.generated';\nexport * from './inputs.generated';\nexport * from './queries.generated';\nexport * from './mutations.generated';\n",
             ],
@@ -119,6 +119,14 @@ final readonly class ZeroTypeScriptGenerator
         return implode(', ', array_unique($names));
     }
 
+    /** @param array<string, Operation> $operations */
+    private function inputImportLine(array $operations): string
+    {
+        $imports = $this->inputImports($operations);
+
+        return $imports === '' ? '' : "import {{$imports}} from './inputs.generated';\n";
+    }
+
     /** @param array<string, Operation> $operations @return array<string, mixed> */
     private function tree(array $operations, callable $compile): array
     {
@@ -146,7 +154,10 @@ final readonly class ZeroTypeScriptGenerator
         $indent = str_repeat('  ', $depth + 1);
         $lines = [];
         foreach ($tree as $key => $value) {
-            $lines[] = $indent.$key.': '.(is_array($value) ? $this->renderTree($value, $depth + 1) : $value).',';
+            $rendered = is_array($value)
+                ? $this->renderTree($value, $depth + 1)
+                : str_replace("\n", "\n{$indent}", $value);
+            $lines[] = $indent.$key.': '.$rendered.',';
         }
 
         return "{\n".implode("\n", $lines)."\n".str_repeat('  ', $depth).'}';

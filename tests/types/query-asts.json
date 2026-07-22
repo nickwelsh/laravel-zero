@@ -1,0 +1,34 @@
+{
+  "byId": {
+    "table": "party",
+    "where": {
+      "type": "and",
+      "conditions": [
+        {"type": "simple", "left": {"type": "column", "name": "userId"}, "right": {"type": "literal", "value": "user-1"}, "op": "="},
+        {"type": "simple", "left": {"type": "column", "name": "id"}, "right": {"type": "literal", "value": "party-1"}, "op": "="}
+      ]
+    },
+    "limit": 1
+  },
+  "withPrimaryEmail": {
+    "table": "party",
+    "where": {
+      "type": "and",
+      "conditions": [
+        {"type": "simple", "left": {"type": "column", "name": "userId"}, "right": {"type": "literal", "value": "user-1"}, "op": "="},
+        {"type": "simple", "left": {"type": "column", "name": "id"}, "right": {"type": "literal", "value": "party-1"}, "op": "="}
+      ]
+    },
+    "related": [{
+      "system": "client",
+      "correlation": {"parentField": ["id"], "childField": ["partyId"]},
+      "subquery": {
+        "table": "emailAddress",
+        "alias": "emailAddresses",
+        "where": {"type": "simple", "left": {"type": "column", "name": "isPrimary"}, "right": {"type": "literal", "value": true}, "op": "="},
+        "limit": 1
+      }
+    }],
+    "limit": 1
+  }
+}

@@ -81,9 +81,10 @@ final readonly class ZeroMutationCompiler
 
         $validator = $shape->zod();
         $parameters = $shape->kind === 'none' ? '{tx, ctx}' : '{tx, ctx, args}';
-        $callback = 'async ('.$parameters.') => {'.implode(' ', $effects).'}';
+        $body = $effects === [] ? '' : "\n    ".implode("\n    ", $effects)."\n  ";
+        $callback = 'async ('.$parameters.") => {{$body}}";
 
-        return 'defineMutator('.($validator ? $validator.', ' : '').$callback.')';
+        return "defineMutator(\n".($validator ? "  {$validator},\n" : '')."  {$callback},\n)";
     }
 
     private function method(Operation $operation): Stmt\ClassMethod

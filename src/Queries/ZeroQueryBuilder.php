@@ -6,6 +6,7 @@ use BackedEnum;
 use InvalidArgumentException;
 use NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry;
 use NickWelsh\LaravelZero\Schema\ZeroModelSchema;
+use NickWelsh\LaravelZero\Schema\ZeroRelationshipSchema;
 
 final class ZeroQueryBuilder
 {
@@ -15,10 +16,12 @@ final class ZeroQueryBuilder
     /** @var list<array{0: string, 1: string}> */
     private array $ordering = [];
 
-    /** @var list<array<string, mixed>> */
+    /** @var list<array{relationship: ZeroRelationshipSchema, builder: self}> */
     private array $related = [];
 
     private ?int $limitValue = null;
+
+    private ?string $alias = null;
 
     public function __construct(private readonly ZeroSchemaRegistry $registry, private readonly string $modelClass) {}
 
@@ -33,6 +36,9 @@ final class ZeroQueryBuilder
         }
 
         if ($value === null) {
+            if (! in_array($operator, ['=', '!='], true)) {
+                throw new InvalidArgumentException("Zero null comparisons only support [=] and [!=], got [{$operator}].");
+            }
             $operator = $operator === '!=' ? 'IS NOT' : 'IS';
         }
 
@@ -93,16 +99,11 @@ final class ZeroQueryBuilder
     {
         $relationship = $this->schema()->relationship($name);
         $builder = new self($this->registry, $relationship->relatedModel);
+        $builder->alias = $relationship->name;
         if ($callback !== null) {
             $callback($builder);
         }
-        $this->related[] = [
-            'correlation' => [
-                'parentField' => array_map($this->schema()->clientColumn(...), $relationship->parentColumns),
-                'childField' => array_map($builder->schema()->clientColumn(...), $relationship->childColumns),
-            ],
-            'subquery' => $builder->toAst(),
-        ];
+        $this->related[] = ['relationship' => $relationship, 'builder' => $builder];
 
         return $this;
     }
@@ -119,13 +120,29 @@ final class ZeroQueryBuilder
         }, $this->conditions);
         $ast = ['table' => $serverNames ? $schema->serverTable : $schema->clientTable];
 
+        if ($this->alias !== null) {
+            $ast['alias'] = $this->alias;
+        }
+
         if (count($conditions) === 1) {
             $ast['where'] = $conditions[0];
         } elseif ($conditions !== []) {
             $ast['where'] = ['type' => 'and', 'conditions' => $conditions];
         }
         if ($this->related !== []) {
-            $ast['related'] = $this->related;
+            $ast['related'] = array_map(function (array $related) use ($serverNames): array {
+                $relationship = $related['relationship'];
+                $builder = $related['builder'];
+
+                return [
+                    'system' => 'client',
+                    'correlation' => [
+                        'parentField' => $serverNames ? $relationship->parentColumns : array_map($this->schema()->clientColumn(...), $relationship->parentColumns),
+                        'childField' => $serverNames ? $relationship->childColumns : array_map($builder->schema()->clientColumn(...), $relationship->childColumns),
+                    ],
+                    'subquery' => $builder->toAst($serverNames),
+                ];
+            }, $this->related);
         }
         if ($this->limitValue !== null) {
             $ast['limit'] = $this->limitValue;
@@ -140,6 +157,9 @@ final class ZeroQueryBuilder
     private function condition(string $column, string $operator, mixed $value): self
     {
         $value = $value instanceof BackedEnum ? $value->value : $value;
+        if (is_array($value)) {
+            $value = array_map(fn (mixed $item): mixed => $item instanceof BackedEnum ? $item->value : $item, $value);
+        }
         $this->conditions[] = [
             'type' => 'simple',
             'op' => $operator,

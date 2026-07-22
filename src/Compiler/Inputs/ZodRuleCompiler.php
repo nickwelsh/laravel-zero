@@ -20,7 +20,12 @@ final class ZodRuleCompiler
             if (str_contains($field, '.')) {
                 continue;
             }
-            $fields[] = $field.': '.$this->field((array) (is_string($definition) ? explode('|', $definition) : $definition), $inputClass.'.'.$field);
+            $fieldRules = (array) (is_string($definition) ? explode('|', $definition) : $definition);
+            $zod = $this->field($fieldRules, $inputClass.'.'.$field);
+            if (in_array('array', array_map($this->name(...), $fieldRules), true)) {
+                $zod = str_replace('z.array(z.unknown())', 'z.array('.$this->arrayElement($field, $rules, $inputClass).')', $zod);
+            }
+            $fields[] = $field.': '.$zod;
         }
 
         return 'z.object({'.implode(', ', $fields).'})';
@@ -34,11 +39,36 @@ final class ZodRuleCompiler
         return $this->serverOnly;
     }
 
+    /** @param array<string, mixed> $rules */
+    private function arrayElement(string $field, array $rules, string $inputClass): string
+    {
+        $wildcard = $field.'.*';
+        if (array_key_exists($wildcard, $rules)) {
+            $definition = $rules[$wildcard];
+
+            return $this->field((array) (is_string($definition) ? explode('|', $definition) : $definition), $inputClass.'.'.$wildcard);
+        }
+
+        $children = [];
+        foreach ($rules as $path => $definition) {
+            if (! str_starts_with($path, $wildcard.'.')) {
+                continue;
+            }
+            $child = substr($path, strlen($wildcard) + 1);
+            if (str_contains($child, '.')) {
+                continue;
+            }
+            $children[] = $child.': '.$this->field((array) (is_string($definition) ? explode('|', $definition) : $definition), $inputClass.'.'.$path);
+        }
+
+        return $children === [] ? 'z.json()' : 'z.object({'.implode(', ', $children).'})';
+    }
+
     /** @param list<mixed> $rules */
     private function field(array $rules, string $path): string
     {
         $names = array_map(fn (mixed $rule): string => $this->name($rule), $rules);
-        $type = 'z.unknown()';
+        $type = 'z.json()';
         if (in_array('string', $names, true)) {
             $type = 'z.string()';
         }

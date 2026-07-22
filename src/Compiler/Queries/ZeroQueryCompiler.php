@@ -7,6 +7,7 @@ use NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape;
 use NickWelsh\LaravelZero\Compiler\Diagnostics\ZeroCompilerException;
 use NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry;
 use NickWelsh\LaravelZero\Discovery\Operation;
+use NickWelsh\LaravelZero\Schema\ZeroModelSchema;
 use PhpParser\Node;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Stmt;
@@ -24,14 +25,44 @@ final readonly class ZeroQueryCompiler
         [$method, $model, $calls] = $this->parse($operation);
         $schema = $this->schemas->model($model);
         $shape = ArgumentShape::from($operation->method);
-        $expression = 'zql.'.$schema->clientTable;
+        $expression = $this->renderCalls('zql.'.$schema->clientTable, $calls, $schema, $operation, $shape);
 
+        $validator = $shape->zod();
+        $callback = '({ctx, args}) => '.$expression;
+        if ($shape->kind === 'none') {
+            $callback = '({ctx}) => '.$expression;
+        }
+
+        if ($validator === null) {
+            return "defineQuery(\n  {$callback},\n)";
+        }
+
+        return "defineQuery(\n  {$validator},\n  {$callback},\n)";
+    }
+
+    /** @param list<Expr\MethodCall> $calls */
+    private function renderCalls(string $expression, array $calls, ZeroModelSchema $schema, Operation $operation, ArgumentShape $shape): string
+    {
         foreach ($calls as $call) {
             $name = $call->name instanceof Node\Identifier ? $call->name->toString() : '';
             $arguments = $call->getArgs();
-            $supported = ['where', 'whereIn', 'whereNotIn', 'whereNull', 'whereNotNull', 'orderBy', 'limit', 'one'];
+            $supported = ['where', 'whereIn', 'whereNotIn', 'whereNull', 'whereNotNull', 'orderBy', 'limit', 'one', 'related'];
             if (! in_array($name, $supported, true)) {
                 throw $this->error($operation, $call, "Unsupported query operation [{$name}].", 'Use a documented V1 ZeroQueryBuilder operation.');
+            }
+            if ($name === 'related') {
+                $relationshipName = $arguments[0]->value ?? null;
+                if (! $relationshipName instanceof Node\Scalar\String_) {
+                    throw $this->error($operation, $call, 'Relationship name must be a string literal.');
+                }
+                $relationship = $schema->relationship($relationshipName->value);
+                $rendered = json_encode($relationship->name, JSON_THROW_ON_ERROR);
+                if (isset($arguments[1])) {
+                    $rendered .= ', '.$this->relationshipCallback($arguments[1]->value, $relationship->relatedModel, $operation, $shape);
+                }
+                $expression .= ".related({$rendered})";
+
+                continue;
             }
             $rendered = [];
             foreach ($arguments as $index => $argument) {
@@ -66,13 +97,35 @@ final readonly class ZeroQueryCompiler
             $expression .= ".{$tsName}(".implode(', ', $rendered).')';
         }
 
-        $validator = $shape->zod();
-        $callback = '({ctx, args}) => '.$expression;
-        if ($shape->kind === 'none') {
-            $callback = '({ctx}) => '.$expression;
+        return $expression;
+    }
+
+    private function relationshipCallback(Expr $closure, string $relatedModel, Operation $operation, ArgumentShape $shape): string
+    {
+        if ($closure instanceof Expr\ArrowFunction) {
+            $body = $closure->expr;
+            $parameter = $closure->params[0]->var->name ?? null;
+        } elseif ($closure instanceof Expr\Closure) {
+            $return = (new NodeFinder)->findFirst($closure->stmts, fn (Node $node): bool => $node instanceof Stmt\Return_);
+            $body = $return instanceof Stmt\Return_ ? $return->expr : null;
+            $parameter = $closure->params[0]->var->name ?? null;
+        } else {
+            throw $this->error($operation, $closure, 'Relationship callback must be an inline closure.');
+        }
+        if (! $body instanceof Expr || ! is_string($parameter)) {
+            throw $this->error($operation, $closure, 'Relationship callback must directly return its query chain.');
+        }
+        $calls = [];
+        $cursor = $body;
+        while ($cursor instanceof Expr\MethodCall) {
+            array_unshift($calls, $cursor);
+            $cursor = $cursor->var;
+        }
+        if (! $cursor instanceof Expr\Variable || $cursor->name !== $parameter) {
+            throw $this->error($operation, $closure, 'Relationship callback must extend its query parameter.');
         }
 
-        return 'defineQuery('.($validator ? $validator.', ' : '').$callback.')';
+        return $parameter.' => '.$this->renderCalls($parameter, $calls, $this->schemas->model($relatedModel), $operation, $shape);
     }
 
     /** @return array{Stmt\ClassMethod, class-string, list<Expr\MethodCall>} */
@@ -88,26 +141,79 @@ final readonly class ZeroQueryCompiler
         if (! $method instanceof Stmt\ClassMethod) {
             throw $this->error($operation, null, 'Unable to parse query method.');
         }
-        $return = $finder->findFirst($method->stmts ?? [], fn (Node $node): bool => $node instanceof Stmt\Return_);
+        $return = collect($method->stmts ?? [])->first(fn (Stmt $statement): bool => $statement instanceof Stmt\Return_);
         if (! $return instanceof Stmt\Return_ || ! $return->expr) {
             throw $this->error($operation, $method, 'Query method must contain a direct return statement.');
         }
+        [$cursor, $calls] = $this->flattenChain($return->expr);
+        if ($cursor instanceof Expr\Variable && is_string($cursor->name)) {
+            return $this->parseAssignedQuery($operation, $method, $cursor->name);
+        }
+        if (! $this->isZeroQueryRoot($cursor)) {
+            throw $this->error($operation, $return->expr, 'Query must return a zeroQuery() method chain.');
+        }
+
+        $model = $this->modelFromRoot($cursor, $operation);
+
+        return [$method, $model, $calls];
+    }
+
+    /** @return array{Stmt\ClassMethod, class-string, list<Expr\MethodCall>} */
+    private function parseAssignedQuery(Operation $operation, Stmt\ClassMethod $method, string $variable): array
+    {
+        $model = null;
         $calls = [];
-        $cursor = $return->expr;
+        foreach ($method->stmts ?? [] as $statement) {
+            if (! $statement instanceof Stmt\Expression) {
+                continue;
+            }
+            $expression = $statement->expr;
+            $value = $expression instanceof Expr\Assign && $expression->var instanceof Expr\Variable && $expression->var->name === $variable
+                ? $expression->expr
+                : $expression;
+            [$root, $nextCalls] = $this->flattenChain($value);
+            if ($this->isZeroQueryRoot($root)) {
+                $model = $this->modelFromRoot($root, $operation);
+                array_push($calls, ...$nextCalls);
+            } elseif ($root instanceof Expr\Variable && $root->name === $variable) {
+                array_push($calls, ...$nextCalls);
+            }
+        }
+        if ($model === null) {
+            throw $this->error($operation, $method, "Unable to find zeroQuery() assignment for \${$variable}.");
+        }
+
+        return [$method, $model, $calls];
+    }
+
+    /** @return array{Expr, list<Expr\MethodCall>} */
+    private function flattenChain(Expr $expression): array
+    {
+        $calls = [];
+        $cursor = $expression;
         while ($cursor instanceof Expr\MethodCall) {
             array_unshift($calls, $cursor);
             $cursor = $cursor->var;
         }
-        if (! $cursor instanceof Expr\StaticCall || ! $cursor->name instanceof Node\Identifier || $cursor->name->toString() !== 'zeroQuery') {
-            throw $this->error($operation, $return->expr, 'Query must return a zeroQuery() method chain.');
-        }
+
+        return [$cursor, $calls];
+    }
+
+    private function isZeroQueryRoot(Expr $expression): bool
+    {
+        return $expression instanceof Expr\StaticCall && $expression->name instanceof Node\Identifier && $expression->name->toString() === 'zeroQuery';
+    }
+
+    /** @return class-string */
+    private function modelFromRoot(Expr\StaticCall $cursor, Operation $operation): string
+    {
         $class = $cursor->class;
         $model = $class instanceof Node\Name ? ($class->getAttribute('resolvedName')?->toString() ?? $class->toString()) : null;
         if (! $model || ! class_exists($model)) {
             throw $this->error($operation, $cursor, 'Unable to resolve model class for zeroQuery().');
         }
 
-        return [$method, $model, $calls];
+        return $model;
     }
 
     private function expression(Expr $expression, Operation $operation, ArgumentShape $shape): string

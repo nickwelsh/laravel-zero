@@ -5,5 +5,6 @@ it('generates deterministically and checks freshness', function (): void {
     $first = file_get_contents(config('laravel-zero.generation.output_directory').'/queries.generated.ts');
     $this->artisan('zero:generate')->expectsOutputToContain('unchanged')->assertExitCode(0);
     expect(file_get_contents(config('laravel-zero.generation.output_directory').'/queries.generated.ts'))->toBe($first);
+    expect(file_get_contents(config('laravel-zero.generation.output_directory').'/manifest.generated.json'))->toContain('unique:parties,reference_code', '1.8.0');
     $this->artisan('zero:check')->assertExitCode(0);
 });

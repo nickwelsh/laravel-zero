@@ -1,0 +1,19 @@
+{
+    "zeroVersion": "1.8.0",
+    "queries": [
+        "directory.party.byId",
+        "directory.party.byIdWithArchived",
+        "directory.party.withPrimaryEmail"
+    ],
+    "mutations": [
+        "directory.party.create",
+        "directory.party.createPair",
+        "directory.party.createThenFail",
+        "directory.party.deny"
+    ],
+    "serverOnlyValidationRules": {
+        "CreatePartyInput.reference_code": [
+            "unique:parties,reference_code"
+        ]
+    }
+}

@@ -17,3 +17,20 @@ it('renders official Zero AST with server names', function (): void {
         'limit' => 1,
     ]);
 });
+
+it('renders relationship correlation with server names', function (): void {
+    $ast = (new ZeroQueryBuilder(new FakeSchemaRegistry, Party::class))
+        ->related('emailAddresses', fn (ZeroQueryBuilder $query) => $query->where('is_primary', true)->limit(1))
+        ->toAst();
+
+    expect($ast['related'][0])->toBe([
+        'system' => 'client',
+        'correlation' => ['parentField' => ['id'], 'childField' => ['party_id']],
+        'subquery' => [
+            'table' => 'email_addresses',
+            'alias' => 'emailAddresses',
+            'where' => ['type' => 'simple', 'op' => '=', 'left' => ['type' => 'column', 'name' => 'is_primary'], 'right' => ['type' => 'literal', 'value' => true]],
+            'limit' => 1,
+        ],
+    ]);
+});

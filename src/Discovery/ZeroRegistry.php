@@ -68,6 +68,13 @@ final class ZeroRegistry
             require_once $file;
         }
 
+        if (config('laravel-zero.discovery.cache') && is_array($cached = $this->cache->get(config('laravel-zero.discovery.cache_key')))) {
+            $this->queries = $this->hydrateCached($cached['queries'] ?? []);
+            $this->mutations = $this->hydrateCached($cached['mutations'] ?? []);
+
+            return;
+        }
+
         $classes = array_unique([...array_diff(get_declared_classes(), $before), ...get_declared_classes()]);
         $queries = [];
         $mutations = [];
@@ -93,6 +100,13 @@ final class ZeroRegistry
         ksort($mutations);
         $this->queries = $queries;
         $this->mutations = $mutations;
+
+        if (config('laravel-zero.discovery.cache')) {
+            $this->cache->forever(config('laravel-zero.discovery.cache_key'), [
+                'queries' => $this->cacheable($queries),
+                'mutations' => $this->cacheable($mutations),
+            ]);
+        }
     }
 
     /** @param class-string $attribute @param array<string, Operation> $operations */
@@ -179,5 +193,35 @@ final class ZeroRegistry
     private function isDiscoveredFile(string $file): bool
     {
         return in_array(realpath($file), $this->files(), true);
+    }
+
+    /** @param array<string, Operation> $operations @return list<array{kind: string, name: string, prefix: string, class: string, method: string}> */
+    private function cacheable(array $operations): array
+    {
+        return array_values(array_map(fn (Operation $operation): array => [
+            'kind' => $operation->kind,
+            'name' => $operation->name,
+            'prefix' => $operation->prefix,
+            'class' => $operation->class,
+            'method' => $operation->method->getName(),
+        ], $operations));
+    }
+
+    /** @param list<array{kind: string, name: string, prefix: string, class: class-string, method: string}> $cached @return array<string, Operation> */
+    private function hydrateCached(array $cached): array
+    {
+        $operations = [];
+        foreach ($cached as $item) {
+            $operations[$item['name']] = new Operation(
+                $item['kind'],
+                $item['name'],
+                $item['prefix'],
+                $item['class'],
+                new ReflectionMethod($item['class'], $item['method']),
+            );
+        }
+        ksort($operations);
+
+        return $operations;
     }
 }
