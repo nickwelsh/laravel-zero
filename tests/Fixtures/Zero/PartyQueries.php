@@ -1,0 +1,20 @@
+<?php
+
+namespace NickWelsh\LaravelZero\Tests\Fixtures\Zero;
+
+use NickWelsh\LaravelZero\Attributes\ZeroQueryCollection;
+use NickWelsh\LaravelZero\Contracts\ZeroQueries;
+use NickWelsh\LaravelZero\Tests\Fixtures\Party;
+use NickWelsh\LaravelZero\Tests\Fixtures\TestZeroContext;
+
+#[ZeroQueryCollection('directory.party')]
+final class PartyQueries implements ZeroQueries
+{
+    public function byId(TestZeroContext $context, string $id)
+    {
+        return Party::zeroQuery()
+            ->where('user_id', $context->user_id)
+            ->where('id', $id)
+            ->one();
+    }
+}
