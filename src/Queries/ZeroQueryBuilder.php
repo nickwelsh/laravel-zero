@@ -35,7 +35,7 @@ final class ZeroQueryBuilder
     /** @param class-string $modelClass */
     public function __construct(private readonly ZeroSchemaRegistry $registry, private readonly string $modelClass) {}
 
-    public function where(string $column, mixed $operatorOrValue, mixed $value = null): self
+    public function where(string|ZeroQueryColumn $column, mixed $operatorOrValue, mixed $value = null): self
     {
         if (func_num_args() === 2) {
             $operator = '=';
@@ -63,34 +63,34 @@ final class ZeroQueryBuilder
     }
 
     /** @param list<mixed> $values */
-    public function whereIn(string $column, array $values): self
+    public function whereIn(string|ZeroQueryColumn $column, array $values): self
     {
         return $this->condition($column, 'IN', $values);
     }
 
     /** @param list<mixed> $values */
-    public function whereNotIn(string $column, array $values): self
+    public function whereNotIn(string|ZeroQueryColumn $column, array $values): self
     {
         return $this->condition($column, 'NOT IN', $values);
     }
 
-    public function whereNull(string $column): self
+    public function whereNull(string|ZeroQueryColumn $column): self
     {
         return $this->condition($column, 'IS', null);
     }
 
-    public function whereNotNull(string $column): self
+    public function whereNotNull(string|ZeroQueryColumn $column): self
     {
         return $this->condition($column, 'IS NOT', null);
     }
 
-    public function orderBy(string $column, string $direction = 'asc'): self
+    public function orderBy(string|ZeroQueryColumn $column, string|ZeroOrderDirection $direction = 'asc'): self
     {
-        $direction = strtolower($direction);
+        $direction = $direction instanceof ZeroOrderDirection ? $direction->value : strtolower($direction);
         if (! in_array($direction, ['asc', 'desc'], true)) {
             throw new InvalidArgumentException("Unsupported Zero order direction [{$direction}].");
         }
-        $this->ordering[] = [$this->schema()->clientColumn($column), $direction];
+        $this->ordering[] = [$this->schema()->clientColumn($this->columnName($column)), $direction];
 
         return $this;
     }
@@ -179,7 +179,7 @@ final class ZeroQueryBuilder
         return $ast;
     }
 
-    private function condition(string $column, string $operator, mixed $value): self
+    private function condition(string|ZeroQueryColumn $column, string $operator, mixed $value): self
     {
         $value = $value instanceof BackedEnum ? $value->value : $value;
         if (is_array($value)) {
@@ -188,11 +188,21 @@ final class ZeroQueryBuilder
         $this->conditions[] = [
             'type' => 'simple',
             'op' => $operator,
-            'left' => ['type' => 'column', 'name' => $this->schema()->clientColumn($column)],
+            'left' => ['type' => 'column', 'name' => $this->schema()->clientColumn($this->columnName($column))],
             'right' => ['type' => 'literal', 'value' => $value],
         ];
 
         return $this;
+    }
+
+    private function columnName(string|ZeroQueryColumn $column): string
+    {
+        $column = $column instanceof ZeroQueryColumn ? $column->value : $column;
+        if (! is_string($column)) {
+            throw new InvalidArgumentException('Zero query column enums must be string-backed.');
+        }
+
+        return $column;
     }
 
     private function schema(): ZeroModelSchema

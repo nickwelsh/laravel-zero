@@ -5,12 +5,16 @@ use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape;
 use NickWelsh\LaravelZero\Compiler\Context\ContextTypeCompiler;
+use NickWelsh\LaravelZero\Compiler\Diagnostics\ZeroCompilerException;
 use NickWelsh\LaravelZero\Compiler\Inputs\ZodRuleCompiler;
 use NickWelsh\LaravelZero\Compiler\TypeScript\ZeroTypeScriptGenerator;
 use NickWelsh\LaravelZero\Discovery\ZeroRegistry;
+use NickWelsh\LaravelZero\Queries\ZeroOrderDirection;
 use NickWelsh\LaravelZero\Schema\EloquentZeroSchemaRegistry;
+use NickWelsh\LaravelZero\Tests\Fixtures\AllowedQueries;
 use NickWelsh\LaravelZero\Tests\Fixtures\CreatePartyInput;
 use NickWelsh\LaravelZero\Tests\Fixtures\Party;
+use NickWelsh\LaravelZero\Tests\Fixtures\PartySort;
 use NickWelsh\LaravelZero\Tests\Fixtures\TestZeroContext;
 
 it('imports the generated schema without its TypeScript extension', function (): void {
@@ -74,6 +78,19 @@ it('infers object argument schemas and optional defaults', function (): void {
     expect($shape->kind)->toBe('object')
         ->and($shape->zod())->toBe('z.object({id: z.string(), includeArchived: z.boolean().optional()})')
         ->and($shape->hydrate([['id' => 'p1']]))->toBe(['p1', false]);
+});
+
+it('hydrates allowlist enums and rejects values outside them', function (): void {
+    $shape = ArgumentShape::from(new ReflectionMethod(AllowedQueries::class, 'paginated'));
+
+    expect($shape->hydrate([['limit' => 10]]))->toBe([
+        10,
+        PartySort::DisplayName,
+        ZeroOrderDirection::Asc,
+    ]);
+
+    expect(fn () => $shape->hydrate([['limit' => 10, 'orderBy' => 'user_id']]))
+        ->toThrow(ZeroCompilerException::class, 'ZERO-A104');
 });
 
 it('generates readonly nullable context fields and Zero registration', function (): void {

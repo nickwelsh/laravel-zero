@@ -5,6 +5,7 @@ use NickWelsh\LaravelZero\Compiler\Mutations\ZeroMutationCompiler;
 use NickWelsh\LaravelZero\Compiler\Queries\ZeroQueryCompiler;
 use NickWelsh\LaravelZero\Discovery\Operation;
 use NickWelsh\LaravelZero\Discovery\ZeroRegistry;
+use NickWelsh\LaravelZero\Tests\Fixtures\AllowedQueries;
 use NickWelsh\LaravelZero\Tests\Fixtures\AssignedQueries;
 use NickWelsh\LaravelZero\Tests\Fixtures\BadMutations;
 use NickWelsh\LaravelZero\Tests\Fixtures\BadQueries;
@@ -35,6 +36,32 @@ it('compiles direct relationship callbacks', function (): void {
 
 it('rejects non-portable query expressions with coded diagnostics', function (): void {
     $operation = new Operation('query', 'bad.byId', 'bad', BadQueries::class, new ReflectionMethod(BadQueries::class, 'byId'));
+
+    expect(fn () => (new ZeroQueryCompiler(new FakeSchemaRegistry))->compile($operation))
+        ->toThrow(ZeroCompilerException::class, 'ZERO-Q104');
+});
+
+it('compiles allowlisted dynamic sorting with enum validation, column mapping, and defaults', function (): void {
+    $operation = new Operation('query', 'allowed.paginated', 'allowed', AllowedQueries::class, new ReflectionMethod(AllowedQueries::class, 'paginated'));
+    $source = (new ZeroQueryCompiler(new FakeSchemaRegistry))->compile($operation);
+
+    expect($source)
+        ->toContain('orderBy: z.enum(["display_name", "id"]).optional()')
+        ->toContain('direction: z.enum(["asc", "desc"]).optional()')
+        ->toContain('.limit(args.limit).orderBy(({"display_name": "displayName", "id": "id"} as const)[args.orderBy ?? "display_name"], args.direction ?? "asc")');
+});
+
+it('compiles allowlisted dynamic filters', function (): void {
+    $operation = new Operation('query', 'allowed.filtered', 'allowed', AllowedQueries::class, new ReflectionMethod(AllowedQueries::class, 'filtered'));
+    $source = (new ZeroQueryCompiler(new FakeSchemaRegistry))->compile($operation);
+
+    expect($source)
+        ->toContain('field: z.enum(["display_name", "id"])')
+        ->toContain('.where(({"display_name": "displayName", "id": "id"} as const)[args.field], args.value)');
+});
+
+it('rejects unrestricted dynamic query columns', function (): void {
+    $operation = new Operation('query', 'allowed.unsafe', 'allowed', AllowedQueries::class, new ReflectionMethod(AllowedQueries::class, 'unsafe'));
 
     expect(fn () => (new ZeroQueryCompiler(new FakeSchemaRegistry))->compile($operation))
         ->toThrow(ZeroCompilerException::class, 'ZERO-Q104');

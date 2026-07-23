@@ -1,8 +1,11 @@
 <?php
 
+use NickWelsh\LaravelZero\Queries\ZeroOrderDirection;
 use NickWelsh\LaravelZero\Queries\ZeroQueryBuilder;
 use NickWelsh\LaravelZero\Tests\Fixtures\FakeSchemaRegistry;
 use NickWelsh\LaravelZero\Tests\Fixtures\Party;
+use NickWelsh\LaravelZero\Tests\Fixtures\PartyFilter;
+use NickWelsh\LaravelZero\Tests\Fixtures\PartySort;
 
 it('renders official Zero AST with server names', function (): void {
     $ast = (new ZeroQueryBuilder(new FakeSchemaRegistry, Party::class))
@@ -16,6 +19,17 @@ it('renders official Zero AST with server names', function (): void {
         ]],
         'limit' => 1,
     ]);
+});
+
+it('uses allowlisted column and direction enums at runtime', function (): void {
+    $ast = (new ZeroQueryBuilder(new FakeSchemaRegistry, Party::class))
+        ->where(PartyFilter::DisplayName, 'Acme')
+        ->orderBy(PartySort::DisplayName, ZeroOrderDirection::Desc)
+        ->toAst();
+
+    expect($ast)
+        ->toHaveKey('where.left.name', 'display_name')
+        ->toHaveKey('orderBy', [['display_name', 'desc']]);
 });
 
 it('renders relationship correlation with server names', function (): void {

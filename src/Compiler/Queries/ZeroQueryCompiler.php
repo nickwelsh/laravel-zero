@@ -3,10 +3,12 @@
 namespace NickWelsh\LaravelZero\Compiler\Queries;
 
 use BackedEnum;
+use InvalidArgumentException;
 use NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape;
 use NickWelsh\LaravelZero\Compiler\Diagnostics\ZeroCompilerException;
 use NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry;
 use NickWelsh\LaravelZero\Discovery\Operation;
+use NickWelsh\LaravelZero\Queries\ZeroQueryColumn;
 use NickWelsh\LaravelZero\Schema\ZeroModelSchema;
 use PhpParser\Node;
 use PhpParser\Node\Expr;
@@ -15,6 +17,8 @@ use PhpParser\NodeFinder;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor\NameResolver;
 use PhpParser\ParserFactory;
+use ReflectionNamedType;
+use ReflectionParameter;
 
 final readonly class ZeroQueryCompiler
 {
@@ -69,10 +73,7 @@ final readonly class ZeroQueryCompiler
             $rendered = [];
             foreach ($arguments as $index => $argument) {
                 if ($index === 0 && in_array($name, ['where', 'whereIn', 'whereNotIn', 'whereNull', 'whereNotNull', 'orderBy'], true)) {
-                    if (! $argument->value instanceof Node\Scalar\String_) {
-                        throw $this->error($operation, $argument->value, 'Column and relationship names must be string literals.');
-                    }
-                    $rendered[] = json_encode($schema->clientColumn($argument->value->value), JSON_THROW_ON_ERROR);
+                    $rendered[] = $this->columnExpression($argument->value, $schema, $operation, $shape);
                 } else {
                     $rendered[] = $this->expression($argument->value, $operation, $shape);
                 }
@@ -235,7 +236,13 @@ final readonly class ZeroQueryCompiler
             };
         }
         if ($expression instanceof Expr\Variable && is_string($expression->name)) {
-            return $shape->kind === 'scalar' ? 'args' : 'args.'.$expression->name;
+            $rendered = $shape->kind === 'scalar' ? 'args' : 'args.'.$expression->name;
+            $parameter = $this->parameter($shape, $expression->name);
+            if ($parameter?->isDefaultValueAvailable()) {
+                $rendered .= ' ?? '.$this->literal($parameter->getDefaultValue());
+            }
+
+            return $rendered;
         }
         if ($expression instanceof Expr\PropertyFetch && $expression->name instanceof Node\Identifier && $expression->var instanceof Expr\Variable) {
             return $expression->var->name === $operation->method->getParameters()[0]->getName() ? 'ctx.'.$expression->name->toString() : 'args.'.$expression->name->toString();
@@ -254,6 +261,75 @@ final readonly class ZeroQueryCompiler
         }
 
         throw $this->error($operation, $expression, 'Unsupported portable query expression.', 'Use an argument, context/input property, literal, array, or backed enum case.');
+    }
+
+    private function columnExpression(Expr $expression, ZeroModelSchema $schema, Operation $operation, ArgumentShape $shape): string
+    {
+        if ($expression instanceof Node\Scalar\String_) {
+            return json_encode($this->clientColumn($schema, $expression->value, $expression, $operation), JSON_THROW_ON_ERROR);
+        }
+        if ($expression instanceof Expr\ClassConstFetch && $expression->name instanceof Node\Identifier && $expression->class instanceof Node\Name) {
+            $class = $this->resolvedName($expression->class);
+            if (enum_exists($class) && is_subclass_of($class, ZeroQueryColumn::class)) {
+                $case = constant($class.'::'.$expression->name->toString());
+                if ($case instanceof ZeroQueryColumn && is_string($case->value)) {
+                    return json_encode($this->clientColumn($schema, $case->value, $expression, $operation), JSON_THROW_ON_ERROR);
+                }
+            }
+        }
+        if ($expression instanceof Expr\Variable && is_string($expression->name)) {
+            $parameter = $this->parameter($shape, $expression->name);
+            $type = $parameter?->getType();
+            if ($type instanceof ReflectionNamedType && is_subclass_of($type->getName(), ZeroQueryColumn::class)) {
+                /** @var class-string<ZeroQueryColumn> $columnEnum */
+                $columnEnum = $type->getName();
+                $columns = [];
+                foreach ($columnEnum::cases() as $case) {
+                    if (! is_string($case->value)) {
+                        throw $this->error($operation, $expression, "Zero query column enum [{$columnEnum}] must be string-backed.");
+                    }
+                    $serverColumn = $case->value;
+                    $clientColumn = $this->clientColumn($schema, $serverColumn, $expression, $operation);
+                    $columns[] = json_encode($serverColumn, JSON_THROW_ON_ERROR).': '.json_encode($clientColumn, JSON_THROW_ON_ERROR);
+                }
+
+                return '({'.implode(', ', $columns).'} as const)['.$this->expression($expression, $operation, $shape).']';
+            }
+        }
+
+        throw $this->error(
+            $operation,
+            $expression,
+            'Dynamic query columns must use a string-backed enum implementing ZeroQueryColumn.',
+            'Use a string literal or type the query parameter with a ZeroQueryColumn enum containing only allowed columns.',
+        );
+    }
+
+    private function clientColumn(ZeroModelSchema $schema, string $column, Node $node, Operation $operation): string
+    {
+        try {
+            return $schema->clientColumn($column);
+        } catch (InvalidArgumentException $exception) {
+            throw $this->error($operation, $node, $exception->getMessage());
+        }
+    }
+
+    private function parameter(ArgumentShape $shape, string $name): ?ReflectionParameter
+    {
+        foreach ($shape->parameters as $parameter) {
+            if ($parameter->getName() === $name) {
+                return $parameter;
+            }
+        }
+
+        return null;
+    }
+
+    private function literal(mixed $value): string
+    {
+        $value = $value instanceof BackedEnum ? $value->value : $value;
+
+        return json_encode($value, JSON_THROW_ON_ERROR);
     }
 
     private function resolvedName(Node\Name $name): string

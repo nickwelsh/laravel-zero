@@ -8,6 +8,7 @@ use NickWelsh\LaravelZero\Inputs\ZeroInput;
 use ReflectionMethod;
 use ReflectionNamedType;
 use ReflectionParameter;
+use ValueError;
 
 final readonly class ArgumentShape
 {
@@ -103,7 +104,11 @@ final readonly class ArgumentShape
                 throw new ZeroCompilerException('ZERO-A104', "Argument [{$parameter->getName()}] must be {$type}.");
             }
 
-            return $type::from($value);
+            try {
+                return $type::from($value);
+            } catch (ValueError) {
+                return self::invalidValue($parameter, $type);
+            }
         }
 
         return match ($type) {

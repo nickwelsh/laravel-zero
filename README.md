@@ -57,6 +57,39 @@ final class PartyQueries implements ZeroQueries
 
 Models use `HasZero`. Supported runtime operations: `where`, `whereIn`, `whereNotIn`, null checks, `orderBy`, `limit`, `one`, and direct relationships.
 
+Dynamic filter and sort columns must be allowlisted with string-backed enums implementing `ZeroQueryColumn`. Define separate enums when the allowed filter and sort fields differ; do not include private or tenant-scoping columns unless callers should be able to select them:
+
+```php
+use NickWelsh\LaravelZero\Queries\ZeroOrderDirection;
+use NickWelsh\LaravelZero\Queries\ZeroQueryColumn;
+
+enum PartySort: string implements ZeroQueryColumn
+{
+    case DisplayName = 'display_name';
+    case CreatedAt = 'created_at';
+}
+
+enum PartyFilter: string implements ZeroQueryColumn
+{
+    case DisplayName = 'display_name';
+    case Status = 'status';
+}
+
+public function paginated(
+    ZeroContext $context,
+    int $limit,
+    PartySort $orderBy = PartySort::DisplayName,
+    ZeroOrderDirection $direction = ZeroOrderDirection::Asc,
+): ZeroQueryBuilder {
+    return Party::zeroQuery()
+        ->where('user_id', $context->user_id)
+        ->limit($limit)
+        ->orderBy($orderBy, $direction);
+}
+```
+
+The enum values use server-side column names. Generation verifies every case against the model schema, maps each case to its client-side column name, and emits a Zod enum. The same enum is hydrated before the PHP query runs, so values outside the allowlist are rejected on both client and server paths. Plain string literals remain supported for fixed columns; unrestricted dynamic string columns produce `ZERO-Q104`.
+
 ## Mutation
 
 ```php
