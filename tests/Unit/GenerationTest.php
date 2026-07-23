@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape;
 use NickWelsh\LaravelZero\Compiler\Context\ContextTypeCompiler;
@@ -51,6 +52,46 @@ it('maps portable validation to Zod 4 and reports server-only rules', function (
         'code: z.any().optional()',
     )->not->toContain('z.json()', 'z.string().email()', 'z.string().ulid()')
         ->and($compiler->notices())->toBe(['Input.code' => ['unique:parties,code']]);
+});
+
+it('maps Laravel password rule constraints and keeps breach checks server-only', function (): void {
+    $compiler = new ZodRuleCompiler;
+    $source = $compiler->object([
+        'password' => [
+            'required',
+            Password::min(12)->max(64)->mixedCase()->letters()->numbers()->symbols()->uncompromised(3)->rules(['not_regex:/password/i']),
+        ],
+    ], 'Input', [
+        'password.mixed' => 'Use both uppercase and lowercase letters.',
+    ]);
+
+    expect($source)->toContain(
+        'password: z.string().min(12).max(64)',
+        '.regex(/(\\p{Ll}+.*\\p{Lu})|(\\p{Lu}+.*\\p{Ll})/u, { error: "Use both uppercase and lowercase letters." })',
+        '.regex(/\\p{L}/u',
+        '.regex(/\\p{N}/u',
+        '.regex(/\\p{Z}|\\p{S}|\\p{P}/u',
+    )->and($compiler->notices())->toBe([
+        'Input.password' => ['not_regex:/password/i', 'password.uncompromised:3'],
+    ]);
+});
+
+it('resolves environment-dependent default password rules when schemas are generated', function (): void {
+    $previous = Password::$defaultCallback;
+
+    try {
+        Password::defaults(fn () => Password::min(app()->environment('testing') ? 10 : 20)->numbers());
+
+        $source = (new ZodRuleCompiler)->object([
+            'password' => Password::required(),
+        ], 'Input');
+
+        expect($source)
+            ->toContain('password: z.string().min(10)', '.regex(/\\p{N}/u')
+            ->not->toContain('.optional()');
+    } finally {
+        Password::$defaultCallback = $previous;
+    }
 });
 
 it('maps confirmed and same rules with Laravel custom messages', function (): void {

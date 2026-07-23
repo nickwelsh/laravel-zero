@@ -5,6 +5,7 @@ namespace NickWelsh\LaravelZero\Compiler\Inputs;
 use BackedEnum;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Validation\Rules\Enum;
+use Illuminate\Validation\Rules\Password;
 use Stringable;
 
 final class ZodRuleCompiler
@@ -25,13 +26,14 @@ final class ZodRuleCompiler
                 continue;
             }
             $fieldRules = $this->rules($definition);
+            $expandedFieldRules = $this->expandPasswordRules($fieldRules);
             $zod = $this->field($fieldRules, $inputClass.'.'.$field, $field, $messages);
             if (in_array('array', array_map($this->baseName(...), $fieldRules), true)) {
                 $zod = str_replace('z.array(z.any()', 'z.array('.$this->arrayElement($field, $rules, $inputClass, $messages), $zod);
             }
             $fields[$field] = $zod;
 
-            foreach ($fieldRules as $rule) {
+            foreach ($expandedFieldRules as $rule) {
                 [$name, $argument] = $this->rule($rule);
                 if ($name === 'confirmed') {
                     $other = $argument ?: $field.'_confirmation';
@@ -41,7 +43,7 @@ final class ZodRuleCompiler
                         if (! array_key_exists($other, $rules)) {
                             $fields[$other] = 'z.any().optional()';
                         }
-                        $refinements[] = $this->comparisonRefinement($field, $other, 'confirmed', $fieldRules, $messages);
+                        $refinements[] = $this->comparisonRefinement($field, $other, 'confirmed', $expandedFieldRules, $messages);
                     }
                 }
                 if ($name === 'same' && $argument) {
@@ -51,7 +53,7 @@ final class ZodRuleCompiler
                         if (! array_key_exists($argument, $rules)) {
                             $fields[$argument] = 'z.any().optional()';
                         }
-                        $refinements[] = $this->comparisonRefinement($field, $argument, 'same', $fieldRules, $messages);
+                        $refinements[] = $this->comparisonRefinement($field, $argument, 'same', $expandedFieldRules, $messages);
                     }
                 }
             }
@@ -106,6 +108,7 @@ final class ZodRuleCompiler
      */
     private function field(array $rules, string $path, string $field, array $messages): string
     {
+        $rules = $this->expandPasswordRules($rules);
         $names = array_map(fn (mixed $rule): string => $this->baseName($rule), $rules);
         $requiredMessage = $this->message($messages, $field, 'required');
         $enum = current(array_filter($rules, fn (mixed $rule): bool => $rule instanceof Enum)) ?: null;
@@ -159,10 +162,17 @@ final class ZodRuleCompiler
                 default => '',
             };
 
-            $portable = in_array($base, ['required', 'sometimes', 'nullable', 'string', 'integer', 'numeric', 'boolean', 'array', 'min', 'max', 'length', 'size', 'email', 'url', 'uuid', 'ulid', 'date', 'date_format', 'in'], true)
+            $portable = $rule instanceof Password
+                || in_array($base, ['required', 'sometimes', 'nullable', 'string', 'integer', 'numeric', 'boolean', 'array', 'min', 'max', 'length', 'size', 'email', 'url', 'uuid', 'ulid', 'date', 'date_format', 'in'], true)
                 || (in_array($base, ['confirmed', 'same'], true) && ! str_contains($field, '.'));
             if (! $portable && ! $rule instanceof Enum) {
                 $this->serverOnly[$path][] = $this->name($rule);
+            }
+        }
+
+        foreach ($rules as $rule) {
+            if ($rule instanceof Password) {
+                $type .= $this->passwordChecks($rule, $path, $field, $messages);
             }
         }
 
@@ -206,10 +216,126 @@ final class ZodRuleCompiler
         ]).')';
     }
 
+    /** @param list<mixed> $rules @return list<mixed> */
+    private function expandPasswordRules(array $rules): array
+    {
+        $expanded = [];
+        foreach ($rules as $rule) {
+            if (! $rule instanceof Password) {
+                $expanded[] = $rule;
+
+                continue;
+            }
+
+            $configuration = $this->passwordConfiguration($rule);
+            if ($configuration['required']) {
+                $expanded[] = 'required';
+            }
+            if ($configuration['sometimes']) {
+                $expanded[] = 'sometimes';
+            }
+            $expanded[] = 'string';
+            $expanded[] = 'min:'.$configuration['min'];
+            if ($configuration['max'] !== null) {
+                $expanded[] = 'max:'.$configuration['max'];
+            }
+            array_push($expanded, ...$configuration['customRules']);
+            $expanded[] = $rule;
+        }
+
+        return $expanded;
+    }
+
+    /**
+     * @return array{
+     *     min: int,
+     *     max: int|null,
+     *     required: bool,
+     *     sometimes: bool,
+     *     mixedCase: bool,
+     *     letters: bool,
+     *     numbers: bool,
+     *     symbols: bool,
+     *     uncompromised: bool,
+     *     compromisedThreshold: int,
+     *     customRules: list<mixed>
+     * }
+     */
+    private function passwordConfiguration(Password $rule): array
+    {
+        /** @var array<string, mixed> $configuration */
+        $configuration = method_exists($rule, 'appliedRules') ? $rule->appliedRules() : [];
+
+        return [
+            'min' => (int) ($configuration['min'] ?? $this->property($rule, 'min', 8)),
+            'max' => isset($configuration['max']) ? (int) $configuration['max'] : $this->nullableInt($this->property($rule, 'max')),
+            'required' => (bool) $this->property($rule, 'required', false),
+            'sometimes' => (bool) $this->property($rule, 'sometimes', false),
+            'mixedCase' => (bool) ($configuration['mixedCase'] ?? $this->property($rule, 'mixedCase', false)),
+            'letters' => (bool) ($configuration['letters'] ?? $this->property($rule, 'letters', false)),
+            'numbers' => (bool) ($configuration['numbers'] ?? $this->property($rule, 'numbers', false)),
+            'symbols' => (bool) ($configuration['symbols'] ?? $this->property($rule, 'symbols', false)),
+            'uncompromised' => (bool) ($configuration['uncompromised'] ?? $this->property($rule, 'uncompromised', false)),
+            'compromisedThreshold' => (int) ($configuration['compromisedThreshold'] ?? $this->property($rule, 'compromisedThreshold', 0)),
+            'customRules' => array_values((array) ($configuration['customRules'] ?? $this->property($rule, 'customRules', []))),
+        ];
+    }
+
+    /** @param array<string, string> $messages */
+    private function passwordChecks(Password $rule, string $path, string $field, array $messages): string
+    {
+        $configuration = $this->passwordConfiguration($rule);
+        $checks = '';
+        if ($configuration['mixedCase']) {
+            $message = $this->message($messages, $field, 'password.mixed')
+                ?? 'The '.$this->label($field).' field must contain at least one uppercase and one lowercase letter.';
+            $checks .= '.regex(/(\\p{Ll}+.*\\p{Lu})|(\\p{Lu}+.*\\p{Ll})/u'.$this->checkError($message).')';
+        }
+        if ($configuration['letters']) {
+            $message = $this->message($messages, $field, 'password.letters')
+                ?? 'The '.$this->label($field).' field must contain at least one letter.';
+            $checks .= '.regex(/\\p{L}/u'.$this->checkError($message).')';
+        }
+        if ($configuration['symbols']) {
+            $message = $this->message($messages, $field, 'password.symbols')
+                ?? 'The '.$this->label($field).' field must contain at least one symbol.';
+            $checks .= '.regex(/\\p{Z}|\\p{S}|\\p{P}/u'.$this->checkError($message).')';
+        }
+        if ($configuration['numbers']) {
+            $message = $this->message($messages, $field, 'password.numbers')
+                ?? 'The '.$this->label($field).' field must contain at least one number.';
+            $checks .= '.regex(/\\p{N}/u'.$this->checkError($message).')';
+        }
+        if ($configuration['uncompromised']) {
+            $this->serverOnly[$path][] = 'password.uncompromised:'.$configuration['compromisedThreshold'];
+        }
+
+        return $checks;
+    }
+
+    private function property(object $object, string $property, mixed $default = null): mixed
+    {
+        $reflection = new \ReflectionClass($object);
+        if (! $reflection->hasProperty($property)) {
+            return $default;
+        }
+
+        return $reflection->getProperty($property)->getValue($object);
+    }
+
+    private function nullableInt(mixed $value): ?int
+    {
+        return $value === null ? null : (int) $value;
+    }
+
     /** @return list<mixed> */
     private function rules(mixed $definition): array
     {
-        return (array) (is_string($definition) ? explode('|', $definition) : $definition);
+        if (is_string($definition)) {
+            return explode('|', $definition);
+        }
+
+        return is_array($definition) ? array_values($definition) : [$definition];
     }
 
     /** @return array{string, ?string} */

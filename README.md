@@ -89,6 +89,8 @@ public function messages(): array
 }
 ```
 
+Laravel's fluent `Password` rule is resolved when schemas are generated. Minimum and maximum length plus `letters()`, `mixedCase()`, `numbers()`, and `symbols()` become Zod checks. `uncompromised()` and unsupported custom password rules remain server-only. Because `Password::defaults()` may depend on the application environment, run `php artisan zero:generate` in the target deployment environment after service providers have booted; do not reuse artifacts generated under different password defaults.
+
 Use `serverOnly()` for values written only by the server, and `ignore()` for validated fields that should not be written by either client or server (such as password confirmations). Supported writes: create, update, upsert, delete, and sequential writes. Application writes and Zero's mutation metadata use the configured physical connection.
 
 Generate and check:
