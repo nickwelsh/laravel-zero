@@ -92,7 +92,8 @@ final readonly class ZeroMutationProcessor
     {
         $table = $connection->table($this->metadataTable($schema, 'clients'));
         $key = ['clientGroupID' => $clientGroupID, 'clientID' => $clientID];
-        $lastMutationID = $connection->getQueryGrammar()->wrap('lastMutationID');
+        $grammar = $table->getGrammar();
+        $lastMutationID = $grammar->wrapTable('clients').'.'.$grammar->wrap('lastMutationID');
 
         $table->upsert(
             [[...$key, 'lastMutationID' => 1]],

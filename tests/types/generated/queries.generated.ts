@@ -2,7 +2,7 @@
 
 import {defineQueries, defineQuery} from '@rocicorp/zero';
 import {z} from 'zod';
-import {zql} from './schema.generatedgenerated';
+import {zql} from './schema.generated';
 import './context.generated';
 
 export const queries = defineQueries({
