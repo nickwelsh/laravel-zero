@@ -4,6 +4,7 @@ namespace NickWelsh\LaravelZero\Commands;
 
 use Illuminate\Console\Command;
 use NickWelsh\LaravelZero\Compiler\TypeScript\ZeroTypeScriptGenerator;
+use NickWelsh\LaravelZero\Installation\FrontendScaffolder;
 use Throwable;
 
 final class GenerateCommand extends Command
@@ -12,7 +13,7 @@ final class GenerateCommand extends Command
 
     protected $description = 'Generate Zero TypeScript definitions';
 
-    public function handle(ZeroTypeScriptGenerator $generator): int
+    public function handle(ZeroTypeScriptGenerator $generator, FrontendScaffolder $frontend): int
     {
         try {
             if (config('laravel-zero.generation.generate_schema') === true) {
@@ -23,7 +24,11 @@ final class GenerateCommand extends Command
             }
             $rendered = $generator->render();
             $changed = $generator->write();
+            $scaffolded = $frontend->scaffold();
             $this->components->info($changed === [] ? 'Zero files unchanged.' : 'Generated '.count($changed).' Zero files.');
+            if ($scaffolded !== []) {
+                $this->components->info('Scaffolded '.count($scaffolded).' Zero frontend '.(count($scaffolded) === 1 ? 'file.' : 'files.'));
+            }
             if ($rendered['notices'] !== []) {
                 $this->components->info('Some validation rules are enforced only by Laravel:');
                 foreach ($rendered['notices'] as $path => $rules) {

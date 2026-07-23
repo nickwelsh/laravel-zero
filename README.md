@@ -86,7 +86,7 @@ php artisan zero:check
 php artisan zero:clear
 ```
 
-`zero:generate` optionally delegates schema generation to `eloquent-zero`, then writes deterministic files under `resources/js/zero/generated` without rewriting unchanged files.
+`zero:generate` optionally delegates schema generation to `eloquent-zero`, then writes deterministic files under `resources/js/zero/generated` without rewriting unchanged files. It also runs the configured frontend scaffolder, creating a missing React provider and adding only missing Zero URL globals.
 
 ## Portable PHP subset
 

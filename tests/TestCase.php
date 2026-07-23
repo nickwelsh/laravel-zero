@@ -30,6 +30,7 @@ abstract class TestCase extends Orchestra
         $app['config']->set('laravel-zero.routes.middleware', []);
         $app['config']->set('laravel-zero.generation.output_directory', __DIR__.'/types/generated');
         $app['config']->set('laravel-zero.generation.generate_schema', false);
+        $app['config']->set('laravel-zero.frontend.framework', null);
     }
 
     protected function setUp(): void

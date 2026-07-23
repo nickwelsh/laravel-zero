@@ -15,6 +15,29 @@ it('generates deterministically and checks freshness', function (): void {
     $this->artisan('zero:check')->assertExitCode(0);
 });
 
+it('scaffolds the configured frontend during generation', function (): void {
+    $files = new Filesystem;
+    $directory = sys_get_temp_dir().'/laravel-zero-'.uniqid();
+    $provider = $directory.'/zero/provider.tsx';
+    $globals = $directory.'/globals.ts';
+
+    try {
+        config()->set('laravel-zero.frontend', [
+            'framework' => 'react',
+            'provider_path' => $provider,
+            'use_globals' => true,
+            'globals_path' => $globals,
+        ]);
+
+        $this->artisan('zero:generate')->assertExitCode(0);
+
+        expect($files->get($provider))->toContain("from '@/globals'", 'useMemo<ZeroContext>')
+            ->and($files->get($globals))->toContain('VITE_ZERO_CACHE_URL', 'VITE_ZERO_MUTATE_URL', 'VITE_ZERO_QUERY_URL');
+    } finally {
+        $files->deleteDirectory($directory);
+    }
+});
+
 it('automatically excludes the Zero endpoints from CSRF validation', function (): void {
     $middleware = class_exists(PreventRequestForgery::class)
         ? PreventRequestForgery::class
