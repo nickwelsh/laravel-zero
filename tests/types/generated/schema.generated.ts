@@ -1,3 +1,5 @@
+// This file is generated. Do not edit directly.
+
 import {boolean, createBuilder, createSchema, relationships, string, table} from '@rocicorp/zero';
 import type {Row} from '@rocicorp/zero';
 

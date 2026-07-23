@@ -11,7 +11,7 @@ composer require nickwelsh/laravel-zero
 php artisan vendor:publish --tag=zero
 ```
 
-The `zero` tag publishes the package config and creates `app/Zero/ZeroContext.php` and `app/Zero/ContextResolver.php`. With the default React frontend config, it also creates `resources/js/zero/provider.tsx` and adds any missing Zero URL exports to `resources/js/globals.ts`. Existing providers and global declarations are never replaced.
+The `zero` tag publishes the package config and creates `app/Zero/ZeroContext.php` and `app/Zero/ContextResolver.php`. With the default React frontend config, it also generates `resources/js/zero/generated/provider.generated.tsx` and adds any missing Zero URL exports to `resources/js/globals.ts`. The provider is regenerated from package configuration; existing global declarations are never replaced.
 
 You can publish only part of the setup when needed:
 
@@ -86,7 +86,7 @@ php artisan zero:check
 php artisan zero:clear
 ```
 
-`zero:generate` optionally delegates schema generation to `eloquent-zero`, then writes deterministic files under `resources/js/zero/generated` without rewriting unchanged files. It also runs the configured frontend scaffolder, creating a missing React provider and adding only missing Zero URL globals.
+`zero:generate` optionally delegates schema generation to `eloquent-zero`, then writes deterministic files under `resources/js/zero/generated`, including `schema.generated.ts` and `provider.generated.tsx`. It regenerates the provider, adds only missing Zero URL globals, and writes `resources/js/zero/index.ts` as the public barrel. Every generated TypeScript file includes a do-not-edit banner.
 
 ## Portable PHP subset
 

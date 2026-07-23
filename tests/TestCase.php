@@ -29,7 +29,10 @@ abstract class TestCase extends Orchestra
         $app['config']->set('laravel-zero.discovery.mutators', [__DIR__.'/Fixtures/Zero']);
         $app['config']->set('laravel-zero.routes.middleware', []);
         $app['config']->set('laravel-zero.generation.output_directory', __DIR__.'/types/generated');
+        $app['config']->set('laravel-zero.generation.barrel_path', __DIR__.'/types/index.ts');
         $app['config']->set('laravel-zero.generation.generate_schema', false);
+        $app['config']->set('laravel-zero.generation.schema_path', __DIR__.'/types/generated/schema.generated.ts');
+        $app['config']->set('eloquent-zero.output_path', __DIR__.'/types/generated/schema.generated.ts');
         $app['config']->set('laravel-zero.frontend.framework', null);
     }
 

@@ -1,6 +1,6 @@
 // This file is generated. Do not edit directly.
 
-import type {Schema} from '../schema';
+import type {Schema} from './schema.generatedgenerated';
 
 export type ZeroContext = {
   readonly user_id: string;

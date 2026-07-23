@@ -26,8 +26,9 @@ return [
     ],
     'generation' => [
         'output_directory' => resource_path('js/zero/generated'),
+        'barrel_path' => resource_path('js/zero/index.ts'),
         'generate_schema' => true,
-        'schema_path' => resource_path('js/zero/schema.ts'),
+        'schema_path' => resource_path('js/zero/generated/schema.generated.ts'),
         'mode' => Mode::OptOut,
         'model_search_directories' => [app_path('Models')],
         'models' => [],
@@ -43,7 +44,7 @@ return [
     ],
     'frontend' => [
         'framework' => 'react',
-        'provider_path' => resource_path('js/zero/provider.tsx'),
+        'provider_path' => resource_path('js/zero/generated/provider.generated.tsx'),
         'use_globals' => true,
         'globals_path' => resource_path('js/globals.ts'),
     ],

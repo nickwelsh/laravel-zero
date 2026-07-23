@@ -3,9 +3,12 @@
 namespace NickWelsh\LaravelZero\Installation;
 
 use Illuminate\Filesystem\Filesystem;
+use NickWelsh\LaravelZero\Support\GeneratedPaths;
 
 final readonly class FrontendScaffolder
 {
+    private const HEADER = "// This file is generated. Do not edit directly.\n\n";
+
     private const GLOBALS = [
         'ZERO_CACHE_URL' => 'export const ZERO_CACHE_URL = import.meta.env.VITE_ZERO_CACHE_URL;',
         'ZERO_MUTATE_URL' => 'export const ZERO_MUTATE_URL = import.meta.env.VITE_ZERO_MUTATE_URL;',
@@ -22,14 +25,23 @@ final readonly class FrontendScaffolder
         }
 
         $changed = [];
-        $providerPath = config('laravel-zero.frontend.provider_path', resource_path('js/zero/provider.tsx'));
+        $providerPath = GeneratedPaths::provider();
+        $stub = config('laravel-zero.frontend.use_globals', true) === true
+            ? __DIR__.'/../../stubs/react/provider.globals.tsx.stub'
+            : __DIR__.'/../../stubs/react/provider.tsx.stub';
+        $provider = self::HEADER.str_replace(
+            ['{{ context_import }}', '{{ mutations_import }}', '{{ schema_import }}'],
+            [
+                GeneratedPaths::moduleImport($providerPath, GeneratedPaths::outputDirectory().'/context.generated.ts'),
+                GeneratedPaths::moduleImport($providerPath, GeneratedPaths::outputDirectory().'/mutations.generated.ts'),
+                GeneratedPaths::moduleImport($providerPath, GeneratedPaths::schema()),
+            ],
+            $this->files->get($stub),
+        );
 
-        if (is_string($providerPath) && ! $this->files->exists($providerPath)) {
+        if (! $this->files->exists($providerPath) || $this->files->get($providerPath) !== $provider) {
             $this->files->ensureDirectoryExists(dirname($providerPath));
-            $stub = config('laravel-zero.frontend.use_globals', true) === true
-                ? __DIR__.'/../../stubs/react/provider.globals.tsx.stub'
-                : __DIR__.'/../../stubs/react/provider.tsx.stub';
-            $this->files->copy($stub, $providerPath);
+            $this->files->put($providerPath, $provider);
             $changed[] = $providerPath;
         }
 

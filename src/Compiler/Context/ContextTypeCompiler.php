@@ -8,7 +8,7 @@ use ReflectionNamedType;
 
 final class ContextTypeCompiler
 {
-    public function compile(string $class): string
+    public function compile(string $class, string $schemaImport = './schema.generated'): string
     {
         $reflection = new ReflectionClass($class);
         $constructor = $reflection->getConstructor();
@@ -35,6 +35,6 @@ final class ContextTypeCompiler
             $fields[] = "  readonly {$parameter->getName()}: {$ts};";
         }
 
-        return "import type {Schema} from '../schema';\n\nexport type ZeroContext = {\n".implode("\n", $fields)."\n};\n\ndeclare module '@rocicorp/zero' {\n  interface DefaultTypes {\n    context: ZeroContext;\n    schema: Schema;\n  }\n}\n";
+        return "import type {Schema} from '{$schemaImport}';\n\nexport type ZeroContext = {\n".implode("\n", $fields)."\n};\n\ndeclare module '@rocicorp/zero' {\n  interface DefaultTypes {\n    context: ZeroContext;\n    schema: Schema;\n  }\n}\n";
     }
 }

@@ -11,6 +11,7 @@ use NickWelsh\LaravelZero\Compiler\Queries\ZeroQueryCompiler;
 use NickWelsh\LaravelZero\Discovery\Operation;
 use NickWelsh\LaravelZero\Discovery\ZeroRegistry;
 use NickWelsh\LaravelZero\Inputs\ZeroInput;
+use NickWelsh\LaravelZero\Support\GeneratedPaths;
 
 final readonly class ZeroTypeScriptGenerator
 {
@@ -32,8 +33,10 @@ final readonly class ZeroTypeScriptGenerator
         [$inputSource, $notices] = $this->inputs([...$queryOperations, ...$mutationOperations]);
         $queryTree = $this->tree($queryOperations, fn (Operation $operation): string => $this->queries->compile($operation));
         $mutationTree = $this->tree($mutationOperations, fn (Operation $operation): string => $this->mutations->compile($operation));
-        $context = $this->contexts->compile(config('laravel-zero.context.class'));
+        $schemaImport = GeneratedPaths::moduleImport(GeneratedPaths::outputDirectory().'/context.generated.ts', GeneratedPaths::schema());
+        $context = $this->contexts->compile(config('laravel-zero.context.class'), $schemaImport);
         $manifest = [
+            '_generated' => 'This file is generated. Do not edit directly.',
             'zeroVersion' => config('laravel-zero.zero_version', '1.8.0') ?: '1.8.0',
             'queries' => array_keys($queryOperations),
             'mutations' => array_keys($mutationOperations),
@@ -44,10 +47,9 @@ final readonly class ZeroTypeScriptGenerator
             'files' => [
                 'context.generated.ts' => self::HEADER.$context,
                 'inputs.generated.ts' => self::HEADER."import {z} from 'zod';\n\n".$inputSource,
-                'queries.generated.ts' => self::HEADER."import {defineQueries, defineQuery} from '@rocicorp/zero';\nimport {z} from 'zod';\nimport {zql} from '../schema';\n".$this->inputImportLine($queryOperations)."import './context.generated';\n\nexport const queries = defineQueries(".$this->renderTree($queryTree).");\n",
+                'queries.generated.ts' => self::HEADER."import {defineQueries, defineQuery} from '@rocicorp/zero';\nimport {z} from 'zod';\nimport {zql} from '{$schemaImport}';\n".$this->inputImportLine($queryOperations)."import './context.generated';\n\nexport const queries = defineQueries(".$this->renderTree($queryTree).");\n",
                 'mutations.generated.ts' => self::HEADER."import {defineMutators, defineMutator} from '@rocicorp/zero';\nimport {z} from 'zod';\n".$this->inputImportLine($mutationOperations)."import './context.generated';\n\nexport const mutations = defineMutators(".$this->renderTree($mutationTree).");\n",
                 'manifest.generated.json' => json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)."\n",
-                'index.ts' => self::HEADER."export * from './context.generated';\nexport * from './inputs.generated';\nexport * from './queries.generated';\nexport * from './mutations.generated';\n",
             ],
             'notices' => $notices,
         ];
@@ -57,15 +59,25 @@ final readonly class ZeroTypeScriptGenerator
     public function write(): array
     {
         $rendered = $this->render();
-        $directory = config('laravel-zero.generation.output_directory');
+        $directory = GeneratedPaths::outputDirectory();
         $this->files->ensureDirectoryExists($directory);
         $changed = [];
         foreach ($rendered['files'] as $name => $contents) {
             $path = $directory.'/'.$name;
-            if (! $this->files->exists($path) || $this->files->get($path) !== $contents) {
-                $this->files->put($path, $contents);
+            if ($this->writeIfChanged($path, $contents)) {
                 $changed[] = $path;
             }
+        }
+
+        $barrel = GeneratedPaths::barrel();
+        if ($this->writeIfChanged($barrel, $this->barrelContents())) {
+            $changed[] = $barrel;
+        }
+
+        $legacyBarrel = $directory.'/index.ts';
+        if ($legacyBarrel !== $barrel && $this->files->exists($legacyBarrel) && str_starts_with($this->files->get($legacyBarrel), self::HEADER)) {
+            $this->files->delete($legacyBarrel);
+            $changed[] = $legacyBarrel;
         }
 
         return $changed;
@@ -75,9 +87,48 @@ final readonly class ZeroTypeScriptGenerator
     public function stale(): array
     {
         $rendered = $this->render();
-        $directory = config('laravel-zero.generation.output_directory');
+        $directory = GeneratedPaths::outputDirectory();
+        $stale = array_values(array_filter(array_keys($rendered['files']), fn (string $name): bool => ! $this->files->exists($directory.'/'.$name) || $this->files->get($directory.'/'.$name) !== $rendered['files'][$name]));
 
-        return array_values(array_filter(array_keys($rendered['files']), fn (string $name): bool => ! $this->files->exists($directory.'/'.$name) || $this->files->get($directory.'/'.$name) !== $rendered['files'][$name]));
+        if (! $this->files->exists(GeneratedPaths::barrel()) || $this->files->get(GeneratedPaths::barrel()) !== $this->barrelContents()) {
+            $stale[] = GeneratedPaths::barrel();
+        }
+
+        return $stale;
+    }
+
+    private function barrelContents(): string
+    {
+        $barrel = GeneratedPaths::barrel();
+        $directory = GeneratedPaths::outputDirectory();
+        $exports = [
+            $directory.'/context.generated.ts',
+            $directory.'/inputs.generated.ts',
+            $directory.'/queries.generated.ts',
+            $directory.'/mutations.generated.ts',
+            GeneratedPaths::schema(),
+        ];
+
+        if (config('laravel-zero.frontend.framework', 'react') === 'react') {
+            $exports[] = GeneratedPaths::provider();
+        }
+
+        return self::HEADER.implode("\n", array_map(
+            fn (string $path): string => "export * from '".GeneratedPaths::moduleImport($barrel, $path)."';",
+            $exports,
+        ))."\n";
+    }
+
+    private function writeIfChanged(string $path, string $contents): bool
+    {
+        if ($this->files->exists($path) && $this->files->get($path) === $contents) {
+            return false;
+        }
+
+        $this->files->ensureDirectoryExists(dirname($path));
+        $this->files->put($path, $contents);
+
+        return true;
     }
 
     /** @param array<string, Operation> $operations @return array{string, array<string, list<string>>} */

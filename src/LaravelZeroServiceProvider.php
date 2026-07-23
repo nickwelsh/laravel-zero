@@ -16,6 +16,7 @@ use NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry;
 use NickWelsh\LaravelZero\Discovery\ZeroRegistry;
 use NickWelsh\LaravelZero\Installation\FrontendScaffolder;
 use NickWelsh\LaravelZero\Schema\EloquentZeroSchemaRegistry;
+use NickWelsh\LaravelZero\Support\GeneratedPaths;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -95,7 +96,7 @@ final class LaravelZeroServiceProvider extends PackageServiceProvider
             'eloquent-zero.model_search_directories' => $config->get('laravel-zero.generation.model_search_directories', [app_path('Models')]),
             'eloquent-zero.models' => $config->get('laravel-zero.generation.models', []),
             'eloquent-zero.tables' => $config->get('laravel-zero.generation.tables', []),
-            'eloquent-zero.output_path' => $config->get('laravel-zero.generation.schema_path', resource_path('js/zero/schema.ts')),
+            'eloquent-zero.output_path' => GeneratedPaths::schema(),
             'eloquent-zero.table_name_casing' => $config->get('laravel-zero.generation.table_name_casing', Casing::Camel),
             'eloquent-zero.column_name_casing' => $config->get('laravel-zero.generation.column_name_casing', Casing::Camel),
             'eloquent-zero.use_wayfinder' => $config->get('laravel-zero.generation.use_wayfinder', false),

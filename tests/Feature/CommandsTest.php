@@ -10,8 +10,14 @@ it('generates deterministically and checks freshness', function (): void {
     $this->artisan('zero:generate')->assertExitCode(0);
     $first = file_get_contents(config('laravel-zero.generation.output_directory').'/queries.generated.ts');
     $this->artisan('zero:generate')->expectsOutputToContain('unchanged')->assertExitCode(0);
-    expect(file_get_contents(config('laravel-zero.generation.output_directory').'/queries.generated.ts'))->toBe($first);
-    expect(file_get_contents(config('laravel-zero.generation.output_directory').'/manifest.generated.json'))->toContain('unique:parties,reference_code', '1.8.0');
+    expect(file_get_contents(config('laravel-zero.generation.output_directory').'/queries.generated.ts'))->toBe($first)
+        ->toContain("from './schema.generated';");
+    expect(file_get_contents(config('laravel-zero.generation.output_directory').'/manifest.generated.json'))->toContain('This file is generated. Do not edit directly.', 'unique:parties,reference_code', '1.8.0');
+    expect(file_get_contents(config('laravel-zero.generation.barrel_path')))->toStartWith('// This file is generated. Do not edit directly.')
+        ->toContain("export * from './generated/schema.generated';");
+    foreach (glob(config('laravel-zero.generation.output_directory').'/*.{ts,tsx}', GLOB_BRACE) ?: [] as $generated) {
+        expect(file_get_contents($generated))->toStartWith('// This file is generated. Do not edit directly.');
+    }
     $this->artisan('zero:check')->assertExitCode(0);
 });
 
@@ -22,6 +28,12 @@ it('scaffolds the configured frontend during generation', function (): void {
     $globals = $directory.'/globals.ts';
 
     try {
+        $schema = $directory.'/generated/schema.generated.ts';
+        $files->ensureDirectoryExists(dirname($schema));
+        $files->put($schema, "export const schema = {};\n");
+        config()->set('laravel-zero.generation.output_directory', $directory.'/generated');
+        config()->set('laravel-zero.generation.barrel_path', $directory.'/index.ts');
+        config()->set('laravel-zero.generation.schema_path', $schema);
         config()->set('laravel-zero.frontend', [
             'framework' => 'react',
             'provider_path' => $provider,
@@ -31,8 +43,16 @@ it('scaffolds the configured frontend during generation', function (): void {
 
         $this->artisan('zero:generate')->assertExitCode(0);
 
-        expect($files->get($provider))->toContain("from '@/globals'", 'useMemo<ZeroContext>')
-            ->and($files->get($globals))->toContain('VITE_ZERO_CACHE_URL', 'VITE_ZERO_MUTATE_URL', 'VITE_ZERO_QUERY_URL');
+        expect($files->get($provider))->toStartWith('// This file is generated. Do not edit directly.')
+            ->toContain("from '@/globals'", 'useMemo<ZeroContext>')
+            ->and($files->get($globals))->toContain('VITE_ZERO_CACHE_URL', 'VITE_ZERO_MUTATE_URL', 'VITE_ZERO_QUERY_URL')
+            ->and($files->get($schema))->toStartWith('// This file is generated. Do not edit directly.')
+            ->and($files->get($directory.'/index.ts'))->toContain("export * from './zero/provider';", "export * from './generated/schema.generated';");
+
+        $files->put($provider, 'custom provider');
+        $this->artisan('zero:generate')->assertExitCode(0);
+
+        expect($files->get($provider))->toStartWith('// This file is generated. Do not edit directly.');
     } finally {
         $files->deleteDirectory($directory);
     }
@@ -74,7 +94,7 @@ it('bridges Laravel Zero configuration to Eloquent Zero', function (): void {
         ->and(config('eloquent-zero.publication_name'))->toBe(config('laravel-zero.database.publication_name'));
 });
 
-it('scaffolds the React provider and only missing globals', function (): void {
+it('regenerates the React provider and appends only missing globals', function (): void {
     $files = new Filesystem;
     $directory = sys_get_temp_dir().'/laravel-zero-'.uniqid();
     $provider = $directory.'/zero/provider.tsx';
@@ -102,8 +122,8 @@ it('scaffolds the React provider and only missing globals', function (): void {
 
         $files->put($provider, 'custom provider');
 
-        expect(app(FrontendScaffolder::class)->scaffold())->toBe([])
-            ->and($files->get($provider))->toBe('custom provider')
+        expect(app(FrontendScaffolder::class)->scaffold())->toBe([$provider])
+            ->and($files->get($provider))->toStartWith('// This file is generated. Do not edit directly.')
             ->and($files->get($globals))->toBe($globalContents);
     } finally {
         $files->deleteDirectory($directory);

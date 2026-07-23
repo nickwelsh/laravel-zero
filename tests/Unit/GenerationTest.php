@@ -3,10 +3,18 @@
 use NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape;
 use NickWelsh\LaravelZero\Compiler\Context\ContextTypeCompiler;
 use NickWelsh\LaravelZero\Compiler\Inputs\ZodRuleCompiler;
+use NickWelsh\LaravelZero\Compiler\TypeScript\ZeroTypeScriptGenerator;
 use NickWelsh\LaravelZero\Discovery\ZeroRegistry;
 use NickWelsh\LaravelZero\Schema\EloquentZeroSchemaRegistry;
 use NickWelsh\LaravelZero\Tests\Fixtures\Party;
 use NickWelsh\LaravelZero\Tests\Fixtures\TestZeroContext;
+
+it('imports the generated schema without its TypeScript extension', function (): void {
+    $files = app(ZeroTypeScriptGenerator::class)->render()['files'];
+
+    expect($files['context.generated.ts'])->toContain("from './schema.generated';")
+        ->and($files['queries.generated.ts'])->toContain("from './schema.generated';");
+});
 
 it('infers object argument schemas and optional defaults', function (): void {
     $operation = app(ZeroRegistry::class)->query('directory.party.byIdWithArchived');
