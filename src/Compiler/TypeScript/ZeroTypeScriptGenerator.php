@@ -17,6 +17,13 @@ final readonly class ZeroTypeScriptGenerator
 {
     private const HEADER = "// This file is generated. Do not edit directly.\n\n";
 
+    private const TYPESCRIPT_FILES = [
+        'context.generated.ts',
+        'inputs.generated.ts',
+        'queries.generated.ts',
+        'mutations.generated.ts',
+    ];
+
     public function __construct(
         private ZeroRegistry $registry,
         private ContextTypeCompiler $contexts,
@@ -43,21 +50,20 @@ final readonly class ZeroTypeScriptGenerator
             'serverOnlyValidationRules' => $notices,
         ];
 
+        $files = [
+            'context.generated.ts' => self::HEADER.$context,
+        ];
+        if ($inputSource !== '') {
+            $files['inputs.generated.ts'] = self::HEADER."import {z} from 'zod';\n\n".$inputSource;
+        }
+        $files['queries.generated.ts'] = self::HEADER.$this->queriesFile($queryOperations, $queryTree, $schemaImport);
+        $files['mutations.generated.ts'] = self::HEADER.$this->mutationsFile($mutationOperations, $mutationTree);
+        $files['manifest.generated.json'] = json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)."\n";
+
         return [
-            'files' => [
-                'context.generated.ts' => $this->typescriptFile($context),
-                'inputs.generated.ts' => $this->typescriptFile($inputSource === '' ? '' : "import {z} from 'zod';\n\n".$inputSource),
-                'queries.generated.ts' => $this->typescriptFile($this->queriesFile($queryOperations, $queryTree, $schemaImport)),
-                'mutations.generated.ts' => $this->typescriptFile($this->mutationsFile($mutationOperations, $mutationTree)),
-                'manifest.generated.json' => json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)."\n",
-            ],
+            'files' => $files,
             'notices' => $notices,
         ];
-    }
-
-    private function typescriptFile(string $source): string
-    {
-        return self::HEADER.($source === '' ? "export default undefined;\n" : $source);
     }
 
     /** @param array<string, Operation> $operations @param array<string, mixed> $tree */
@@ -124,9 +130,16 @@ final readonly class ZeroTypeScriptGenerator
                 $changed[] = $path;
             }
         }
+        foreach ($this->omittedTypeScriptFiles($rendered['files']) as $name) {
+            $path = $directory.'/'.$name;
+            if ($this->files->exists($path) && str_starts_with($this->files->get($path), self::HEADER)) {
+                $this->files->delete($path);
+                $changed[] = $path;
+            }
+        }
 
         $barrel = GeneratedPaths::barrel();
-        if ($this->writeIfChanged($barrel, $this->barrelContents())) {
+        if ($this->writeIfChanged($barrel, $this->barrelContents($rendered['files']))) {
             $changed[] = $barrel;
         }
 
@@ -145,25 +158,30 @@ final readonly class ZeroTypeScriptGenerator
         $rendered = $this->render();
         $directory = GeneratedPaths::outputDirectory();
         $stale = array_values(array_filter(array_keys($rendered['files']), fn (string $name): bool => ! $this->files->exists($directory.'/'.$name) || $this->files->get($directory.'/'.$name) !== $rendered['files'][$name]));
+        foreach ($this->omittedTypeScriptFiles($rendered['files']) as $name) {
+            $path = $directory.'/'.$name;
+            if ($this->files->exists($path) && str_starts_with($this->files->get($path), self::HEADER)) {
+                $stale[] = $name;
+            }
+        }
 
-        if (! $this->files->exists(GeneratedPaths::barrel()) || $this->files->get(GeneratedPaths::barrel()) !== $this->barrelContents()) {
+        if (! $this->files->exists(GeneratedPaths::barrel()) || $this->files->get(GeneratedPaths::barrel()) !== $this->barrelContents($rendered['files'])) {
             $stale[] = GeneratedPaths::barrel();
         }
 
         return $stale;
     }
 
-    private function barrelContents(): string
+    /** @param array<string, string> $files */
+    private function barrelContents(array $files): string
     {
         $barrel = GeneratedPaths::barrel();
         $directory = GeneratedPaths::outputDirectory();
-        $exports = [
-            $directory.'/context.generated.ts',
-            $directory.'/inputs.generated.ts',
-            $directory.'/queries.generated.ts',
-            $directory.'/mutations.generated.ts',
-            GeneratedPaths::schema(),
-        ];
+        $exports = array_map(
+            fn (string $name): string => $directory.'/'.$name,
+            array_values(array_filter(self::TYPESCRIPT_FILES, fn (string $name): bool => isset($files[$name]))),
+        );
+        $exports[] = GeneratedPaths::schema();
 
         if (config('laravel-zero.frontend.framework', 'react') === 'react') {
             $exports[] = GeneratedPaths::provider();
@@ -173,6 +191,12 @@ final readonly class ZeroTypeScriptGenerator
             fn (string $path): string => "export * from '".GeneratedPaths::moduleImport($barrel, $path)."';",
             $exports,
         ))."\n";
+    }
+
+    /** @param array<string, string> $files @return list<string> */
+    private function omittedTypeScriptFiles(array $files): array
+    {
+        return array_values(array_filter(self::TYPESCRIPT_FILES, fn (string $name): bool => ! isset($files[$name])));
     }
 
     private function writeIfChanged(string $path, string $contents): bool

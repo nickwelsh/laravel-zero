@@ -1,5 +1,6 @@
 <?php
 
+use Illuminate\Filesystem\Filesystem;
 use Illuminate\Validation\Rules\Password;
 use Illuminate\Validation\ValidationException;
 use NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape;
@@ -19,35 +20,49 @@ it('imports the generated schema without its TypeScript extension', function ():
         ->and($files['queries.generated.ts'])->toContain("from './schema.generated';");
 });
 
-it('omits unused imports from empty generated modules', function (): void {
-    config()->set('laravel-zero.discovery.queries', []);
-    config()->set('laravel-zero.discovery.mutators', []);
-    app()->forgetInstance(ZeroRegistry::class);
+it('omits empty generated modules and their barrel exports', function (): void {
+    $filesystem = new Filesystem;
+    $directory = sys_get_temp_dir().'/laravel-zero-'.uniqid();
+    $output = $directory.'/generated';
+    $barrel = $directory.'/index.ts';
 
-    $files = app(ZeroTypeScriptGenerator::class)->render()['files'];
+    try {
+        config()->set('laravel-zero.discovery.queries', []);
+        config()->set('laravel-zero.discovery.mutators', []);
+        config()->set('laravel-zero.generation.output_directory', $output);
+        config()->set('laravel-zero.generation.barrel_path', $barrel);
+        config()->set('laravel-zero.generation.schema_path', $output.'/schema.generated.ts');
+        app()->forgetInstance(ZeroRegistry::class);
 
-    expect($files['queries.generated.ts'])->toBe(<<<'TS'
+        $filesystem->ensureDirectoryExists($output);
+        $filesystem->put($output.'/inputs.generated.ts', "// This file is generated. Do not edit directly.\n\nexport default undefined;\n");
+
+        $generator = app(ZeroTypeScriptGenerator::class);
+        $files = $generator->render()['files'];
+        $generator->write();
+
+        expect($files)->not->toHaveKey('inputs.generated.ts')
+            ->and($files['queries.generated.ts'])->toBe(<<<'TS'
 // This file is generated. Do not edit directly.
 
 import {defineQueries} from '@rocicorp/zero';
 
 export const queries = defineQueries({});
 TS
-        ."\n")
-        ->and($files['mutations.generated.ts'])->toBe(<<<'TS'
+                ."\n")
+            ->and($files['mutations.generated.ts'])->toBe(<<<'TS'
 // This file is generated. Do not edit directly.
 
 import {defineMutators} from '@rocicorp/zero';
 
 export const mutations = defineMutators({});
 TS
-        ."\n")
-        ->and($files['inputs.generated.ts'])->toBe(<<<'TS'
-// This file is generated. Do not edit directly.
-
-export default undefined;
-TS
-        ."\n");
+                ."\n")
+            ->and($filesystem->exists($output.'/inputs.generated.ts'))->toBeFalse()
+            ->and($filesystem->get($barrel))->not->toContain('inputs.generated');
+    } finally {
+        $filesystem->deleteDirectory($directory);
+    }
 });
 
 it('infers object argument schemas and optional defaults', function (): void {
