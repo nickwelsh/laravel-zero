@@ -45,14 +45,70 @@ final readonly class ZeroTypeScriptGenerator
 
         return [
             'files' => [
-                'context.generated.ts' => self::HEADER.$context,
-                'inputs.generated.ts' => self::HEADER."import {z} from 'zod';\n\n".$inputSource,
-                'queries.generated.ts' => self::HEADER."import {defineQueries, defineQuery} from '@rocicorp/zero';\nimport {z} from 'zod';\nimport {zql} from '{$schemaImport}';\n".$this->inputImportLine($queryOperations)."import './context.generated';\n\nexport const queries = defineQueries(".$this->renderTree($queryTree).");\n",
-                'mutations.generated.ts' => self::HEADER."import {defineMutators, defineMutator} from '@rocicorp/zero';\nimport {z} from 'zod';\n".$this->inputImportLine($mutationOperations)."import './context.generated';\n\nexport const mutations = defineMutators(".$this->renderTree($mutationTree).");\n",
+                'context.generated.ts' => $this->typescriptFile($context),
+                'inputs.generated.ts' => $this->typescriptFile($inputSource === '' ? '' : "import {z} from 'zod';\n\n".$inputSource),
+                'queries.generated.ts' => $this->typescriptFile($this->queriesFile($queryOperations, $queryTree, $schemaImport)),
+                'mutations.generated.ts' => $this->typescriptFile($this->mutationsFile($mutationOperations, $mutationTree)),
                 'manifest.generated.json' => json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)."\n",
             ],
             'notices' => $notices,
         ];
+    }
+
+    private function typescriptFile(string $source): string
+    {
+        return self::HEADER.($source === '' ? "export default undefined;\n" : $source);
+    }
+
+    /** @param array<string, Operation> $operations @param array<string, mixed> $tree */
+    private function queriesFile(array $operations, array $tree, string $schemaImport): string
+    {
+        $hasOperations = $operations !== [];
+        $imports = ['import {defineQueries'.($hasOperations ? ', defineQuery' : '')."} from '@rocicorp/zero';"];
+
+        if ($this->usesZod($operations)) {
+            $imports[] = "import {z} from 'zod';";
+        }
+        if ($hasOperations) {
+            $imports[] = "import {zql} from '{$schemaImport}';";
+            if ($inputImport = $this->inputImportLine($operations)) {
+                $imports[] = rtrim($inputImport);
+            }
+            $imports[] = "import './context.generated';";
+        }
+
+        return implode("\n", $imports)."\n\nexport const queries = defineQueries(".$this->renderTree($tree).");\n";
+    }
+
+    /** @param array<string, Operation> $operations @param array<string, mixed> $tree */
+    private function mutationsFile(array $operations, array $tree): string
+    {
+        $hasOperations = $operations !== [];
+        $imports = ['import {defineMutators'.($hasOperations ? ', defineMutator' : '')."} from '@rocicorp/zero';"];
+
+        if ($this->usesZod($operations)) {
+            $imports[] = "import {z} from 'zod';";
+        }
+        if ($hasOperations) {
+            if ($inputImport = $this->inputImportLine($operations)) {
+                $imports[] = rtrim($inputImport);
+            }
+            $imports[] = "import './context.generated';";
+        }
+
+        return implode("\n", $imports)."\n\nexport const mutations = defineMutators(".$this->renderTree($tree).");\n";
+    }
+
+    /** @param array<string, Operation> $operations */
+    private function usesZod(array $operations): bool
+    {
+        foreach ($operations as $operation) {
+            if (in_array(ArgumentShape::from($operation->method)->kind, ['scalar', 'object'], true)) {
+                return true;
+            }
+        }
+
+        return false;
     }
 
     /** @return list<string> */

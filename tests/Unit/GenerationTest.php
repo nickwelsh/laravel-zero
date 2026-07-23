@@ -19,6 +19,37 @@ it('imports the generated schema without its TypeScript extension', function ():
         ->and($files['queries.generated.ts'])->toContain("from './schema.generated';");
 });
 
+it('omits unused imports from empty generated modules', function (): void {
+    config()->set('laravel-zero.discovery.queries', []);
+    config()->set('laravel-zero.discovery.mutators', []);
+    app()->forgetInstance(ZeroRegistry::class);
+
+    $files = app(ZeroTypeScriptGenerator::class)->render()['files'];
+
+    expect($files['queries.generated.ts'])->toBe(<<<'TS'
+// This file is generated. Do not edit directly.
+
+import {defineQueries} from '@rocicorp/zero';
+
+export const queries = defineQueries({});
+TS
+        ."\n")
+        ->and($files['mutations.generated.ts'])->toBe(<<<'TS'
+// This file is generated. Do not edit directly.
+
+import {defineMutators} from '@rocicorp/zero';
+
+export const mutations = defineMutators({});
+TS
+        ."\n")
+        ->and($files['inputs.generated.ts'])->toBe(<<<'TS'
+// This file is generated. Do not edit directly.
+
+export default undefined;
+TS
+        ."\n");
+});
+
 it('infers object argument schemas and optional defaults', function (): void {
     $operation = app(ZeroRegistry::class)->query('directory.party.byIdWithArchived');
     $shape = ArgumentShape::from($operation->method);
