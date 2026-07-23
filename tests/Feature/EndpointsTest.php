@@ -19,7 +19,7 @@ it('returns structured query parse and application errors', function (): void {
 it('processes and deduplicates mutations', function (): void {
     $body = ['pushVersion' => 1, 'clientGroupID' => 'cg1', 'timestamp' => 1, 'requestID' => 'r1', 'mutations' => [[
         'type' => 'custom', 'id' => 1, 'clientID' => 'c1', 'name' => 'directory.party.create',
-        'args' => [['id' => 'p1', 'display_name' => 'Party']], 'timestamp' => 1,
+        'args' => [['id' => 'p1', 'display_name' => 'Party', 'password_confirmation' => 'Party']], 'timestamp' => 1,
     ]]];
 
     $this->postJson('/zero/mutate?schema=zero_0&appID=zero', $body)->assertOk()

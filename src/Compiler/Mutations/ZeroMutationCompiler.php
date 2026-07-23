@@ -30,7 +30,7 @@ final readonly class ZeroMutationCompiler
 
         foreach ($effectCalls as $call) {
             /** @var Expr\MethodCall $call */
-            [$model, $serverOnly] = $this->zeroMutationRoot($call);
+            [$model, $serverOnly, $ignored] = $this->zeroMutationRoot($call);
             $schema = $this->schemas->model($model);
             $verb = match ($call->name->toString()) {
                 'create' => 'insert', default => $call->name->toString()
@@ -52,13 +52,13 @@ final readonly class ZeroMutationCompiler
                         $inputClass = $shape->parameters[0]->getType()->getName();
                         $input = new $inputClass;
                         foreach (array_keys($input->rules()) as $field) {
-                            if (str_contains($field, '.') || in_array($field, $serverOnly, true)) {
+                            if (str_contains($field, '.') || in_array($field, [...$serverOnly, ...$ignored], true)) {
                                 continue;
                             }
                             try {
                                 $clientField = $schema->clientColumn($field);
                             } catch (\InvalidArgumentException) {
-                                throw $this->error($operation, $item, "Validated input field [{$field}] is not a Zero column.", 'Mark it server-only or remove it from the model write.');
+                                throw $this->error($operation, $item, "Validated input field [{$field}] is not a Zero column.", 'Mark it server-only, ignore it, or remove it from the model write.');
                             }
                             $parts[] = $clientField.': args.'.$field;
                         }
@@ -71,7 +71,7 @@ final readonly class ZeroMutationCompiler
                     throw $this->error($operation, $item, 'Mutation field names must be string literals.');
                 }
                 $serverColumn = $item->key->value;
-                if (in_array($serverColumn, $serverOnly, true)) {
+                if (in_array($serverColumn, [...$serverOnly, ...$ignored], true)) {
                     continue;
                 }
                 $parts[] = $schema->clientColumn($serverColumn).': '.$this->expression($item->value, $operation, $shape);
@@ -102,22 +102,20 @@ final readonly class ZeroMutationCompiler
         return $method;
     }
 
-    /** @return array{class-string, list<string>}|null */
+    /** @return array{class-string, list<string>, list<string>}|null */
     private function zeroMutationRoot(Expr\MethodCall $effect): ?array
     {
         $cursor = $effect->var;
         $serverOnly = [];
+        $ignored = [];
         while ($cursor instanceof Expr\MethodCall) {
-            if ($cursor->name instanceof Node\Identifier && $cursor->name->toString() === 'serverOnly') {
-                $argument = $cursor->getArgs()[0]->value ?? null;
-                if ($argument instanceof Node\Scalar\String_) {
-                    $serverOnly[] = $argument->value;
-                } elseif ($argument instanceof Expr\Array_) {
-                    foreach ($argument->items as $item) {
-                        if ($item?->value instanceof Node\Scalar\String_) {
-                            $serverOnly[] = $item->value->value;
-                        }
-                    }
+            $modifier = $cursor->name instanceof Node\Identifier ? $cursor->name->toString() : null;
+            if (in_array($modifier, ['serverOnly', 'ignore'], true)) {
+                $fields = $this->literalFields($cursor);
+                if ($modifier === 'serverOnly') {
+                    $serverOnly = [...$serverOnly, ...$fields];
+                } else {
+                    $ignored = [...$ignored, ...$fields];
                 }
             }
             $cursor = $cursor->var;
@@ -128,7 +126,30 @@ final readonly class ZeroMutationCompiler
         $class = $cursor->class;
         $model = $class instanceof Node\Name ? ($class->getAttribute('resolvedName')?->toString() ?? $class->toString()) : null;
 
-        return $model && class_exists($model) ? [$model, $serverOnly] : null;
+        return $model && class_exists($model)
+            ? [$model, array_values(array_unique($serverOnly)), array_values(array_unique($ignored))]
+            : null;
+    }
+
+    /** @return list<string> */
+    private function literalFields(Expr\MethodCall $call): array
+    {
+        $argument = $call->getArgs()[0]->value ?? null;
+        if ($argument instanceof Node\Scalar\String_) {
+            return [$argument->value];
+        }
+        if (! $argument instanceof Expr\Array_) {
+            return [];
+        }
+
+        $fields = [];
+        foreach ($argument->items as $item) {
+            if ($item?->value instanceof Node\Scalar\String_) {
+                $fields[] = $item->value->value;
+            }
+        }
+
+        return $fields;
     }
 
     private function expression(Expr $expression, Operation $operation, ArgumentShape $shape): string

@@ -22,6 +22,7 @@ final class PartyMutations implements ZeroMutations
     {
         return Party::zeroMutate()
             ->serverOnly('reference_code')
+            ->ignore('password_confirmation')
             ->create([
                 ...$input->validated(),
                 'user_id' => $context->user_id,
@@ -31,7 +32,7 @@ final class PartyMutations implements ZeroMutations
 
     public function createThenFail(TestZeroContext $context, CreatePartyInput $input): void
     {
-        Party::zeroMutate()->create([
+        Party::zeroMutate()->ignore(['password_confirmation'])->create([
             ...$input->validated(),
             'user_id' => $context->user_id,
         ]);

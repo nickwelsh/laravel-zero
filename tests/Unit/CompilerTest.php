@@ -17,11 +17,13 @@ it('compiles scalar query and context filter', function (): void {
     expect($source)->toContain('z.string()', 'zql.party.where("userId", ctx.user_id).where("id", args).one()');
 });
 
-it('compiles optimistic mutation omitting server-only field', function (): void {
+it('compiles optimistic mutation omitting server-only and ignored fields', function (): void {
     $operation = app(ZeroRegistry::class)->mutation('directory.party.create');
     $source = (new ZeroMutationCompiler(new FakeSchemaRegistry))->compile($operation);
 
-    expect($source)->toContain('id: args.id', 'displayName: args.display_name', 'userId: ctx.user_id')->not->toContain('referenceCode');
+    expect($source)
+        ->toContain('id: args.id', 'displayName: args.display_name', 'userId: ctx.user_id')
+        ->not->toContain('referenceCode', 'password_confirmation');
 });
 
 it('compiles direct relationship callbacks', function (): void {

@@ -67,6 +67,7 @@ final class PartyMutations implements ZeroMutations
     {
         return Party::zeroMutate()
             ->serverOnly('reference_code')
+            ->ignore('password_confirmation')
             ->create([
                 ...$input->validated(),
                 'user_id' => $context->user_id,
@@ -76,7 +77,7 @@ final class PartyMutations implements ZeroMutations
 }
 ```
 
-`ZeroInput` rules run through Laravel. Portable rules become Zod. Database/service rules remain server-only and appear in the generated manifest. Supported writes: create, update, upsert, delete, and sequential writes. Application writes and Zero's mutation metadata use the configured physical connection.
+`ZeroInput` rules run through Laravel. Portable rules become Zod. Database/service rules remain server-only and appear in the generated manifest. Use `serverOnly()` for values written only by the server, and `ignore()` for validated fields that should not be written by either client or server (such as password confirmations). Supported writes: create, update, upsert, delete, and sequential writes. Application writes and Zero's mutation metadata use the configured physical connection.
 
 Generate and check:
 
