@@ -27,7 +27,5 @@ return [
     ],
     'database' => [
         'connection' => null,
-        'mutation_results_table' => 'zero_mutation_results',
-        'clients_table' => 'zero_clients',
     ],
 ];

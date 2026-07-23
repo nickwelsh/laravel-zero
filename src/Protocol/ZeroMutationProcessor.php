@@ -73,9 +73,9 @@ final readonly class ZeroMutationProcessor
             try {
                 $this->connection()->transaction(function (ConnectionInterface $connection) use ($schema, $clientGroupID, $clientID, $id, $result): void {
                     $this->advance($connection, $schema, $clientGroupID, $clientID, $id);
-                    $connection->table($this->resultsTable())->insert([
-                        'upstream_schema' => $schema, 'client_group_id' => $clientGroupID, 'client_id' => $clientID,
-                        'mutation_id' => $id, 'result' => json_encode($result, JSON_THROW_ON_ERROR),
+                    $connection->table($this->metadataTable($schema, 'mutations'))->insert([
+                        'clientGroupID' => $clientGroupID, 'clientID' => $clientID,
+                        'mutationID' => $id, 'result' => json_encode($result, JSON_THROW_ON_ERROR),
                     ]);
                 });
             } catch (AlreadyProcessedMutation) {
@@ -90,32 +90,33 @@ final readonly class ZeroMutationProcessor
 
     private function advance(ConnectionInterface $connection, string $schema, string $clientGroupID, string $clientID, int $received): void
     {
-        $table = $this->clientsTable();
-        $key = ['upstream_schema' => $schema, 'client_group_id' => $clientGroupID, 'client_id' => $clientID];
-        $row = $connection->table($table)->where($key)->lockForUpdate()->first();
-        $last = (int) ($row->last_mutation_id ?? 0);
-        $expected = $last + 1;
-        if ($received < $expected) {
-            throw new AlreadyProcessedMutation("Mutation {$received} already processed; expected {$expected}.");
+        $table = $connection->table($this->metadataTable($schema, 'clients'));
+        $key = ['clientGroupID' => $clientGroupID, 'clientID' => $clientID];
+        $lastMutationID = $connection->getQueryGrammar()->wrap('lastMutationID');
+
+        $table->upsert(
+            [[...$key, 'lastMutationID' => 1]],
+            ['clientGroupID', 'clientID'],
+            ['lastMutationID' => $connection->raw("{$lastMutationID} + 1")],
+        );
+
+        $last = (int) $table->where($key)->value('lastMutationID');
+        if ($received < $last) {
+            throw new AlreadyProcessedMutation("Mutation {$received} already processed; expected {$last}.");
         }
-        if ($received > $expected) {
-            throw new OutOfOrderMutation("Client {$clientID} sent mutation ID {$received} but expected {$expected}");
-        }
-        if ($row) {
-            $connection->table($table)->where($key)->update(['last_mutation_id' => $received]);
-        } else {
-            $connection->table($table)->insert([...$key, 'last_mutation_id' => $received]);
+        if ($received > $last) {
+            throw new OutOfOrderMutation("Client {$clientID} sent mutation ID {$received} but expected {$last}");
         }
     }
 
     /** @param array<string, mixed> $args */
     private function cleanup(string $schema, string $clientGroupID, array $args): void
     {
-        $query = $this->connection()->table($this->resultsTable())->where('upstream_schema', $schema)->where('client_group_id', $clientGroupID);
+        $query = $this->connection()->table($this->metadataTable($schema, 'mutations'))->where('clientGroupID', $clientGroupID);
         if (($args['type'] ?? 'single') === 'bulk') {
-            $query->whereIn('client_id', $args['clientIDs'] ?? [])->delete();
+            $query->whereIn('clientID', $args['clientIDs'] ?? [])->delete();
         } else {
-            $query->where('client_id', $args['clientID'] ?? '')->where('mutation_id', '<=', $args['upToMutationID'] ?? 0)->delete();
+            $query->where('clientID', $args['clientID'] ?? '')->where('mutationID', '<=', $args['upToMutationID'] ?? 0)->delete();
         }
     }
 
@@ -133,13 +134,8 @@ final readonly class ZeroMutationProcessor
         return $this->database->connection(config('laravel-zero.database.connection'));
     }
 
-    private function clientsTable(): string
+    private function metadataTable(string $schema, string $table): string
     {
-        return config('laravel-zero.database.clients_table', 'zero_clients') ?: 'zero_clients';
-    }
-
-    private function resultsTable(): string
-    {
-        return config('laravel-zero.database.mutation_results_table', 'zero_mutation_results') ?: 'zero_mutation_results';
+        return "{$schema}.{$table}";
     }
 }

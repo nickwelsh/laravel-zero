@@ -22,19 +22,19 @@ it('processes and deduplicates mutations', function (): void {
         'args' => [['id' => 'p1', 'display_name' => 'Party']], 'timestamp' => 1,
     ]]];
 
-    $this->postJson('/zero/mutate?schema=public&appID=test', $body)->assertOk()
+    $this->postJson('/zero/mutate?schema=zero_0&appID=zero', $body)->assertOk()
         ->assertJsonPath('kind', 'MutateResponse')->assertJsonPath('mutations.0.id.id', 1);
     expect(Party::find('p1'))->not->toBeNull()->and(Party::find('p1')->user_id)->toBe('user-1');
-    $this->postJson('/zero/mutate?schema=public&appID=test', $body)->assertJsonPath('mutations.0.result.error', 'alreadyProcessed');
+    $this->postJson('/zero/mutate?schema=zero_0&appID=zero', $body)->assertJsonPath('mutations.0.result.error', 'alreadyProcessed');
 });
 
 it('persists application failures and advances mutation id', function (): void {
     $body = ['pushVersion' => 1, 'clientGroupID' => 'cg2', 'timestamp' => 1, 'requestID' => 'r2', 'mutations' => [[
         'type' => 'custom', 'id' => 1, 'clientID' => 'c2', 'name' => 'directory.party.create', 'args' => [['id' => 'p2']], 'timestamp' => 1,
     ]]];
-    $this->postJson('/zero/mutate?schema=public&appID=test', $body)->assertJsonPath('mutations.0.result.error', 'app');
-    $this->assertDatabaseHas('zero_clients', ['client_id' => 'c2', 'last_mutation_id' => 1]);
-    $this->assertDatabaseHas('zero_mutation_results', ['client_id' => 'c2', 'mutation_id' => 1]);
+    $this->postJson('/zero/mutate?schema=zero_0&appID=zero', $body)->assertJsonPath('mutations.0.result.error', 'app');
+    $this->assertDatabaseHas('zero_0.clients', ['clientID' => 'c2', 'lastMutationID' => 1]);
+    $this->assertDatabaseHas('zero_0.mutations', ['clientID' => 'c2', 'mutationID' => 1]);
 });
 
 it('persists authorization failures as processed application errors', function (): void {
@@ -42,9 +42,9 @@ it('persists authorization failures as processed application errors', function (
         'type' => 'custom', 'id' => 1, 'clientID' => 'auth-c', 'name' => 'directory.party.deny', 'args' => [], 'timestamp' => 1,
     ]]];
 
-    $this->postJson('/zero/mutate?schema=public&appID=test', $body)
+    $this->postJson('/zero/mutate?schema=zero_0&appID=zero', $body)
         ->assertJsonPath('mutations.0.result.error', 'app')->assertJsonPath('mutations.0.result.message', 'denied');
-    $this->assertDatabaseHas('zero_clients', ['client_id' => 'auth-c', 'last_mutation_id' => 1]);
+    $this->assertDatabaseHas('zero_0.clients', ['clientID' => 'auth-c', 'lastMutationID' => 1]);
 });
 
 it('rejects out-of-order mutations without advancing', function (): void {
@@ -53,8 +53,8 @@ it('rejects out-of-order mutations without advancing', function (): void {
         'args' => [['id' => 'p3', 'display_name' => 'Party']], 'timestamp' => 1,
     ]]];
 
-    $this->postJson('/zero/mutate?schema=public&appID=test', $body)->assertJsonPath('kind', 'PushFailed')->assertJsonPath('reason', 'oooMutation');
-    $this->assertDatabaseMissing('zero_clients', ['client_id' => 'c3']);
+    $this->postJson('/zero/mutate?schema=zero_0&appID=zero', $body)->assertJsonPath('kind', 'PushFailed')->assertJsonPath('reason', 'oooMutation');
+    $this->assertDatabaseMissing('zero_0.clients', ['clientID' => 'c3']);
 });
 
 it('rolls back writes then persists application result', function (): void {
@@ -63,9 +63,9 @@ it('rolls back writes then persists application result', function (): void {
         'args' => [['id' => 'p4', 'display_name' => 'Party']], 'timestamp' => 1,
     ]]];
 
-    $this->postJson('/zero/mutate?schema=public&appID=test', $body)->assertJsonPath('mutations.0.result.error', 'app');
+    $this->postJson('/zero/mutate?schema=zero_0&appID=zero', $body)->assertJsonPath('mutations.0.result.error', 'app');
     $this->assertDatabaseMissing('parties', ['id' => 'p4']);
-    $this->assertDatabaseHas('zero_mutation_results', ['client_id' => 'c4', 'mutation_id' => 1]);
+    $this->assertDatabaseHas('zero_0.mutations', ['clientID' => 'c4', 'mutationID' => 1]);
 });
 
 it('processes multiple writes and mutations in order', function (): void {
@@ -77,19 +77,19 @@ it('processes multiple writes and mutations in order', function (): void {
         'args' => [['id' => 'p5c', 'display_name' => 'Third']], 'timestamp' => 1,
     ]]];
 
-    $this->postJson('/zero/mutate?schema=public&appID=test', $body)->assertJsonCount(2, 'mutations');
+    $this->postJson('/zero/mutate?schema=zero_0&appID=zero', $body)->assertJsonCount(2, 'mutations');
     expect(Party::query()->orderBy('id')->pluck('id')->all())->toBe(['p5a', 'p5b', 'p5c']);
 });
 
 it('cleans acknowledged mutation results', function (): void {
-    $this->app['db']->table('zero_mutation_results')->insert([
-        'upstream_schema' => 'public', 'client_group_id' => 'cg6', 'client_id' => 'c6', 'mutation_id' => 1, 'result' => '{}',
+    $this->app['db']->table('zero_0.mutations')->insert([
+        'clientGroupID' => 'cg6', 'clientID' => 'c6', 'mutationID' => 1, 'result' => '{}',
     ]);
     $body = ['pushVersion' => 1, 'clientGroupID' => 'cg6', 'timestamp' => 1, 'requestID' => 'r6', 'mutations' => [[
         'type' => 'custom', 'id' => 99, 'clientID' => 'c6', 'name' => '_zero_cleanupResults',
         'args' => [['clientGroupID' => 'cg6', 'clientID' => 'c6', 'upToMutationID' => 1]], 'timestamp' => 1,
     ]]];
 
-    $this->postJson('/zero/mutate?schema=public&appID=test', $body)->assertJsonCount(0, 'mutations');
-    $this->assertDatabaseMissing('zero_mutation_results', ['client_id' => 'c6']);
+    $this->postJson('/zero/mutate?schema=zero_0&appID=zero', $body)->assertJsonCount(0, 'mutations');
+    $this->assertDatabaseMissing('zero_0.mutations', ['clientID' => 'c6']);
 });

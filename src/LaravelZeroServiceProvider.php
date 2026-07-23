@@ -16,16 +16,15 @@ final class LaravelZeroServiceProvider extends PackageServiceProvider
 {
     public function configurePackage(Package $package): void
     {
-        $package->name('laravel-zero')->hasConfigFile()->hasCommands([
+        $package->name('laravel-zero')->hasConfigFile('laravel-zero')->hasCommands([
             GenerateCommand::class,
             CheckCommand::class,
             ClearRegistryCommand::class,
-        ])->hasMigration('create_laravel_zero_tables');
+        ]);
     }
 
     public function packageRegistered(): void
     {
-        $this->mergeConfigFrom(__DIR__.'/../config/laravel-zero.php', 'laravel-zero');
         $this->app->singleton(ZeroSchemaRegistry::class, EloquentZeroSchemaRegistry::class);
         $this->app->singleton(ZeroRegistry::class);
         $this->app->bind(ZeroContextResolver::class, fn ($app) => $app->make(config('laravel-zero.context.resolver')));

@@ -8,9 +8,7 @@ Pinned to `@rocicorp/zero` `1.8.0`. Experimental V1 API.
 
 ```bash
 composer require nickwelsh/laravel-zero
-php artisan vendor:publish --tag=laravel-zero-config
-php artisan vendor:publish --tag=laravel-zero-migrations
-php artisan migrate
+php artisan vendor:publish --tag=zero-config
 ```
 
 Configure a readonly context and trusted request resolver:
@@ -69,7 +67,7 @@ final class PartyMutations implements ZeroMutations
 }
 ```
 
-`ZeroInput` rules run through Laravel. Portable rules become Zod. Database/service rules remain server-only and appear in the generated manifest. Supported writes: create, update, upsert, delete, and sequential writes. All writes, mutation IDs, errors, and outbox records must use the configured physical connection.
+`ZeroInput` rules run through Laravel. Portable rules become Zod. Database/service rules remain server-only and appear in the generated manifest. Supported writes: create, update, upsert, delete, and sequential writes. Application writes and Zero's mutation metadata use the configured physical connection.
 
 Generate and check:
 

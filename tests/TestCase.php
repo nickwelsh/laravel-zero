@@ -41,6 +41,8 @@ abstract class TestCase extends Orchestra
 
     private function migrateFixtureDatabase(): void
     {
+        $this->app['db']->connection()->statement('ATTACH DATABASE \':memory:\' AS "zero_0"');
+
         Schema::create('parties', function (Blueprint $table): void {
             $table->string('id')->primary();
             $table->string('user_id');
@@ -52,22 +54,19 @@ abstract class TestCase extends Orchestra
             $table->string('party_id');
             $table->boolean('is_primary');
         });
-        Schema::create('zero_clients', function (Blueprint $table): void {
-            $table->id();
-            $table->string('upstream_schema');
-            $table->string('client_group_id');
-            $table->string('client_id');
-            $table->unsignedBigInteger('last_mutation_id')->default(0);
-            $table->unique(['upstream_schema', 'client_group_id', 'client_id']);
+        Schema::create('zero_0.clients', function (Blueprint $table): void {
+            $table->string('clientGroupID');
+            $table->string('clientID');
+            $table->unsignedBigInteger('lastMutationID');
+            $table->string('userID')->nullable();
+            $table->primary(['clientGroupID', 'clientID']);
         });
-        Schema::create('zero_mutation_results', function (Blueprint $table): void {
-            $table->id();
-            $table->string('upstream_schema');
-            $table->string('client_group_id');
-            $table->string('client_id');
-            $table->unsignedBigInteger('mutation_id');
+        Schema::create('zero_0.mutations', function (Blueprint $table): void {
+            $table->string('clientGroupID');
+            $table->string('clientID');
+            $table->unsignedBigInteger('mutationID');
             $table->json('result');
-            $table->unique(['upstream_schema', 'client_group_id', 'client_id', 'mutation_id']);
+            $table->primary(['clientGroupID', 'clientID', 'mutationID']);
         });
     }
 }
