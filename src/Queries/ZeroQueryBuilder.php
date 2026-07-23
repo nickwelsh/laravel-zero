@@ -7,10 +7,19 @@ use InvalidArgumentException;
 use NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry;
 use NickWelsh\LaravelZero\Schema\ZeroModelSchema;
 use NickWelsh\LaravelZero\Schema\ZeroRelationshipSchema;
+use Stringable;
 
+/**
+ * @phpstan-type ZeroCondition array{
+ *     type: 'simple',
+ *     op: string,
+ *     left: array{type: 'column', name: string},
+ *     right: array{type: 'literal', value: mixed}
+ * }
+ */
 final class ZeroQueryBuilder
 {
-    /** @var list<array<string, mixed>> */
+    /** @var list<ZeroCondition> */
     private array $conditions = [];
 
     /** @var list<array{0: string, 1: string}> */
@@ -23,12 +32,20 @@ final class ZeroQueryBuilder
 
     private ?string $alias = null;
 
+    /** @param class-string $modelClass */
     public function __construct(private readonly ZeroSchemaRegistry $registry, private readonly string $modelClass) {}
 
     public function where(string $column, mixed $operatorOrValue, mixed $value = null): self
     {
-        $operator = func_num_args() === 2 ? '=' : strtoupper((string) $operatorOrValue);
-        $value = func_num_args() === 2 ? $operatorOrValue : $value;
+        if (func_num_args() === 2) {
+            $operator = '=';
+            $value = $operatorOrValue;
+        } else {
+            if (! is_scalar($operatorOrValue) && $operatorOrValue !== null && ! $operatorOrValue instanceof Stringable) {
+                throw new InvalidArgumentException('Unsupported Zero operator ['.get_debug_type($operatorOrValue).'].');
+            }
+            $operator = strtoupper((string) $operatorOrValue);
+        }
         $allowed = ['=', '!=', '<', '>', '<=', '>=', 'LIKE', 'NOT LIKE', 'ILIKE', 'NOT ILIKE'];
 
         if (! in_array($operator, $allowed, true)) {
@@ -95,10 +112,13 @@ final class ZeroQueryBuilder
         return $this;
     }
 
+    /** @param null|callable(self): mixed $callback */
     public function related(string $name, ?callable $callback = null): self
     {
         $relationship = $this->schema()->relationship($name);
-        $builder = new self($this->registry, $relationship->relatedModel);
+        /** @var class-string $relatedModel */
+        $relatedModel = $relationship->relatedModel;
+        $builder = new self($this->registry, $relatedModel);
         $builder->alias = $relationship->name;
         if ($callback !== null) {
             $callback($builder);
@@ -134,11 +154,16 @@ final class ZeroQueryBuilder
                 $relationship = $related['relationship'];
                 $builder = $related['builder'];
 
+                /** @var non-empty-list<string> $parentColumns */
+                $parentColumns = $relationship->parentColumns;
+                /** @var non-empty-list<string> $childColumns */
+                $childColumns = $relationship->childColumns;
+
                 return [
                     'system' => 'client',
                     'correlation' => [
-                        'parentField' => $serverNames ? $relationship->parentColumns : array_map($this->schema()->clientColumn(...), $relationship->parentColumns),
-                        'childField' => $serverNames ? $relationship->childColumns : array_map($builder->schema()->clientColumn(...), $relationship->childColumns),
+                        'parentField' => $serverNames ? $parentColumns : array_map($this->schema()->clientColumn(...), $parentColumns),
+                        'childField' => $serverNames ? $childColumns : array_map($builder->schema()->clientColumn(...), $childColumns),
                     ],
                     'subquery' => $builder->toAst($serverNames),
                 ];

@@ -1,0 +1,15 @@
+includes:
+    - vendor/larastan/larastan/extension.neon
+
+parameters:
+    level: 10
+    paths:
+        - src
+    ignoreErrors:
+        # Public extension traits are only analysed when consumed by an application.
+        -
+            identifier: trait.unused
+            path: src/Mutations/AuthorizesZeroMutations.php
+        -
+            identifier: trait.unused
+            path: src/Support/HasZero.php

@@ -10,16 +10,19 @@ use NickWelsh\LaravelZero\Compiler\Diagnostics\ZeroCompilerException;
 use NickWelsh\LaravelZero\Context\ZeroContextResolver;
 use NickWelsh\LaravelZero\Discovery\ZeroRegistry;
 use NickWelsh\LaravelZero\Queries\ZeroQueryBuilder;
+use Stringable;
 use Throwable;
+use UnexpectedValueException;
 
+/** @phpstan-type QueryRequest array{id: string, name: string, args: list<mixed>} */
 final readonly class ZeroQueryEndpoint
 {
     public function __construct(private ZeroRegistry $registry, private ZeroContextResolver $contexts) {}
 
     public function __invoke(Request $request): JsonResponse
     {
-        $payload = $request->json()->all();
-        if (! array_is_list($payload) || count($payload) !== 2 || $payload[0] !== 'transform' || ! is_array($payload[1])) {
+        $payload = $this->payload($request);
+        if (! is_array($payload) || ! array_is_list($payload) || count($payload) !== 2 || $payload[0] !== 'transform' || ! is_array($payload[1])) {
             return response()->json([
                 'kind' => 'TransformFailed',
                 'origin' => 'server',
@@ -29,6 +32,8 @@ final readonly class ZeroQueryEndpoint
             ]);
         }
         $queryIDs = [];
+        /** @var list<QueryRequest> $queries */
+        $queries = [];
         foreach ($payload[1] as $item) {
             if (is_array($item) && is_string($item['id'] ?? null)) {
                 $queryIDs[] = $item['id'];
@@ -42,18 +47,18 @@ final readonly class ZeroQueryEndpoint
                     'queryIDs' => $queryIDs,
                 ]);
             }
+            $queries[] = ['id' => $item['id'], 'name' => $item['name'], 'args' => $item['args']];
         }
         $context = $this->contexts->resolve($request);
-        $field = config('laravel-zero.context.user_id_field', 'user_id');
-        $userID = isset($context->{$field}) ? (string) $context->{$field} : null;
+        $userID = $this->userID($context);
         $responses = [];
 
-        foreach ($payload[1] as $item) {
-            $id = $item['id'] ?? '';
-            $name = $item['name'] ?? '';
+        foreach ($queries as $item) {
+            $id = $item['id'];
+            $name = $item['name'];
             try {
                 $operation = $this->registry->query($name);
-                $arguments = ArgumentShape::from($operation->method)->hydrate($item['args'] ?? []);
+                $arguments = ArgumentShape::from($operation->method)->hydrate($item['args']);
                 $result = $operation->method->invokeArgs($operation->instance(), [$context, ...$arguments]);
                 if (! $result instanceof ZeroQueryBuilder) {
                     throw new \RuntimeException('Zero query must return ZeroQueryBuilder.');
@@ -69,5 +74,31 @@ final readonly class ZeroQueryEndpoint
         }
 
         return response()->json(['kind' => 'QueryResponse', 'userID' => $userID, 'queries' => $responses]);
+    }
+
+    private function payload(Request $request): mixed
+    {
+        return $request->json()->all();
+    }
+
+    private function userID(object $context): ?string
+    {
+        $field = config('laravel-zero.context.user_id_field', 'user_id');
+
+        if (! is_string($field) || $field === '') {
+            throw new UnexpectedValueException('Zero context user ID field must be a non-empty string.');
+        }
+
+        if (! isset($context->{$field})) {
+            return null;
+        }
+
+        $value = $context->{$field};
+
+        if (! is_scalar($value) && ! $value instanceof Stringable) {
+            throw new UnexpectedValueException("Zero context user ID [{$field}] must be stringable.");
+        }
+
+        return (string) $value;
     }
 }

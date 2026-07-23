@@ -216,7 +216,10 @@ final class ZodRuleCompiler
         ]).')';
     }
 
-    /** @param list<mixed> $rules @return list<mixed> */
+    /**
+     * @param  list<mixed>  $rules
+     * @return list<mixed>
+     */
     private function expandPasswordRules(array $rules): array
     {
         $expanded = [];
@@ -263,12 +266,14 @@ final class ZodRuleCompiler
      */
     private function passwordConfiguration(Password $rule): array
     {
-        /** @var array<string, mixed> $configuration */
-        $configuration = method_exists($rule, 'appliedRules') ? $rule->appliedRules() : [];
+        $reflection = new \ReflectionClass($rule);
+        $method = $reflection->hasMethod('appliedRules') ? $reflection->getMethod('appliedRules') : null;
+        $appliedRules = $method?->isPublic() === true ? $method->invoke($rule) : null;
+        $configuration = is_array($appliedRules) ? $appliedRules : [];
 
         return [
-            'min' => (int) ($configuration['min'] ?? $this->property($rule, 'min', 8)),
-            'max' => isset($configuration['max']) ? (int) $configuration['max'] : $this->nullableInt($this->property($rule, 'max')),
+            'min' => $this->integer($configuration['min'] ?? $this->property($rule, 'min', 8)),
+            'max' => isset($configuration['max']) ? $this->integer($configuration['max']) : $this->nullableInt($this->property($rule, 'max')),
             'required' => (bool) $this->property($rule, 'required', false),
             'sometimes' => (bool) $this->property($rule, 'sometimes', false),
             'mixedCase' => (bool) ($configuration['mixedCase'] ?? $this->property($rule, 'mixedCase', false)),
@@ -276,7 +281,7 @@ final class ZodRuleCompiler
             'numbers' => (bool) ($configuration['numbers'] ?? $this->property($rule, 'numbers', false)),
             'symbols' => (bool) ($configuration['symbols'] ?? $this->property($rule, 'symbols', false)),
             'uncompromised' => (bool) ($configuration['uncompromised'] ?? $this->property($rule, 'uncompromised', false)),
-            'compromisedThreshold' => (int) ($configuration['compromisedThreshold'] ?? $this->property($rule, 'compromisedThreshold', 0)),
+            'compromisedThreshold' => $this->integer($configuration['compromisedThreshold'] ?? $this->property($rule, 'compromisedThreshold', 0)),
             'customRules' => array_values((array) ($configuration['customRules'] ?? $this->property($rule, 'customRules', []))),
         ];
     }
@@ -325,7 +330,16 @@ final class ZodRuleCompiler
 
     private function nullableInt(mixed $value): ?int
     {
-        return $value === null ? null : (int) $value;
+        return $value === null ? null : $this->integer($value);
+    }
+
+    private function integer(mixed $value): int
+    {
+        if (! is_int($value) && ! is_float($value) && ! is_string($value) && ! is_bool($value) && $value !== null) {
+            throw new \UnexpectedValueException('Expected an integer-compatible password rule value.');
+        }
+
+        return (int) $value;
     }
 
     /** @return list<mixed> */
@@ -341,7 +355,9 @@ final class ZodRuleCompiler
     /** @return array{string, ?string} */
     private function rule(mixed $rule): array
     {
-        return array_pad(explode(':', $this->name($rule), 2), 2, null);
+        $parts = explode(':', $this->name($rule), 2);
+
+        return [$parts[0], $parts[1] ?? null];
     }
 
     private function baseName(mixed $rule): string
@@ -369,6 +385,9 @@ final class ZodRuleCompiler
         $reflection = new \ReflectionClass($rule);
         $property = $reflection->getProperty('type');
         $enum = $property->getValue($rule);
+        if (! is_string($enum) || ! is_subclass_of($enum, BackedEnum::class)) {
+            throw new \UnexpectedValueException('Laravel enum validation rules must reference a backed enum.');
+        }
         $values = array_map(fn (BackedEnum $case): string => json_encode($case->value, JSON_THROW_ON_ERROR), $enum::cases());
 
         return $this->schema('z.enum', ['['.implode(', ', $values).']'], $error);

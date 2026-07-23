@@ -58,7 +58,10 @@ final readonly class FrontendScaffolder
 
     private function propsDeclaration(): string
     {
-        return match ((string) config('laravel-zero.generation.declaration_style', 'interface')) {
+        /** @var scalar|\Stringable|null $style */
+        $style = config('laravel-zero.generation.declaration_style', 'interface');
+
+        return match ((string) $style) {
             'interface' => "interface AppZeroProviderProps {\n    children?: ReactNode;\n    userId: string;\n}",
             'type' => "type AppZeroProviderProps = {\n    children?: ReactNode;\n    userId: string;\n};",
             default => throw new \InvalidArgumentException('TypeScript declaration style must be [interface] or [type].'),

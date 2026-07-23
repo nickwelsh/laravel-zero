@@ -6,7 +6,12 @@ use InvalidArgumentException;
 
 final readonly class ZeroModelSchema
 {
-    /** @param array<string, string> $columns server => client @param list<string> $primaryKey @param array<string, ZeroRelationshipSchema> $relationships */
+    /**
+     * @param  class-string  $modelClass
+     * @param  array<string, string>  $columns  server => client
+     * @param  list<string>  $primaryKey
+     * @param  array<string, ZeroRelationshipSchema>  $relationships
+     */
     public function __construct(
         public string $modelClass,
         public string $serverTable,

@@ -4,7 +4,11 @@ namespace NickWelsh\LaravelZero\Schema;
 
 final readonly class ZeroRelationshipSchema
 {
-    /** @param non-empty-list<string> $parentColumns @param non-empty-list<string> $childColumns */
+    /**
+     * @param  class-string  $relatedModel
+     * @param  non-empty-list<string>  $parentColumns
+     * @param  non-empty-list<string>  $childColumns
+     */
     public function __construct(
         public string $name,
         public string $relatedModel,

@@ -7,6 +7,7 @@ use NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape;
 use NickWelsh\LaravelZero\Compiler\Diagnostics\ZeroCompilerException;
 use NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry;
 use NickWelsh\LaravelZero\Discovery\Operation;
+use NickWelsh\LaravelZero\Inputs\ZeroInput;
 use PhpParser\Node;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Stmt;
@@ -14,6 +15,7 @@ use PhpParser\NodeFinder;
 use PhpParser\NodeTraverser;
 use PhpParser\NodeVisitor\NameResolver;
 use PhpParser\ParserFactory;
+use ReflectionNamedType;
 
 final readonly class ZeroMutationCompiler
 {
@@ -29,11 +31,18 @@ final readonly class ZeroMutationCompiler
         $effects = [];
 
         foreach ($effectCalls as $call) {
-            /** @var Expr\MethodCall $call */
-            [$model, $serverOnly, $ignored] = $this->zeroMutationRoot($call);
+            if (! $call instanceof Expr\MethodCall || ! $call->name instanceof Node\Identifier) {
+                continue;
+            }
+            $root = $this->zeroMutationRoot($call);
+            if ($root === null) {
+                continue;
+            }
+            [$model, $serverOnly, $ignored] = $root;
             $schema = $this->schemas->model($model);
-            $verb = match ($call->name->toString()) {
-                'create' => 'insert', default => $call->name->toString()
+            $name = $call->name->toString();
+            $verb = match ($name) {
+                'create' => 'insert', default => $name
             };
             $array = $call->getArgs()[0]->value ?? null;
             if (! $array instanceof Expr\Array_) {
@@ -41,15 +50,16 @@ final readonly class ZeroMutationCompiler
             }
             $parts = [];
             foreach ($array->items as $item) {
-                if (! $item) {
-                    continue;
-                }
                 if ($item->unpack) {
                     if ($item->value instanceof Expr\MethodCall && $item->value->name instanceof Node\Identifier && $item->value->name->toString() === 'validated') {
                         if ($shape->kind !== 'input') {
                             throw $this->error($operation, $item, 'validated() spread requires a ZeroInput argument.');
                         }
-                        $inputClass = $shape->parameters[0]->getType()->getName();
+                        $inputType = $shape->parameters[0]->getType();
+                        if (! $inputType instanceof ReflectionNamedType || ! is_subclass_of($inputType->getName(), ZeroInput::class)) {
+                            throw $this->error($operation, $item, 'validated() spread requires a ZeroInput argument.');
+                        }
+                        $inputClass = $inputType->getName();
                         $input = new $inputClass;
                         foreach (array_keys($input->rules()) as $field) {
                             if (str_contains($field, '.') || in_array($field, [...$serverOnly, ...$ignored], true)) {
@@ -89,7 +99,8 @@ final readonly class ZeroMutationCompiler
 
     private function method(Operation $operation): Stmt\ClassMethod
     {
-        $code = file_get_contents($operation->method->getFileName()) ?: '';
+        $filename = $operation->method->getFileName();
+        $code = $filename === false ? '' : (file_get_contents($filename) ?: '');
         $ast = (new ParserFactory)->createForNewestSupportedVersion()->parse($code) ?? [];
         $traverser = new NodeTraverser;
         $traverser->addVisitor(new NameResolver);
@@ -124,11 +135,15 @@ final readonly class ZeroMutationCompiler
             return null;
         }
         $class = $cursor->class;
-        $model = $class instanceof Node\Name ? ($class->getAttribute('resolvedName')?->toString() ?? $class->toString()) : null;
+        if (! $class instanceof Node\Name) {
+            return null;
+        }
+        $model = $this->resolvedName($class);
+        if (! class_exists($model)) {
+            return null;
+        }
 
-        return $model && class_exists($model)
-            ? [$model, array_values(array_unique($serverOnly)), array_values(array_unique($ignored))]
-            : null;
+        return [$model, array_values(array_unique($serverOnly)), array_values(array_unique($ignored))];
     }
 
     /** @return list<string> */
@@ -144,7 +159,7 @@ final readonly class ZeroMutationCompiler
 
         $fields = [];
         foreach ($argument->items as $item) {
-            if ($item?->value instanceof Node\Scalar\String_) {
+            if ($item->value instanceof Node\Scalar\String_) {
                 $fields[] = $item->value->value;
             }
         }
@@ -169,11 +184,11 @@ final readonly class ZeroMutationCompiler
             return $expression->var->name === $operation->method->getParameters()[0]->getName() ? 'ctx.'.$expression->name->toString() : 'args.'.$expression->name->toString();
         }
         if ($expression instanceof Expr\Array_) {
-            return '['.implode(', ', array_map(fn (Node\ArrayItem $item): string => $this->expression($item->value, $operation, $shape), array_filter($expression->items))).']';
+            return '['.implode(', ', array_map(fn (Node\ArrayItem $item): string => $this->expression($item->value, $operation, $shape), $expression->items)).']';
         }
-        if ($expression instanceof Expr\ClassConstFetch && $expression->name instanceof Node\Identifier) {
-            $class = $expression->class instanceof Node\Name ? ($expression->class->getAttribute('resolvedName')?->toString() ?? $expression->class->toString()) : null;
-            if ($class && enum_exists($class)) {
+        if ($expression instanceof Expr\ClassConstFetch && $expression->name instanceof Node\Identifier && $expression->class instanceof Node\Name) {
+            $class = $this->resolvedName($expression->class);
+            if (enum_exists($class)) {
                 $case = constant($class.'::'.$expression->name->toString());
                 if ($case instanceof BackedEnum) {
                     return json_encode($case->value, JSON_THROW_ON_ERROR);
@@ -184,8 +199,18 @@ final readonly class ZeroMutationCompiler
         throw $this->error($operation, $expression, 'Client mutation effect depends on a server-only value.', 'Pass it as mutation input or mark its field server-only.');
     }
 
+    private function resolvedName(Node\Name $name): string
+    {
+        $resolvedName = $name->getAttribute('resolvedName');
+
+        return $resolvedName instanceof Node\Name ? $resolvedName->toString() : $name->toString();
+    }
+
     private function error(Operation $operation, ?Node $node, string $message, ?string $suggestion = null): ZeroCompilerException
     {
-        return new ZeroCompilerException('ZERO-M102', $message, $operation->method->getFileName(), $operation->class, $operation->method->getName(), $node?->getStartLine() ?? $operation->method->getStartLine(), $suggestion);
+        $sourceFile = $operation->method->getFileName();
+        $sourceLine = $node?->getStartLine() ?? $operation->method->getStartLine();
+
+        return new ZeroCompilerException('ZERO-M102', $message, $sourceFile === false ? null : $sourceFile, $operation->class, $operation->method->getName(), $sourceLine === false ? null : $sourceLine, $suggestion);
     }
 }

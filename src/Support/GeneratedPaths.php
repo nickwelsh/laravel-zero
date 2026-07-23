@@ -6,7 +6,10 @@ final class GeneratedPaths
 {
     public static function outputDirectory(): string
     {
-        return rtrim((string) config('laravel-zero.generation.output_directory', resource_path('js/zero/generated')), '/\\');
+        /** @var scalar|\Stringable|null $directory */
+        $directory = config('laravel-zero.generation.output_directory', resource_path('js/zero/generated'));
+
+        return rtrim((string) $directory, '/\\');
     }
 
     public static function schema(): string
@@ -39,6 +42,7 @@ final class GeneratedPaths
     public static function moduleImport(string $from, string $to): string
     {
         $from = str_replace('\\', '/', dirname($from));
+        /** @var string $to */
         $to = preg_replace('/\.(?:[cm]?[jt]sx?)$/', '', str_replace('\\', '/', $to));
         $fromParts = explode('/', trim($from, '/'));
         $toParts = explode('/', trim($to, '/'));

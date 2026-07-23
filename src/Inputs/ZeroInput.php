@@ -51,6 +51,8 @@ abstract class ZeroInput
     {
         /** @var Validator $validator */
         $validator = app('validator')->make($this->raw, $this->rules(), $this->messages());
-        $this->validated = $validator->validate();
+        /** @var array<string, mixed> $validated */
+        $validated = $validator->validate();
+        $this->validated = $validated;
     }
 }

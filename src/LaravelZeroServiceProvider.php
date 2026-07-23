@@ -3,6 +3,7 @@
 namespace NickWelsh\LaravelZero;
 
 use Illuminate\Contracts\Config\Repository;
+use Illuminate\Contracts\Container\Container;
 use Illuminate\Contracts\Events\Dispatcher;
 use Illuminate\Foundation\Events\VendorTagPublished;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
@@ -38,7 +39,15 @@ final class LaravelZeroServiceProvider extends PackageServiceProvider
         $this->app->singleton(ZeroSchemaRegistry::class, EloquentZeroSchemaRegistry::class);
         $this->app->singleton(ZeroRegistry::class);
         $this->app->singleton(FrontendScaffolder::class);
-        $this->app->bind(ZeroContextResolver::class, fn ($app) => $app->make(config('laravel-zero.context.resolver')));
+        $this->app->bind(ZeroContextResolver::class, function ($app) {
+            /** @var Container $app */
+            /** @var class-string<ZeroContextResolver> $resolver */
+            $resolver = config('laravel-zero.context.resolver');
+            /** @var ZeroContextResolver $contextResolver */
+            $contextResolver = $app->make($resolver);
+
+            return $contextResolver;
+        });
     }
 
     public function packageBooted(): void
@@ -72,7 +81,9 @@ final class LaravelZeroServiceProvider extends PackageServiceProvider
             return;
         }
 
-        $prefix = trim((string) config('laravel-zero.routes.prefix', 'zero'), '/');
+        /** @var scalar|\Stringable|null $configuredPrefix */
+        $configuredPrefix = config('laravel-zero.routes.prefix', 'zero');
+        $prefix = trim((string) $configuredPrefix, '/');
         $paths = array_map(
             fn (string $endpoint): string => $prefix === '' ? $endpoint : $prefix.'/'.$endpoint,
             ['query', 'mutate'],

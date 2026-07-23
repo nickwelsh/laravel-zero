@@ -10,6 +10,7 @@ use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Support\Str;
 use NickWelsh\EloquentZero\Attributes\ZeroColumns;
 use NickWelsh\EloquentZero\Attributes\ZeroName;
+use NickWelsh\EloquentZero\Support\Casing;
 use NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry;
 use ReflectionClass;
 use ReflectionMethod;
@@ -45,11 +46,13 @@ final class EloquentZeroSchemaRegistry implements ZeroSchemaRegistry
         if (! in_array($model->getKeyName(), $columns, true)) {
             $columns[] = $model->getKeyName();
         }
+        /** @var Casing|string|null $casing */
         $casing = config('laravel-zero.generation.column_name_casing');
+        $casing = $casing instanceof Casing ? $casing->value : $casing;
         $mapped = [];
 
         foreach ($columns as $column) {
-            $mapped[$column] = match ($casing?->value ?? $casing) {
+            $mapped[$column] = match ($casing) {
                 'snake' => Str::snake($column),
                 default => Str::camel($column),
             };
@@ -60,8 +63,15 @@ final class EloquentZeroSchemaRegistry implements ZeroSchemaRegistry
         $relationships = [];
 
         foreach ($reflection->getMethods(ReflectionMethod::IS_PUBLIC) as $method) {
+            if ($method->getDeclaringClass()->getName() !== $modelClass || $method->getNumberOfParameters() !== 0) {
+                continue;
+            }
+
             $returnType = $method->getReturnType();
-            if ($method->getDeclaringClass()->getName() !== $modelClass || $method->getNumberOfParameters() !== 0 || ! $returnType instanceof \ReflectionNamedType || ! is_a($returnType->getName(), Relation::class, true)) {
+            if (! $returnType instanceof \ReflectionNamedType) {
+                continue;
+            }
+            if (! is_a($returnType->getName(), Relation::class, true)) {
                 continue;
             }
             $relation = $model->{$method->getName()}();

@@ -6,6 +6,7 @@ use ReflectionMethod;
 
 final readonly class Operation
 {
+    /** @param class-string $class */
     public function __construct(
         public string $kind,
         public string $name,
@@ -16,6 +17,12 @@ final readonly class Operation
 
     public function instance(): object
     {
-        return app($this->class);
+        $instance = app($this->class);
+
+        if (! is_object($instance)) {
+            throw new \UnexpectedValueException("Container binding [{$this->class}] must resolve to an object.");
+        }
+
+        return $instance;
     }
 }

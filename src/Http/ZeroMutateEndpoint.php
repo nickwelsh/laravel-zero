@@ -6,6 +6,8 @@ use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use NickWelsh\LaravelZero\Context\ZeroContextResolver;
 use NickWelsh\LaravelZero\Protocol\ZeroMutationProcessor;
+use Stringable;
+use UnexpectedValueException;
 
 final readonly class ZeroMutateEndpoint
 {
@@ -14,8 +16,7 @@ final readonly class ZeroMutateEndpoint
     public function __invoke(Request $request): JsonResponse
     {
         $context = $this->contexts->resolve($request);
-        $field = config('laravel-zero.context.user_id_field', 'user_id');
-        $userID = isset($context->{$field}) ? (string) $context->{$field} : null;
+        $userID = $this->userID($context);
         $schema = $request->query('schema');
         $appID = $request->query('appID');
 
@@ -35,5 +36,26 @@ final readonly class ZeroMutateEndpoint
         }
 
         return response()->json($this->processor->process($request->json()->all(), $context, $userID, $schema));
+    }
+
+    private function userID(object $context): ?string
+    {
+        $field = config('laravel-zero.context.user_id_field', 'user_id');
+
+        if (! is_string($field) || $field === '') {
+            throw new UnexpectedValueException('Zero context user ID field must be a non-empty string.');
+        }
+
+        if (! isset($context->{$field})) {
+            return null;
+        }
+
+        $value = $context->{$field};
+
+        if (! is_scalar($value) && ! $value instanceof Stringable) {
+            throw new UnexpectedValueException("Zero context user ID [{$field}] must be stringable.");
+        }
+
+        return (string) $value;
     }
 }

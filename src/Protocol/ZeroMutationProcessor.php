@@ -6,20 +6,33 @@ use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape;
 use NickWelsh\LaravelZero\Discovery\ZeroRegistry;
+use Stringable;
 use Throwable;
+use UnexpectedValueException;
+use UnitEnum;
 
 final readonly class ZeroMutationProcessor
 {
     public function __construct(private DatabaseManager $database, private ZeroRegistry $registry) {}
 
-    /** @param array<string, mixed> $body @return array<string, mixed> */
+    /**
+     * @param  array<string, mixed>  $body
+     * @return array<string, mixed>
+     */
     public function process(array $body, object $context, ?string $userID, string $schema): array
     {
-        if (($body['pushVersion'] ?? null) !== 1) {
-            return $this->failed('unsupportedPushVersion', 'Unsupported push version: '.($body['pushVersion'] ?? 'missing'), $body['mutations'] ?? []);
+        $pushVersion = $body['pushVersion'] ?? null;
+        if ($pushVersion !== 1) {
+            $version = match (true) {
+                $pushVersion === null => 'missing',
+                is_scalar($pushVersion), $pushVersion instanceof Stringable => (string) $pushVersion,
+                default => get_debug_type($pushVersion),
+            };
+
+            return $this->failed('unsupportedPushVersion', 'Unsupported push version: '.$version, $this->mutationList($body['mutations'] ?? null));
         }
         if (! isset($body['clientGroupID']) || ! is_string($body['clientGroupID']) || ! isset($body['requestID']) || ! is_string($body['requestID']) || ! is_numeric($body['timestamp'] ?? null) || ! isset($body['mutations']) || ! is_array($body['mutations'])) {
-            return $this->failed('parse', 'Invalid mutate request.', $body['mutations'] ?? []);
+            return $this->failed('parse', 'Invalid mutate request.', $this->mutationList($body['mutations'] ?? null));
         }
 
         $responses = [];
@@ -29,7 +42,9 @@ final readonly class ZeroMutationProcessor
                 return $this->failed('parse', 'Only custom mutations are supported.', array_slice($mutations, $index));
             }
             if (($mutation['name'] ?? null) === '_zero_cleanupResults') {
-                $this->cleanup($schema, $body['clientGroupID'], $mutation['args'][0] ?? []);
+                $args = $mutation['args'] ?? null;
+                $cleanupArgs = is_array($args) && isset($args[0]) && is_array($args[0]) ? $args[0] : [];
+                $this->cleanup($schema, $body['clientGroupID'], $cleanupArgs);
 
                 continue;
             }
@@ -45,7 +60,10 @@ final readonly class ZeroMutationProcessor
         return ['kind' => 'MutateResponse', 'userID' => $userID, 'mutations' => $responses];
     }
 
-    /** @param array<string, mixed> $mutation @return array<string, mixed> */
+    /**
+     * @param  array<array-key, mixed>  $mutation
+     * @return array<string, mixed>
+     */
     private function run(string $schema, string $clientGroupID, array $mutation, object $context): array
     {
         $clientID = $mutation['clientID'] ?? null;
@@ -93,6 +111,7 @@ final readonly class ZeroMutationProcessor
         $table = $connection->table($this->metadataTable($schema, 'clients'));
         $key = ['clientGroupID' => $clientGroupID, 'clientID' => $clientID];
         $grammar = $table->getGrammar();
+        /** @var non-falsy-string&literal-string $lastMutationID The grammar safely wraps both fixed identifiers. */
         $lastMutationID = $grammar->wrapTable('clients').'.'.$grammar->wrap('lastMutationID');
 
         $table->upsert(
@@ -101,7 +120,9 @@ final readonly class ZeroMutationProcessor
             ['lastMutationID' => $connection->raw("{$lastMutationID} + 1")],
         );
 
-        $last = (int) $table->where($key)->value('lastMutationID');
+        /** @var int|numeric-string $lastValue The metadata column is a non-null integer. */
+        $lastValue = $table->where($key)->value('lastMutationID');
+        $last = (int) $lastValue;
         if ($received < $last) {
             throw new AlreadyProcessedMutation("Mutation {$received} already processed; expected {$last}.");
         }
@@ -110,7 +131,7 @@ final readonly class ZeroMutationProcessor
         }
     }
 
-    /** @param array<string, mixed> $args */
+    /** @param array<array-key, mixed> $args */
     private function cleanup(string $schema, string $clientGroupID, array $args): void
     {
         $query = $this->connection()->table($this->metadataTable($schema, 'mutations'))->where('clientGroupID', $clientGroupID);
@@ -121,18 +142,32 @@ final readonly class ZeroMutationProcessor
         }
     }
 
-    /** @param list<mixed> $mutations @return array<string, mixed> */
+    /**
+     * @param  list<mixed>  $mutations
+     * @return array<string, mixed>
+     */
     private function failed(string $reason, string $message, array $mutations): array
     {
-        return ['kind' => 'PushFailed', 'origin' => 'server', 'reason' => $reason, 'message' => $message, 'mutationIDs' => array_values(array_map(
+        return ['kind' => 'PushFailed', 'origin' => 'server', 'reason' => $reason, 'message' => $message, 'mutationIDs' => array_map(
             fn (mixed $mutation): array => ['id' => is_array($mutation) ? ($mutation['id'] ?? 0) : 0, 'clientID' => is_array($mutation) ? ($mutation['clientID'] ?? '') : ''],
             $mutations,
-        ))];
+        )];
+    }
+
+    /** @return list<mixed> */
+    private function mutationList(mixed $mutations): array
+    {
+        return is_array($mutations) ? array_values($mutations) : [];
     }
 
     private function connection(): ConnectionInterface
     {
-        return $this->database->connection(config('laravel-zero.database.connection'));
+        $name = config('laravel-zero.database.connection');
+        if ($name !== null && ! is_string($name) && ! $name instanceof UnitEnum) {
+            throw new UnexpectedValueException('The Zero database connection must be a string, enum, or null.');
+        }
+
+        return $this->database->connection($name);
     }
 
     private function metadataTable(string $schema, string $table): string

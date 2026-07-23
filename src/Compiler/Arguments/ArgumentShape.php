@@ -16,7 +16,7 @@ final readonly class ArgumentShape
 
     public static function from(ReflectionMethod $method): self
     {
-        $parameters = array_values(array_slice($method->getParameters(), 1));
+        $parameters = array_slice($method->getParameters(), 1);
         if ($parameters === []) {
             return new self('none', []);
         }
@@ -42,7 +42,10 @@ final readonly class ArgumentShape
         };
     }
 
-    /** @param list<mixed> $wireArgs @return list<mixed> */
+    /**
+     * @param  list<mixed>  $wireArgs
+     * @return list<mixed>
+     */
     public function hydrate(array $wireArgs): array
     {
         $value = $wireArgs[0] ?? null;
@@ -62,7 +65,11 @@ final readonly class ArgumentShape
             throw new ZeroCompilerException('ZERO-A101', 'Expected object arguments for Zero input.');
         }
         $class = self::typeName($this->parameters[0]);
+        if (! is_subclass_of($class, ZeroInput::class)) {
+            throw new ZeroCompilerException('ZERO-A105', "Unsupported argument type [{$class}]. Use a scalar, backed enum, or ZeroInput.");
+        }
 
+        /** @var array<string, mixed> $value */
         return $class::from($value);
     }
 
@@ -92,21 +99,26 @@ final readonly class ArgumentShape
             return null;
         }
         if (is_subclass_of($type, BackedEnum::class)) {
+            if (! is_int($value) && ! is_string($value)) {
+                throw new ZeroCompilerException('ZERO-A104', "Argument [{$parameter->getName()}] must be {$type}.");
+            }
+
             return $type::from($value);
         }
-        $valid = match ($type) {
-            'string' => is_string($value),
-            'int' => is_int($value),
-            'float' => is_int($value) || is_float($value),
-            'bool' => is_bool($value),
-            'array' => is_array($value),
-            default => false,
-        };
-        if (! $valid) {
-            throw new ZeroCompilerException('ZERO-A104', "Argument [{$parameter->getName()}] must be {$type}.");
-        }
 
-        return $type === 'float' ? (float) $value : $value;
+        return match ($type) {
+            'string' => is_string($value) ? $value : self::invalidValue($parameter, $type),
+            'int' => is_int($value) ? $value : self::invalidValue($parameter, $type),
+            'float' => is_int($value) || is_float($value) ? (float) $value : self::invalidValue($parameter, $type),
+            'bool' => is_bool($value) ? $value : self::invalidValue($parameter, $type),
+            'array' => is_array($value) ? $value : self::invalidValue($parameter, $type),
+            default => self::invalidValue($parameter, $type),
+        };
+    }
+
+    private static function invalidValue(ReflectionParameter $parameter, string $type): never
+    {
+        throw new ZeroCompilerException('ZERO-A104', "Argument [{$parameter->getName()}] must be {$type}.");
     }
 
     private static function parameterZod(ReflectionParameter $parameter): string

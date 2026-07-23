@@ -58,7 +58,9 @@ final readonly class ZeroQueryCompiler
                 $relationship = $schema->relationship($relationshipName->value);
                 $rendered = json_encode($relationship->name, JSON_THROW_ON_ERROR);
                 if (isset($arguments[1])) {
-                    $rendered .= ', '.$this->relationshipCallback($arguments[1]->value, $relationship->relatedModel, $operation, $shape);
+                    /** @var class-string $relatedModel */
+                    $relatedModel = $relationship->relatedModel;
+                    $rendered .= ', '.$this->relationshipCallback($arguments[1]->value, $relatedModel, $operation, $shape);
                 }
                 $expression .= ".related({$rendered})";
 
@@ -100,6 +102,7 @@ final readonly class ZeroQueryCompiler
         return $expression;
     }
 
+    /** @param class-string $relatedModel */
     private function relationshipCallback(Expr $closure, string $relatedModel, Operation $operation, ArgumentShape $shape): string
     {
         if ($closure instanceof Expr\ArrowFunction) {
@@ -131,8 +134,9 @@ final readonly class ZeroQueryCompiler
     /** @return array{Stmt\ClassMethod, class-string, list<Expr\MethodCall>} */
     private function parse(Operation $operation): array
     {
-        $code = file_get_contents($operation->method->getFileName());
-        $ast = (new ParserFactory)->createForNewestSupportedVersion()->parse($code ?: '') ?? [];
+        $filename = $operation->method->getFileName();
+        $code = $filename === false ? '' : (file_get_contents($filename) ?: '');
+        $ast = (new ParserFactory)->createForNewestSupportedVersion()->parse($code) ?? [];
         $traverser = new NodeTraverser;
         $traverser->addVisitor(new NameResolver);
         $ast = $traverser->traverse($ast);
@@ -199,6 +203,7 @@ final readonly class ZeroQueryCompiler
         return [$cursor, $calls];
     }
 
+    /** @phpstan-assert-if-true Expr\StaticCall $expression */
     private function isZeroQueryRoot(Expr $expression): bool
     {
         return $expression instanceof Expr\StaticCall && $expression->name instanceof Node\Identifier && $expression->name->toString() === 'zeroQuery';
@@ -208,8 +213,11 @@ final readonly class ZeroQueryCompiler
     private function modelFromRoot(Expr\StaticCall $cursor, Operation $operation): string
     {
         $class = $cursor->class;
-        $model = $class instanceof Node\Name ? ($class->getAttribute('resolvedName')?->toString() ?? $class->toString()) : null;
-        if (! $model || ! class_exists($model)) {
+        if (! $class instanceof Node\Name) {
+            throw $this->error($operation, $cursor, 'Unable to resolve model class for zeroQuery().');
+        }
+        $model = $this->resolvedName($class);
+        if (! class_exists($model)) {
             throw $this->error($operation, $cursor, 'Unable to resolve model class for zeroQuery().');
         }
 
@@ -233,11 +241,11 @@ final readonly class ZeroQueryCompiler
             return $expression->var->name === $operation->method->getParameters()[0]->getName() ? 'ctx.'.$expression->name->toString() : 'args.'.$expression->name->toString();
         }
         if ($expression instanceof Expr\Array_) {
-            return '['.implode(', ', array_map(fn (Node\ArrayItem $item): string => $this->expression($item->value, $operation, $shape), array_filter($expression->items))).']';
+            return '['.implode(', ', array_map(fn (Node\ArrayItem $item): string => $this->expression($item->value, $operation, $shape), $expression->items)).']';
         }
-        if ($expression instanceof Expr\ClassConstFetch && $expression->name instanceof Node\Identifier) {
-            $class = $expression->class instanceof Node\Name ? ($expression->class->getAttribute('resolvedName')?->toString() ?? $expression->class->toString()) : null;
-            if ($class && enum_exists($class)) {
+        if ($expression instanceof Expr\ClassConstFetch && $expression->name instanceof Node\Identifier && $expression->class instanceof Node\Name) {
+            $class = $this->resolvedName($expression->class);
+            if (enum_exists($class)) {
                 $case = constant($class.'::'.$expression->name->toString());
                 if ($case instanceof BackedEnum) {
                     return json_encode($case->value, JSON_THROW_ON_ERROR);
@@ -248,8 +256,18 @@ final readonly class ZeroQueryCompiler
         throw $this->error($operation, $expression, 'Unsupported portable query expression.', 'Use an argument, context/input property, literal, array, or backed enum case.');
     }
 
+    private function resolvedName(Node\Name $name): string
+    {
+        $resolvedName = $name->getAttribute('resolvedName');
+
+        return $resolvedName instanceof Node\Name ? $resolvedName->toString() : $name->toString();
+    }
+
     private function error(Operation $operation, ?Node $node, string $message, ?string $suggestion = null): ZeroCompilerException
     {
-        return new ZeroCompilerException('ZERO-Q104', $message, $operation->method->getFileName(), $operation->class, $operation->method->getName(), $node?->getStartLine() ?? $operation->method->getStartLine(), $suggestion);
+        $sourceFile = $operation->method->getFileName();
+        $sourceLine = $node?->getStartLine() ?? $operation->method->getStartLine();
+
+        return new ZeroCompilerException('ZERO-Q104', $message, $sourceFile === false ? null : $sourceFile, $operation->class, $operation->method->getName(), $sourceLine === false ? null : $sourceLine, $suggestion);
     }
 }

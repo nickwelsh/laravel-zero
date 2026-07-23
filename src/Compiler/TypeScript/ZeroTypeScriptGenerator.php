@@ -12,7 +12,13 @@ use NickWelsh\LaravelZero\Discovery\Operation;
 use NickWelsh\LaravelZero\Discovery\ZeroRegistry;
 use NickWelsh\LaravelZero\Inputs\ZeroInput;
 use NickWelsh\LaravelZero\Support\GeneratedPaths;
+use ReflectionNamedType;
+use UnexpectedValueException;
 
+/**
+ * @phpstan-type TypeScriptTree array<string, string|array<string, mixed>>
+ * @phpstan-type ExportEntry array{path: string, source: string|null}
+ */
 final readonly class ZeroTypeScriptGenerator
 {
     private const HEADER = "// This file is generated. Do not edit directly.\n\n";
@@ -41,10 +47,15 @@ final readonly class ZeroTypeScriptGenerator
         $queryTree = $this->tree($queryOperations, fn (Operation $operation): string => $this->queries->compile($operation));
         $mutationTree = $this->tree($mutationOperations, fn (Operation $operation): string => $this->mutations->compile($operation));
         $schemaImport = GeneratedPaths::moduleImport(GeneratedPaths::outputDirectory().'/context.generated.ts', GeneratedPaths::schema());
+        $contextClass = $this->stringConfig('laravel-zero.context.class');
+        if (! class_exists($contextClass)) {
+            throw new UnexpectedValueException("Configured context class [{$contextClass}] does not exist.");
+        }
+        $declarationStyle = $this->stringConfig('laravel-zero.generation.declaration_style', 'interface');
         $context = $this->contexts->compile(
-            config('laravel-zero.context.class'),
+            $contextClass,
             $schemaImport,
-            (string) config('laravel-zero.generation.declaration_style', 'interface'),
+            $declarationStyle,
         );
         $manifest = [
             '_generated' => 'This file is generated. Do not edit directly.',
@@ -70,7 +81,10 @@ final readonly class ZeroTypeScriptGenerator
         ];
     }
 
-    /** @param array<string, Operation> $operations @param array<string, mixed> $tree */
+    /**
+     * @param  array<string, Operation>  $operations
+     * @param  TypeScriptTree  $tree
+     */
     private function queriesFile(array $operations, array $tree, string $schemaImport): string
     {
         $hasOperations = $operations !== [];
@@ -90,7 +104,10 @@ final readonly class ZeroTypeScriptGenerator
         return implode("\n", $imports)."\n\nexport const queries = defineQueries(".$this->renderTree($tree).");\n";
     }
 
-    /** @param array<string, Operation> $operations @param array<string, mixed> $tree */
+    /**
+     * @param  array<string, Operation>  $operations
+     * @param  TypeScriptTree  $tree
+     */
     private function mutationsFile(array $operations, array $tree): string
     {
         $hasOperations = $operations !== [];
@@ -136,7 +153,7 @@ final readonly class ZeroTypeScriptGenerator
         }
         foreach ($this->omittedTypeScriptFiles($rendered['files']) as $name) {
             $path = $directory.'/'.$name;
-            if ($this->files->exists($path) && str_starts_with($this->files->get($path), self::HEADER)) {
+            if ($this->files->exists($path) && str_starts_with($this->existingFileContents($path), self::HEADER)) {
                 $this->files->delete($path);
                 $changed[] = $path;
             }
@@ -148,7 +165,7 @@ final readonly class ZeroTypeScriptGenerator
         }
 
         $legacyBarrel = $directory.'/index.ts';
-        if ($legacyBarrel !== $barrel && $this->files->exists($legacyBarrel) && str_starts_with($this->files->get($legacyBarrel), self::HEADER)) {
+        if ($legacyBarrel !== $barrel && $this->files->exists($legacyBarrel) && str_starts_with($this->existingFileContents($legacyBarrel), self::HEADER)) {
             $this->files->delete($legacyBarrel);
             $changed[] = $legacyBarrel;
         }
@@ -164,7 +181,7 @@ final readonly class ZeroTypeScriptGenerator
         $stale = array_values(array_filter(array_keys($rendered['files']), fn (string $name): bool => ! $this->files->exists($directory.'/'.$name) || $this->files->get($directory.'/'.$name) !== $rendered['files'][$name]));
         foreach ($this->omittedTypeScriptFiles($rendered['files']) as $name) {
             $path = $directory.'/'.$name;
-            if ($this->files->exists($path) && str_starts_with($this->files->get($path), self::HEADER)) {
+            if ($this->files->exists($path) && str_starts_with($this->existingFileContents($path), self::HEADER)) {
                 $stale[] = $name;
             }
         }
@@ -181,6 +198,7 @@ final readonly class ZeroTypeScriptGenerator
     {
         $barrel = GeneratedPaths::barrel();
         $directory = GeneratedPaths::outputDirectory();
+        /** @var list<ExportEntry> $exports */
         $exports = array_map(
             fn (string $name): array => ['path' => $directory.'/'.$name, 'source' => $files[$name]],
             array_values(array_filter(self::TYPESCRIPT_FILES, fn (string $name): bool => isset($files[$name]))),
@@ -201,7 +219,12 @@ final readonly class ZeroTypeScriptGenerator
 
     private function fileContents(string $path): ?string
     {
-        return $this->files->exists($path) ? $this->files->get($path) : null;
+        return $this->files->exists($path) ? $this->existingFileContents($path) : null;
+    }
+
+    private function existingFileContents(string $path): string
+    {
+        return $this->files->get($path);
     }
 
     private function hasOnlyTypeExports(?string $source): bool
@@ -213,7 +236,10 @@ final readonly class ZeroTypeScriptGenerator
         return preg_match('/^[\\t ]*export[\\t ]+(?!(?:type|interface)\\b)/m', $source) !== 1;
     }
 
-    /** @param array<string, string> $files @return list<string> */
+    /**
+     * @param  array<string, string>  $files
+     * @return list<string>
+     */
     private function omittedTypeScriptFiles(array $files): array
     {
         return array_values(array_filter(self::TYPESCRIPT_FILES, fn (string $name): bool => ! isset($files[$name])));
@@ -231,7 +257,10 @@ final readonly class ZeroTypeScriptGenerator
         return true;
     }
 
-    /** @param array<string, Operation> $operations @return array{string, array<string, list<string>>} */
+    /**
+     * @param  array<string, Operation>  $operations
+     * @return array{string, array<string, list<string>>}
+     */
     private function inputs(array $operations): array
     {
         $compiler = new ZodRuleCompiler;
@@ -241,7 +270,7 @@ final readonly class ZeroTypeScriptGenerator
             if ($shape->kind !== 'input') {
                 continue;
             }
-            $class = $shape->parameters[0]->getType()->getName();
+            $class = $this->inputClass($shape);
             if (isset($schemas[$class])) {
                 continue;
             }
@@ -262,7 +291,7 @@ final readonly class ZeroTypeScriptGenerator
         foreach ($operations as $operation) {
             $shape = ArgumentShape::from($operation->method);
             if ($shape->kind === 'input') {
-                $names[] = lcfirst(class_basename($shape->parameters[0]->getType()->getName())).'Schema';
+                $names[] = lcfirst(class_basename($this->inputClass($shape))).'Schema';
             }
         }
         sort($names);
@@ -278,25 +307,49 @@ final readonly class ZeroTypeScriptGenerator
         return $imports === '' ? '' : "import {{$imports}} from './inputs.generated';\n";
     }
 
-    /** @param array<string, Operation> $operations @return array<string, mixed> */
+    /**
+     * @param  array<string, Operation>  $operations
+     * @param  callable(Operation): string  $compile
+     * @return TypeScriptTree
+     */
     private function tree(array $operations, callable $compile): array
     {
+        /** @var TypeScriptTree $tree */
         $tree = [];
         foreach ($operations as $name => $operation) {
-            $cursor = &$tree;
-            $parts = explode('.', $name);
-            $leaf = array_pop($parts);
-            foreach ($parts as $part) {
-                $cursor = &$cursor[$part];
-            }
-            $cursor[$leaf] = $compile($operation);
-            unset($cursor);
+            $tree = $this->appendToTree($tree, explode('.', $name), $compile($operation));
         }
 
         return $tree;
     }
 
-    /** @param array<string, mixed> $tree */
+    /**
+     * @param  TypeScriptTree  $tree
+     * @param  list<string>  $parts
+     * @return TypeScriptTree
+     */
+    private function appendToTree(array $tree, array $parts, string $source): array
+    {
+        $part = array_shift($parts);
+        if ($part === null) {
+            throw new UnexpectedValueException('Operation names must not be empty.');
+        }
+        if ($parts === []) {
+            $tree[$part] = $source;
+
+            return $tree;
+        }
+
+        $branch = $tree[$part] ?? [];
+        if (! is_array($branch)) {
+            throw new UnexpectedValueException("Operation namespace [{$part}] conflicts with an operation.");
+        }
+        $tree[$part] = $this->appendToTree($this->treeBranch($branch), $parts, $source);
+
+        return $tree;
+    }
+
+    /** @param TypeScriptTree $tree */
     private function renderTree(array $tree, int $depth = 0): string
     {
         if ($tree === []) {
@@ -306,11 +359,53 @@ final readonly class ZeroTypeScriptGenerator
         $lines = [];
         foreach ($tree as $key => $value) {
             $rendered = is_array($value)
-                ? $this->renderTree($value, $depth + 1)
+                ? $this->renderTree($this->treeBranch($value), $depth + 1)
                 : str_replace("\n", "\n{$indent}", $value);
             $lines[] = $indent.$key.': '.$rendered.',';
         }
 
         return "{\n".implode("\n", $lines)."\n".str_repeat('  ', $depth).'}';
+    }
+
+    /**
+     * @param  array<array-key, mixed>  $branch
+     * @return TypeScriptTree
+     */
+    private function treeBranch(array $branch): array
+    {
+        foreach ($branch as $key => $value) {
+            if (! is_string($key) || (! is_string($value) && ! is_array($value))) {
+                throw new UnexpectedValueException('Operation trees may only contain named branches and compiled operations.');
+            }
+        }
+
+        /** @var TypeScriptTree $branch */
+        return $branch;
+    }
+
+    /** @return class-string<ZeroInput> */
+    private function inputClass(ArgumentShape $shape): string
+    {
+        $type = $shape->parameters[0]->getType();
+        if (! $type instanceof ReflectionNamedType) {
+            throw new UnexpectedValueException('Zero input parameters must have one named type.');
+        }
+
+        $class = $type->getName();
+        if (! is_a($class, ZeroInput::class, true)) {
+            throw new UnexpectedValueException("Expected [{$class}] to extend ".ZeroInput::class.'.');
+        }
+
+        return $class;
+    }
+
+    private function stringConfig(string $key, ?string $default = null): string
+    {
+        $value = config($key, $default);
+        if (! is_string($value)) {
+            throw new UnexpectedValueException("Configuration [{$key}] must be a string.");
+        }
+
+        return $value;
     }
 }

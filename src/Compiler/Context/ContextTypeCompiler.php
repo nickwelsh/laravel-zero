@@ -8,6 +8,7 @@ use ReflectionNamedType;
 
 final class ContextTypeCompiler
 {
+    /** @param class-string $class */
     public function compile(string $class, string $schemaImport = './schema.generated', string $declarationStyle = 'interface'): string
     {
         $reflection = new ReflectionClass($class);
