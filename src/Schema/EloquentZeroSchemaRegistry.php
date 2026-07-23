@@ -45,7 +45,7 @@ final class EloquentZeroSchemaRegistry implements ZeroSchemaRegistry
         if (! in_array($model->getKeyName(), $columns, true)) {
             $columns[] = $model->getKeyName();
         }
-        $casing = config('eloquent-zero.column_name_casing');
+        $casing = config('laravel-zero.generation.column_name_casing');
         $mapped = [];
 
         foreach ($columns as $column) {

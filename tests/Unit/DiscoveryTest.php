@@ -11,8 +11,19 @@ it('discovers deterministic names', function (): void {
     ]);
 });
 
+it('discovers queries and mutators from their own directories', function (): void {
+    config()->set('laravel-zero.discovery.queries', []);
+    config()->set('laravel-zero.discovery.mutators', [__DIR__.'/../Fixtures/Zero']);
+    app()->forgetInstance(ZeroRegistry::class);
+
+    $registry = app(ZeroRegistry::class);
+
+    expect($registry->queries())->toBe([])
+        ->and($registry->mutations())->not->toBeEmpty();
+});
+
 it('reports both duplicate operation locations', function (): void {
-    config()->set('laravel-zero.discovery.directories', [__DIR__.'/../Fixtures/DuplicateZero']);
+    config()->set('laravel-zero.discovery.queries', [__DIR__.'/../Fixtures/DuplicateZero']);
     app()->forgetInstance(ZeroRegistry::class);
 
     try {

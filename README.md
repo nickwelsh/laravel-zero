@@ -8,27 +8,36 @@ Pinned to `@rocicorp/zero` `1.8.0`. Experimental V1 API.
 
 ```bash
 composer require nickwelsh/laravel-zero
-php artisan vendor:publish --tag=zero-config
+php artisan vendor:publish --tag=zero
 ```
 
-Configure a readonly context and trusted request resolver:
+The `zero` tag publishes the package config and creates `app/Zero/ZeroContext.php` and `app/Zero/ContextResolver.php`. With the default React frontend config, it also creates `resources/js/zero/provider.tsx` and adds any missing Zero URL exports to `resources/js/globals.ts`. Existing providers and global declarations are never replaced.
+
+You can publish only part of the setup when needed:
+
+```bash
+php artisan vendor:publish --tag=zero-config
+php artisan vendor:publish --tag=zero-context
+```
+
+The generated provider accepts `userId` as a prop and includes a memoized context ready to customize for your application. Routes default to authenticated `POST /zero/query` and `POST /zero/mutate`.
+
+## Configuration
+
+Queries and mutators have independent discovery paths:
 
 ```php
-final readonly class ZeroContext
-{
-    public function __construct(public string $user_id) {}
-}
-
-final class ContextResolver implements \NickWelsh\LaravelZero\Context\ZeroContextResolver
-{
-    public function resolve(Request $request): object
-    {
-        return new ZeroContext((string) $request->user()->getAuthIdentifier());
-    }
-}
+'discovery' => [
+    'queries' => [app_path('Zero/Queries')],
+    'mutators' => [app_path('Zero/Mutators')],
+],
 ```
 
-Set both classes in `config/laravel-zero.php`. Routes default to authenticated `POST /zero/query` and `POST /zero/mutate`.
+`config/laravel-zero.php` also owns all Eloquent Zero model discovery, schema naming, connection, and publication settings. Laravel Zero mirrors those values into Eloquent Zero, so there is no second config file to publish or maintain.
+
+The configured query and mutate routes are automatically excluded from CSRF validation. This follows `routes.prefix` and can be disabled by setting `routes.except_from_csrf` to `false`.
+
+Frontend scaffolding defaults to React. Set `frontend.framework` to `null` to disable it. When `frontend.use_globals` is `false`, the generated provider reads `import.meta.env` directly instead of creating or updating `globals.ts`.
 
 ## Query
 

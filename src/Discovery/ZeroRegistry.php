@@ -63,8 +63,10 @@ final class ZeroRegistry
         }
 
         $before = get_declared_classes();
+        $queryFiles = $this->files('queries');
+        $mutatorFiles = $this->files('mutators');
 
-        foreach ($this->files() as $file) {
+        foreach (array_unique([...$queryFiles, ...$mutatorFiles]) as $file) {
             require_once $file;
         }
 
@@ -83,15 +85,15 @@ final class ZeroRegistry
             $reflection = new ReflectionClass($class);
             $file = $reflection->getFileName();
 
-            if (! $file || ! $this->isDiscoveredFile($file)) {
+            if (! $file) {
                 continue;
             }
 
-            if ($reflection->implementsInterface(ZeroQueries::class)) {
+            if (in_array(realpath($file), $queryFiles, true) && $reflection->implementsInterface(ZeroQueries::class)) {
                 $this->addCollection($reflection, ZeroQueryCollection::class, 'query', $queries);
             }
 
-            if ($reflection->implementsInterface(ZeroMutations::class)) {
+            if (in_array(realpath($file), $mutatorFiles, true) && $reflection->implementsInterface(ZeroMutations::class)) {
                 $this->addCollection($reflection, ZeroMutationCollection::class, 'mutation', $mutations);
             }
         }
@@ -167,11 +169,16 @@ final class ZeroRegistry
     }
 
     /** @return list<string> */
-    private function files(): array
+    private function files(string $kind): array
     {
         $files = [];
+        $patterns = config("laravel-zero.discovery.{$kind}");
 
-        foreach (config('laravel-zero.discovery.directories', []) as $pattern) {
+        if (! is_array($patterns)) {
+            $patterns = config('laravel-zero.discovery.directories', []);
+        }
+
+        foreach ($patterns as $pattern) {
             $directories = glob($pattern, GLOB_ONLYDIR) ?: [];
             if (is_dir($pattern)) {
                 $directories[] = $pattern;
@@ -188,11 +195,6 @@ final class ZeroRegistry
         sort($files);
 
         return array_values(array_unique($files));
-    }
-
-    private function isDiscoveredFile(string $file): bool
-    {
-        return in_array(realpath($file), $this->files(), true);
     }
 
     /** @param array<string, Operation> $operations @return list<array{kind: string, name: string, prefix: string, class: string, method: string}> */

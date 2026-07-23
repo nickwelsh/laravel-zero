@@ -25,7 +25,8 @@ abstract class TestCase extends Orchestra
         $app['config']->set('database.connections.testing', ['driver' => 'sqlite', 'database' => ':memory:', 'prefix' => '']);
         $app['config']->set('laravel-zero.context.class', TestZeroContext::class);
         $app['config']->set('laravel-zero.context.resolver', FakeContextResolver::class);
-        $app['config']->set('laravel-zero.discovery.directories', [__DIR__.'/Fixtures/Zero']);
+        $app['config']->set('laravel-zero.discovery.queries', [__DIR__.'/Fixtures/Zero']);
+        $app['config']->set('laravel-zero.discovery.mutators', [__DIR__.'/Fixtures/Zero']);
         $app['config']->set('laravel-zero.routes.middleware', []);
         $app['config']->set('laravel-zero.generation.output_directory', __DIR__.'/types/generated');
         $app['config']->set('laravel-zero.generation.generate_schema', false);

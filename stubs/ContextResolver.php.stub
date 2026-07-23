@@ -1,0 +1,14 @@
+<?php
+
+namespace App\Zero;
+
+use Illuminate\Http\Request;
+use NickWelsh\LaravelZero\Context\ZeroContextResolver;
+
+final class ContextResolver implements ZeroContextResolver
+{
+    public function resolve(Request $request): object
+    {
+        return new ZeroContext((string) $request->user()->getAuthIdentifier());
+    }
+}
