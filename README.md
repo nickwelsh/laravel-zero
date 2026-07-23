@@ -101,7 +101,15 @@ php artisan zero:check
 php artisan zero:clear
 ```
 
-`zero:generate` optionally delegates schema generation to `eloquent-zero`, then writes deterministic files under `resources/js/zero/generated`, including `schema.generated.ts` and `provider.generated.tsx`. It regenerates the provider, adds only missing Zero URL globals, and writes `resources/js/zero/index.ts` as the public barrel. Every generated TypeScript file includes a do-not-edit banner.
+`zero:generate` optionally delegates schema generation to `eloquent-zero`, then writes deterministic files under `resources/js/zero/generated`, including `schema.generated.ts` and `provider.generated.tsx`. It regenerates the provider, adds only missing Zero URL globals, and writes `resources/js/zero/index.ts` as the public barrel. Every generated TypeScript file includes a do-not-edit banner. Type-only modules use `export type *` in the barrel.
+
+Laravel Zero emits interfaces by default. Set `generation.declaration_style` to `type` to use type aliases for generated context and React provider declarations:
+
+```php
+'generation' => [
+    'declaration_style' => 'type',
+],
+```
 
 ## Portable PHP subset
 

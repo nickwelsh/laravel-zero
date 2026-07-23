@@ -8,7 +8,7 @@ use ReflectionNamedType;
 
 final class ContextTypeCompiler
 {
-    public function compile(string $class, string $schemaImport = './schema.generated'): string
+    public function compile(string $class, string $schemaImport = './schema.generated', string $declarationStyle = 'interface'): string
     {
         $reflection = new ReflectionClass($class);
         $constructor = $reflection->getConstructor();
@@ -35,6 +35,12 @@ final class ContextTypeCompiler
             $fields[] = "  readonly {$parameter->getName()}: {$ts};";
         }
 
-        return "import type {Schema} from '{$schemaImport}';\n\nexport type ZeroContext = {\n".implode("\n", $fields)."\n};\n\ndeclare module '@rocicorp/zero' {\n  interface DefaultTypes {\n    context: ZeroContext;\n    schema: Schema;\n  }\n}\n";
+        $context = match ($declarationStyle) {
+            'interface' => "export interface ZeroContext {\n".implode("\n", $fields)."\n}",
+            'type' => "export type ZeroContext = {\n".implode("\n", $fields)."\n};",
+            default => throw new ZeroCompilerException('ZERO-C103', "Unsupported TypeScript declaration style [{$declarationStyle}]. Use [interface] or [type]."),
+        };
+
+        return "import type {Schema} from '{$schemaImport}';\n\n{$context}\n\ndeclare module '@rocicorp/zero' {\n  interface DefaultTypes {\n    context: ZeroContext;\n    schema: Schema;\n  }\n}\n";
     }
 }

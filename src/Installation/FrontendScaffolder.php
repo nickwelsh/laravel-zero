@@ -30,11 +30,12 @@ final readonly class FrontendScaffolder
             ? __DIR__.'/../../stubs/react/provider.globals.tsx.stub'
             : __DIR__.'/../../stubs/react/provider.tsx.stub';
         $provider = self::HEADER.str_replace(
-            ['{{ context_import }}', '{{ mutations_import }}', '{{ schema_import }}'],
+            ['{{ context_import }}', '{{ mutations_import }}', '{{ schema_import }}', '{{ props_declaration }}'],
             [
                 GeneratedPaths::moduleImport($providerPath, GeneratedPaths::outputDirectory().'/context.generated.ts'),
                 GeneratedPaths::moduleImport($providerPath, GeneratedPaths::outputDirectory().'/mutations.generated.ts'),
                 GeneratedPaths::moduleImport($providerPath, GeneratedPaths::schema()),
+                $this->propsDeclaration(),
             ],
             $this->files->get($stub),
         );
@@ -53,6 +54,15 @@ final readonly class FrontendScaffolder
         }
 
         return $changed;
+    }
+
+    private function propsDeclaration(): string
+    {
+        return match ((string) config('laravel-zero.generation.declaration_style', 'interface')) {
+            'interface' => "interface AppZeroProviderProps {\n    children?: ReactNode;\n    userId: string;\n}",
+            'type' => "type AppZeroProviderProps = {\n    children?: ReactNode;\n    userId: string;\n};",
+            default => throw new \InvalidArgumentException('TypeScript declaration style must be [interface] or [type].'),
+        };
     }
 
     private function appendMissingGlobals(string $path): bool

@@ -59,7 +59,9 @@ export const mutations = defineMutators({});
 TS
                 ."\n")
             ->and($filesystem->exists($output.'/inputs.generated.ts'))->toBeFalse()
-            ->and($filesystem->get($barrel))->not->toContain('inputs.generated');
+            ->and($filesystem->get($barrel))
+            ->toContain("export type * from './generated/context.generated';")
+            ->not->toContain('inputs.generated');
     } finally {
         $filesystem->deleteDirectory($directory);
     }
@@ -77,7 +79,19 @@ it('infers object argument schemas and optional defaults', function (): void {
 it('generates readonly nullable context fields and Zero registration', function (): void {
     $source = (new ContextTypeCompiler)->compile(TestZeroContext::class);
 
-    expect($source)->toContain('readonly user_id: string;', 'readonly tenant_id: string | null;', 'schema: Schema;', 'context: ZeroContext;');
+    expect($source)
+        ->toContain('export interface ZeroContext {', 'readonly user_id: string;', 'readonly tenant_id: string | null;', 'schema: Schema;', 'context: ZeroContext;')
+        ->not->toContain('export type ZeroContext');
+});
+
+it('can emit context types as type aliases', function (): void {
+    config()->set('laravel-zero.generation.declaration_style', 'type');
+
+    $source = app(ZeroTypeScriptGenerator::class)->render()['files']['context.generated.ts'];
+
+    expect($source)
+        ->toContain('export type ZeroContext = {')
+        ->not->toContain('export interface ZeroContext');
 });
 
 it('maps portable validation to Zod 4 and reports server-only rules', function (): void {

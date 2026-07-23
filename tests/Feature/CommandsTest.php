@@ -114,7 +114,7 @@ it('regenerates the React provider and appends only missing globals', function (
         $globalContents = $files->get($globals);
 
         expect($changed)->toBe([$provider, $globals])
-            ->and($files->get($provider))->toContain("from '@/globals'", 'useMemo<ZeroContext>')
+            ->and($files->get($provider))->toContain("from '@/globals'", 'useMemo<ZeroContext>', 'interface AppZeroProviderProps')
             ->and($globalContents)->toContain("ZERO_CACHE_URL = 'custom'", 'VITE_ZERO_MUTATE_URL', 'VITE_ZERO_QUERY_URL')
             ->and(substr_count($globalContents, 'export const ZERO_CACHE_URL ='))->toBe(1)
             ->and(substr_count($globalContents, 'export const ZERO_MUTATE_URL ='))->toBe(1)
@@ -143,9 +143,10 @@ it('scaffolds a React provider without globals when configured', function (): vo
             'use_globals' => false,
             'globals_path' => $globals,
         ]);
+        config()->set('laravel-zero.generation.declaration_style', 'type');
 
         expect(app(FrontendScaffolder::class)->scaffold())->toBe([$provider])
-            ->and($files->get($provider))->toContain('import.meta.env.VITE_ZERO_CACHE_URL')
+            ->and($files->get($provider))->toContain('import.meta.env.VITE_ZERO_CACHE_URL', 'type AppZeroProviderProps = {')
             ->and($files->exists($globals))->toBeFalse();
     } finally {
         $files->deleteDirectory($directory);

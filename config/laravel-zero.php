@@ -29,6 +29,7 @@ return [
         'barrel_path' => resource_path('js/zero/index.ts'),
         'generate_schema' => true,
         'schema_path' => resource_path('js/zero/generated/schema.generated.ts'),
+        'declaration_style' => 'interface',
         'mode' => Mode::OptOut,
         'model_search_directories' => [app_path('Models')],
         'models' => [],

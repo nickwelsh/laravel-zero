@@ -41,7 +41,11 @@ final readonly class ZeroTypeScriptGenerator
         $queryTree = $this->tree($queryOperations, fn (Operation $operation): string => $this->queries->compile($operation));
         $mutationTree = $this->tree($mutationOperations, fn (Operation $operation): string => $this->mutations->compile($operation));
         $schemaImport = GeneratedPaths::moduleImport(GeneratedPaths::outputDirectory().'/context.generated.ts', GeneratedPaths::schema());
-        $context = $this->contexts->compile(config('laravel-zero.context.class'), $schemaImport);
+        $context = $this->contexts->compile(
+            config('laravel-zero.context.class'),
+            $schemaImport,
+            (string) config('laravel-zero.generation.declaration_style', 'interface'),
+        );
         $manifest = [
             '_generated' => 'This file is generated. Do not edit directly.',
             'zeroVersion' => config('laravel-zero.zero_version', '1.8.0') ?: '1.8.0',
@@ -178,19 +182,35 @@ final readonly class ZeroTypeScriptGenerator
         $barrel = GeneratedPaths::barrel();
         $directory = GeneratedPaths::outputDirectory();
         $exports = array_map(
-            fn (string $name): string => $directory.'/'.$name,
+            fn (string $name): array => ['path' => $directory.'/'.$name, 'source' => $files[$name]],
             array_values(array_filter(self::TYPESCRIPT_FILES, fn (string $name): bool => isset($files[$name]))),
         );
-        $exports[] = GeneratedPaths::schema();
+        $schema = GeneratedPaths::schema();
+        $exports[] = ['path' => $schema, 'source' => $this->fileContents($schema)];
 
         if (config('laravel-zero.frontend.framework', 'react') === 'react') {
-            $exports[] = GeneratedPaths::provider();
+            $provider = GeneratedPaths::provider();
+            $exports[] = ['path' => $provider, 'source' => $this->fileContents($provider)];
         }
 
         return self::HEADER.implode("\n", array_map(
-            fn (string $path): string => "export * from '".GeneratedPaths::moduleImport($barrel, $path)."';",
+            fn (array $export): string => ($this->hasOnlyTypeExports($export['source']) ? 'export type *' : 'export *')." from '".GeneratedPaths::moduleImport($barrel, $export['path'])."';",
             $exports,
         ))."\n";
+    }
+
+    private function fileContents(string $path): ?string
+    {
+        return $this->files->exists($path) ? $this->files->get($path) : null;
+    }
+
+    private function hasOnlyTypeExports(?string $source): bool
+    {
+        if ($source === null || preg_match('/^[\\t ]*export[\\t ]+(?:type|interface)\\b/m', $source) !== 1) {
+            return false;
+        }
+
+        return preg_match('/^[\\t ]*export[\\t ]+(?!(?:type|interface)\\b)/m', $source) !== 1;
     }
 
     /** @param array<string, string> $files @return list<string> */
