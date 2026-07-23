@@ -16,6 +16,12 @@ abstract class ZeroInput
     /** @return array<string, mixed> */
     abstract public function rules(): array;
 
+    /** @return array<string, string> */
+    public function messages(): array
+    {
+        return [];
+    }
+
     /** @param array<string, mixed> $raw */
     public static function from(array $raw): static
     {
@@ -44,7 +50,7 @@ abstract class ZeroInput
     private function validate(): void
     {
         /** @var Validator $validator */
-        $validator = app('validator')->make($this->raw, $this->rules());
+        $validator = app('validator')->make($this->raw, $this->rules(), $this->messages());
         $this->validated = $validator->validate();
     }
 }

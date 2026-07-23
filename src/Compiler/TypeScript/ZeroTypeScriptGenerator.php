@@ -148,7 +148,7 @@ final readonly class ZeroTypeScriptGenerator
             /** @var ZeroInput $input */
             $input = new $class;
             $name = lcfirst(class_basename($class)).'Schema';
-            $schemas[$class] = "export const {$name} = ".$compiler->object($input->rules(), class_basename($class)).';';
+            $schemas[$class] = "export const {$name} = ".$compiler->object($input->rules(), class_basename($class), $input->messages()).';';
         }
         ksort($schemas);
 

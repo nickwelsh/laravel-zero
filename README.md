@@ -77,7 +77,19 @@ final class PartyMutations implements ZeroMutations
 }
 ```
 
-`ZeroInput` rules run through Laravel. Portable rules become Zod. Database/service rules remain server-only and appear in the generated manifest. Use `serverOnly()` for values written only by the server, and `ignore()` for validated fields that should not be written by either client or server (such as password confirmations). Supported writes: create, update, upsert, delete, and sequential writes. Application writes and Zero's mutation metadata use the configured physical connection.
+`ZeroInput` rules run through Laravel. Portable rules become Zod 4 schemas, including object-level `confirmed` and `same` refinements. Database/service rules remain server-only and appear in the generated manifest. Override `messages()` on an input with Laravel-style `field.rule` keys to share custom validation messages between Laravel and generated Zod schemas:
+
+```php
+public function messages(): array
+{
+    return [
+        'password.confirmed' => 'The passwords do not match.',
+        'email.email' => 'Enter a valid email address.',
+    ];
+}
+```
+
+Use `serverOnly()` for values written only by the server, and `ignore()` for validated fields that should not be written by either client or server (such as password confirmations). Supported writes: create, update, upsert, delete, and sequential writes. Application writes and Zero's mutation metadata use the configured physical connection.
 
 Generate and check:
 

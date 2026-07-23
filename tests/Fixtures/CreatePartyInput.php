@@ -15,4 +15,11 @@ final class CreatePartyInput extends ZeroMutationInput
             'reference_code' => ['sometimes', 'unique:parties,reference_code'],
         ];
     }
+
+    public function messages(): array
+    {
+        return [
+            'password_confirmation.same' => 'The confirmation does not match the display name.',
+        ];
+    }
 }

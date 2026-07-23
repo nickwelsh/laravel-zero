@@ -13,9 +13,6 @@
         "directory.party.deny"
     ],
     "serverOnlyValidationRules": {
-        "CreatePartyInput.password_confirmation": [
-            "same:display_name"
-        ],
         "CreatePartyInput.reference_code": [
             "unique:parties,reference_code"
         ]
