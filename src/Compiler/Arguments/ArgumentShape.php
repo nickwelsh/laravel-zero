@@ -29,20 +29,6 @@ final readonly class ArgumentShape
         return new self(count($parameters) === 1 ? 'scalar' : 'object', $parameters);
     }
 
-    public function zod(): ?string
-    {
-        return match ($this->kind) {
-            'none' => null,
-            'input' => lcfirst(class_basename(self::typeName($this->parameters[0]))).'Schema',
-            'scalar' => self::parameterZod($this->parameters[0]),
-            'object' => 'z.object({'.implode(', ', array_map(
-                fn (ReflectionParameter $parameter): string => $parameter->getName().': '.self::parameterZod($parameter),
-                $this->parameters,
-            )).'})',
-            default => throw new ZeroCompilerException('ZERO-A100', "Unsupported argument shape [{$this->kind}]."),
-        };
-    }
-
     /**
      * @param  list<mixed>  $wireArgs
      * @return list<mixed>
@@ -124,37 +110,6 @@ final readonly class ArgumentShape
     private static function invalidValue(ReflectionParameter $parameter, string $type): never
     {
         throw new ZeroCompilerException('ZERO-A104', "Argument [{$parameter->getName()}] must be {$type}.");
-    }
-
-    private static function parameterZod(ReflectionParameter $parameter): string
-    {
-        $type = self::typeName($parameter);
-        $zod = match ($type) {
-            'string' => 'z.string()',
-            'int' => 'z.number().int()',
-            'float' => 'z.number()',
-            'bool' => 'z.boolean()',
-            'array' => 'z.array(z.unknown())',
-            default => self::enumZod($type),
-        };
-        if ($parameter->allowsNull()) {
-            $zod .= '.nullable()';
-        }
-        if ($parameter->isOptional()) {
-            $zod .= '.optional()';
-        }
-
-        return $zod;
-    }
-
-    private static function enumZod(string $type): string
-    {
-        if (! enum_exists($type) || ! is_subclass_of($type, BackedEnum::class)) {
-            throw new ZeroCompilerException('ZERO-A105', "Unsupported argument type [{$type}]. Use a scalar, backed enum, or ZeroInput.");
-        }
-        $values = array_map(fn (BackedEnum $case): string => json_encode($case->value, JSON_THROW_ON_ERROR), $type::cases());
-
-        return 'z.enum(['.implode(', ', $values).'])';
     }
 
     private static function typeName(ReflectionParameter $parameter): string

@@ -13,11 +13,13 @@ use NickWelsh\LaravelZero\Commands\CheckCommand;
 use NickWelsh\LaravelZero\Commands\ClearRegistryCommand;
 use NickWelsh\LaravelZero\Commands\GenerateCommand;
 use NickWelsh\LaravelZero\Context\ZeroContextResolver;
+use NickWelsh\LaravelZero\Contracts\ValidationSchema;
 use NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry;
 use NickWelsh\LaravelZero\Discovery\ZeroRegistry;
 use NickWelsh\LaravelZero\Installation\FrontendScaffolder;
 use NickWelsh\LaravelZero\Schema\EloquentZeroSchemaRegistry;
 use NickWelsh\LaravelZero\Support\GeneratedPaths;
+use NickWelsh\LaravelZero\Validation\Zod;
 use Spatie\LaravelPackageTools\Package;
 use Spatie\LaravelPackageTools\PackageServiceProvider;
 
@@ -39,6 +41,16 @@ final class LaravelZeroServiceProvider extends PackageServiceProvider
         $this->app->singleton(ZeroSchemaRegistry::class, EloquentZeroSchemaRegistry::class);
         $this->app->singleton(ZeroRegistry::class);
         $this->app->singleton(FrontendScaffolder::class);
+        $this->app->singleton(ValidationSchema::class, function ($app): ValidationSchema {
+            /** @var Container $app */
+            $class = config('laravel-zero.validation.schema', Zod::class);
+            if (! is_string($class) || ! is_subclass_of($class, ValidationSchema::class)) {
+                throw new \UnexpectedValueException('Configuration [laravel-zero.validation.schema] must be a '.ValidationSchema::class.' class.');
+            }
+
+            /** @var ValidationSchema */
+            return $app->make($class);
+        });
         $this->app->bind(ZeroContextResolver::class, function ($app) {
             /** @var Container $app */
             /** @var class-string<ZeroContextResolver> $resolver */

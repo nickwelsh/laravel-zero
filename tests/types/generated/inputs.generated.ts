@@ -2,8 +2,6 @@
 
 import {z} from 'zod';
 
-import { z as partyFiltersZod } from 'zod';
-
 type partyFiltersValue = string | number | boolean | readonly (string | number | boolean)[];
 
 export type PartyFilterNode =
@@ -438,7 +436,7 @@ const partyFiltersValidate = (
   visit(input, partyFilters.rootDefinitionId, 0, 0, []);
 };
 
-export const partyFilterSchema = partyFiltersZod.custom<PartyFilterNode>((value): value is PartyFilterNode => true).superRefine(
+export const partyFilterSchema = z.custom<PartyFilterNode>((value): value is PartyFilterNode => true).superRefine(
   (value, context) => partyFiltersValidate(
     value,
     (message, path) => context.addIssue({code: 'custom', message, path}),

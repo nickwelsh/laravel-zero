@@ -4,6 +4,8 @@ use App\Zero\ContextResolver;
 use App\Zero\ZeroContext;
 use NickWelsh\EloquentZero\Support\Casing;
 use NickWelsh\EloquentZero\Support\Mode;
+use NickWelsh\LaravelZero\Frontend\React;
+use NickWelsh\LaravelZero\Validation\Zod;
 
 return [
     'zero_version' => '1.8.0',
@@ -36,6 +38,8 @@ return [
         'tables' => [],
         'table_name_casing' => Casing::Camel,
         'column_name_casing' => Casing::Camel,
+        // true is equivalent to ['method' => 'import', 'import_path' => '@/wayfinder'].
+        // Use ['method' => 'global'] when Wayfinder namespaces are globally available.
         'use_wayfinder' => false,
     ],
     'database' => [
@@ -44,9 +48,13 @@ return [
         'publication_name' => env('ZERO_APP_PUBLICATIONS'),
     ],
     'frontend' => [
-        'framework' => 'react',
-        'provider_path' => resource_path('js/zero/generated/provider.generated.tsx'),
+        'framework' => React::class,
+        'output_path' => resource_path('js/zero/generated/frontend'),
+        'barrel_path' => resource_path('js/zero/frontend/index.ts'),
         'use_globals' => true,
         'globals_path' => resource_path('js/globals.ts'),
+    ],
+    'validation' => [
+        'schema' => Zod::class,
     ],
 ];

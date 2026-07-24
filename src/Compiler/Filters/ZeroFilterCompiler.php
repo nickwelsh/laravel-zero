@@ -2,7 +2,9 @@
 
 namespace NickWelsh\LaravelZero\Compiler\Filters;
 
+use NickWelsh\LaravelZero\Contracts\ValidationSchema;
 use NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry;
+use NickWelsh\LaravelZero\Validation\Zod;
 use RuntimeException;
 
 /**
@@ -18,9 +20,12 @@ final readonly class ZeroFilterCompiler
 {
     private ZeroFilterDomainAdapter $adapter;
 
-    public function __construct(private ZeroSchemaRegistry $schemas)
+    private ValidationSchema $validation;
+
+    public function __construct(private ZeroSchemaRegistry $schemas, ?ValidationSchema $validation = null)
     {
         $this->adapter = new ZeroFilterDomainAdapter($schemas);
+        $this->validation = $validation ?? new Zod;
     }
 
     /** @param class-string $definitionClass */
@@ -66,8 +71,6 @@ final readonly class ZeroFilterCompiler
         ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
 
         $source = <<<'TYPESCRIPT'
-import { z as __ZOD__ } from 'zod';
-
 type __PREFIX__Value = string | number | boolean | readonly (string | number | boolean)[];
 
 export type __NODE_TYPE__ =
@@ -392,12 +395,7 @@ const __PREFIX__Validate = (
   visit(input, __METADATA__.rootDefinitionId, 0, 0, []);
 };
 
-export const __SCHEMA__ = __ZOD__.custom<__NODE_TYPE__>((value): value is __NODE_TYPE__ => true).superRefine(
-  (value, context) => __PREFIX__Validate(
-    value,
-    (message, path) => context.addIssue({code: 'custom', message, path}),
-  ),
-);
+export const __SCHEMA__ = __VALIDATION_SCHEMA__;
 
 const __PREFIX__CanonicalValue = (field: __PREFIX__RuntimeField, value: unknown): unknown => {
   if (field.values.length === 0) return value;
@@ -457,12 +455,12 @@ export const __APPLY__ = (expressionBuilder: any, node: __NODE_TYPE__): any =>
 TYPESCRIPT;
 
         return strtr($source, [
-            '__ZOD__' => $metadata.'Zod',
             '__NODE_TYPE__' => $type,
             '__METADATA__' => $metadata,
             '__METADATA_JSON__' => $metadataJson,
             '__PREFIX__' => $metadata,
             '__SCHEMA__' => $schema,
+            '__VALIDATION_SCHEMA__' => $this->validation->filter($type, $metadata.'Validate'),
             '__APPLY__' => $apply,
         ])."\n";
     }

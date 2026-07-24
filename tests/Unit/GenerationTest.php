@@ -8,20 +8,38 @@ use NickWelsh\LaravelZero\Compiler\Context\ContextTypeCompiler;
 use NickWelsh\LaravelZero\Compiler\Diagnostics\ZeroCompilerException;
 use NickWelsh\LaravelZero\Compiler\Inputs\ZodRuleCompiler;
 use NickWelsh\LaravelZero\Compiler\TypeScript\ZeroTypeScriptGenerator;
+use NickWelsh\LaravelZero\Contracts\ValidationSchema;
 use NickWelsh\LaravelZero\Discovery\ZeroRegistry;
 use NickWelsh\LaravelZero\Queries\ZeroOrderDirection;
 use NickWelsh\LaravelZero\Schema\EloquentZeroSchemaRegistry;
 use NickWelsh\LaravelZero\Tests\Fixtures\AllowedQueries;
 use NickWelsh\LaravelZero\Tests\Fixtures\CreatePartyInput;
+use NickWelsh\LaravelZero\Tests\Fixtures\FakeValidationSchema;
 use NickWelsh\LaravelZero\Tests\Fixtures\Party;
 use NickWelsh\LaravelZero\Tests\Fixtures\PartySort;
 use NickWelsh\LaravelZero\Tests\Fixtures\TestZeroContext;
+use NickWelsh\LaravelZero\Validation\Zod;
 
 it('imports the generated schema without its TypeScript extension', function (): void {
     $files = app(ZeroTypeScriptGenerator::class)->render()['files'];
 
     expect($files['context.generated.ts'])->toContain("from './schema.generated';")
         ->and($files['queries.generated.ts'])->toContain("from './schema.generated';");
+});
+
+it('delegates generated validation schemas to the configured class', function (): void {
+    config()->set('laravel-zero.validation.schema', FakeValidationSchema::class);
+    app()->forgetInstance(ValidationSchema::class);
+
+    $files = app(ZeroTypeScriptGenerator::class)->render()['files'];
+
+    expect($files['inputs.generated.ts'])
+        ->toContain("import {schema} from 'fake-validation';")
+        ->toContain('schema.filter<PartyFilterNode>(partyFiltersValidate)')
+        ->toContain("schema.input('PartyGridInput')")
+        ->and($files['queries.generated.ts'])
+        ->toContain("import {schema} from 'fake-validation';")
+        ->toContain("schema.argument('scalar')");
 });
 
 it('generates recursive filter schemas, UI metadata, labels, values, and query helpers', function (): void {
@@ -92,7 +110,7 @@ it('infers object argument schemas and optional defaults', function (): void {
     $shape = ArgumentShape::from($operation->method);
 
     expect($shape->kind)->toBe('object')
-        ->and($shape->zod())->toBe('z.object({id: z.string(), includeArchived: z.boolean().optional()})')
+        ->and((new Zod)->argument($shape))->toBe('z.object({id: z.string(), includeArchived: z.boolean().optional()})')
         ->and($shape->hydrate([['id' => 'p1']]))->toBe(['p1', false]);
 });
 

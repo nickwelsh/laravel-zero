@@ -5,9 +5,11 @@ namespace NickWelsh\LaravelZero\Compiler\Mutations;
 use BackedEnum;
 use NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape;
 use NickWelsh\LaravelZero\Compiler\Diagnostics\ZeroCompilerException;
+use NickWelsh\LaravelZero\Contracts\ValidationSchema;
 use NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry;
 use NickWelsh\LaravelZero\Discovery\Operation;
 use NickWelsh\LaravelZero\Inputs\ZeroInput;
+use NickWelsh\LaravelZero\Validation\Zod;
 use PhpParser\Node;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Stmt;
@@ -19,7 +21,12 @@ use ReflectionNamedType;
 
 final readonly class ZeroMutationCompiler
 {
-    public function __construct(private ZeroSchemaRegistry $schemas) {}
+    private ValidationSchema $validation;
+
+    public function __construct(private ZeroSchemaRegistry $schemas, ?ValidationSchema $validation = null)
+    {
+        $this->validation = $validation ?? new Zod;
+    }
 
     public function compile(Operation $operation): string
     {
@@ -89,7 +96,7 @@ final readonly class ZeroMutationCompiler
             $effects[] = 'await tx.mutate.'.$schema->clientTable.'.'.$verb.'({'.implode(', ', $parts).'});';
         }
 
-        $validator = $shape->zod();
+        $validator = $this->validation->argument($shape);
         $parameters = $shape->kind === 'none' ? '{tx, ctx}' : '{tx, ctx, args}';
         $body = $effects === [] ? '' : "\n    ".implode("\n    ", $effects)."\n  ";
         $callback = 'async ('.$parameters.") => {{$body}}";

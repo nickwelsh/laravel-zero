@@ -22,14 +22,22 @@ final class GeneratedPaths
             : $configured;
     }
 
-    public static function provider(): string
+    public static function frontend(): string
     {
-        $configured = config('laravel-zero.frontend.provider_path');
-        $legacy = resource_path('js/zero/provider.tsx');
+        $configured = config('laravel-zero.frontend.output_path');
 
-        return ! is_string($configured) || $configured === $legacy
-            ? self::outputDirectory().'/provider.generated.tsx'
-            : $configured;
+        return is_string($configured)
+            ? rtrim($configured, '/\\')
+            : self::outputDirectory().'/frontend';
+    }
+
+    public static function frontendBarrel(): string
+    {
+        $configured = config('laravel-zero.frontend.barrel_path');
+
+        return is_string($configured)
+            ? $configured
+            : dirname(self::outputDirectory()).'/frontend/index.ts';
     }
 
     public static function barrel(): string

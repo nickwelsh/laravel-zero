@@ -7,12 +7,14 @@ use InvalidArgumentException;
 use NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape;
 use NickWelsh\LaravelZero\Compiler\Diagnostics\ZeroCompilerException;
 use NickWelsh\LaravelZero\Compiler\Filters\ZeroFilterCompiler;
+use NickWelsh\LaravelZero\Contracts\ValidationSchema;
 use NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry;
 use NickWelsh\LaravelZero\Discovery\Operation;
 use NickWelsh\LaravelZero\Filters\ZeroFilterDefinition;
 use NickWelsh\LaravelZero\Inputs\ZeroFilterInput;
 use NickWelsh\LaravelZero\Queries\ZeroQueryColumn;
 use NickWelsh\LaravelZero\Schema\ZeroModelSchema;
+use NickWelsh\LaravelZero\Validation\Zod;
 use PhpParser\Node;
 use PhpParser\Node\Expr;
 use PhpParser\Node\Stmt;
@@ -25,7 +27,12 @@ use ReflectionParameter;
 
 final readonly class ZeroQueryCompiler
 {
-    public function __construct(private ZeroSchemaRegistry $schemas) {}
+    private ValidationSchema $validation;
+
+    public function __construct(private ZeroSchemaRegistry $schemas, ?ValidationSchema $validation = null)
+    {
+        $this->validation = $validation ?? new Zod;
+    }
 
     public function compile(Operation $operation): string
     {
@@ -34,7 +41,7 @@ final readonly class ZeroQueryCompiler
         $shape = ArgumentShape::from($operation->method);
         $expression = $this->renderCalls('zql.'.$schema->clientTable, $calls, $schema, $operation, $shape);
 
-        $validator = $shape->zod();
+        $validator = $this->validation->argument($shape);
         $callback = '({ctx, args}) => '.$expression;
         if ($shape->kind === 'none') {
             $callback = '({ctx}) => '.$expression;

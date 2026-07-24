@@ -11,7 +11,7 @@ composer require nickwelsh/laravel-zero
 php artisan vendor:publish --tag=zero
 ```
 
-The `zero` tag publishes the package config and creates `app/Zero/ZeroContext.php` and `app/Zero/ContextResolver.php`. With the default React frontend config, it also generates `resources/js/zero/generated/provider.generated.tsx` and adds any missing Zero URL exports to `resources/js/globals.ts`. The provider is regenerated from package configuration; existing global declarations are never replaced.
+The `zero` tag publishes the package config and creates `app/Zero/ZeroContext.php` and `app/Zero/ContextResolver.php`. With the default React frontend config, it also generates `resources/js/zero/generated/frontend/provider.tsx`, a `resources/js/zero/frontend/index.ts` barrel, and any missing Zero URL exports in `resources/js/globals.ts`. Generated frontend files are regenerated from package configuration; existing global declarations are never replaced.
 
 You can publish only part of the setup when needed:
 
@@ -37,7 +37,23 @@ Queries and mutators have independent discovery paths:
 
 The configured query and mutate routes are automatically excluded from CSRF validation. This follows `routes.prefix` and can be disabled by setting `routes.except_from_csrf` to `false`.
 
-Frontend scaffolding defaults to React. Set `frontend.framework` to `null` to disable it. When `frontend.use_globals` is `false`, the generated provider reads `import.meta.env` directly instead of creating or updating `globals.ts`.
+Frontend scaffolding defaults to the `React` class. `frontend.framework` accepts any class extending `Frontend\Frontend`; set it to `null` to disable frontend generation. Each frontend class owns its generated files and barrel. React generates a provider under `frontend.output_path` and a barrel at `frontend.barrel_path`. It reads `import.meta.env` directly when `frontend.use_globals` is `false`.
+
+```php
+use NickWelsh\LaravelZero\Frontend\React;
+
+'frontend' => [
+    'framework' => React::class,
+    'output_path' => resource_path('js/zero/generated/frontend'),
+    'barrel_path' => resource_path('js/zero/frontend/index.ts'),
+],
+```
+
+The frontend barrel is not re-exported from `resources/js/zero/index.ts`:
+
+```ts
+import {AppZeroProvider} from '@/zero/frontend';
+```
 
 ## Query
 
@@ -276,7 +292,7 @@ public function messages(): array
 }
 ```
 
-Laravel's fluent `Password` rule is resolved when schemas are generated. Minimum and maximum length plus `letters()`, `mixedCase()`, `numbers()`, and `symbols()` become Zod checks. `uncompromised()` and unsupported custom password rules remain server-only. Because `Password::defaults()` may depend on the application environment, run `php artisan zero:generate` in the target deployment environment after service providers have booted; do not reuse artifacts generated under different password defaults.
+Laravel's fluent `Password` rule is resolved when schemas are generated. With default Zod validation, minimum and maximum length plus `letters()`, `mixedCase()`, `numbers()`, and `symbols()` become Zod checks. `uncompromised()` and unsupported custom password rules remain server-only. Because `Password::defaults()` may depend on the application environment, run `php artisan zero:generate` in the target deployment environment after service providers have booted; do not reuse artifacts generated under different password defaults.
 
 Use `serverOnly()` for values written only by the server, and `ignore()` for validated fields that should not be written by either client or server (such as password confirmations). Supported writes: create, update, upsert, delete, and sequential writes. Application writes and Zero's mutation metadata use the configured physical connection.
 
@@ -288,7 +304,17 @@ php artisan zero:check
 php artisan zero:clear
 ```
 
-`zero:generate` optionally delegates schema generation to `eloquent-zero`, then writes deterministic files under `resources/js/zero/generated`, including `schema.generated.ts` and `provider.generated.tsx`. It regenerates the provider, adds only missing Zero URL globals, and writes `resources/js/zero/index.ts` as the public barrel. Every generated TypeScript file includes a do-not-edit banner. Type-only modules use `export type *` in the barrel.
+`zero:generate` optionally delegates database schema generation to `eloquent-zero`, then writes deterministic files under `resources/js/zero/generated`, including `schema.generated.ts`. It writes `resources/js/zero/index.ts` as the generated query/mutation barrel and independently runs the configured frontend class. Every generated TypeScript file includes a do-not-edit banner. Type-only modules use `export type *` in the root barrel.
+
+Validation schema generation defaults to the `Zod` class. Replace `validation.schema` with any class implementing `Contracts\ValidationSchema` to control imports and argument, input, and recursive-filter schemas:
+
+```php
+use NickWelsh\LaravelZero\Validation\Zod;
+
+'validation' => [
+    'schema' => Zod::class,
+],
+```
 
 Laravel Zero emits interfaces by default. Set `generation.declaration_style` to `type` to use type aliases for generated context and React provider declarations:
 
@@ -297,6 +323,19 @@ Laravel Zero emits interfaces by default. Set `generation.declaration_style` to 
     'declaration_style' => 'type',
 ],
 ```
+
+Wayfinder types are disabled by default. Set `generation.use_wayfinder` to `true` to import used namespaces from `@/wayfinder/types`, or customize the Wayfinder output directory:
+
+```php
+'generation' => [
+    'use_wayfinder' => [
+        'method' => 'import',
+        'import_path' => '@/wayfinder',
+    ],
+],
+```
+
+`method` defaults to `import`. Use `global` when the project already exposes Wayfinder namespaces globally; `import_path` is then ignored.
 
 ## Portable PHP subset
 

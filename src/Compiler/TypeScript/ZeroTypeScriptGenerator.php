@@ -6,9 +6,9 @@ use Illuminate\Filesystem\Filesystem;
 use NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape;
 use NickWelsh\LaravelZero\Compiler\Context\ContextTypeCompiler;
 use NickWelsh\LaravelZero\Compiler\Filters\ZeroFilterCompiler;
-use NickWelsh\LaravelZero\Compiler\Inputs\ZodRuleCompiler;
 use NickWelsh\LaravelZero\Compiler\Mutations\ZeroMutationCompiler;
 use NickWelsh\LaravelZero\Compiler\Queries\ZeroQueryCompiler;
+use NickWelsh\LaravelZero\Contracts\ValidationSchema;
 use NickWelsh\LaravelZero\Discovery\Operation;
 use NickWelsh\LaravelZero\Discovery\ZeroRegistry;
 use NickWelsh\LaravelZero\Inputs\ZeroFilterInput;
@@ -38,6 +38,7 @@ final readonly class ZeroTypeScriptGenerator
         private ZeroQueryCompiler $queries,
         private ZeroMutationCompiler $mutations,
         private ZeroFilterCompiler $filters,
+        private ValidationSchema $validation,
         private Filesystem $files,
     ) {}
 
@@ -72,7 +73,7 @@ final readonly class ZeroTypeScriptGenerator
             'context.generated.ts' => self::HEADER.$context,
         ];
         if ($inputSource !== '') {
-            $files['inputs.generated.ts'] = self::HEADER."import {z} from 'zod';\n\n".$inputSource;
+            $files['inputs.generated.ts'] = self::HEADER.$this->validation->import()."\n\n".$inputSource;
         }
         $files['queries.generated.ts'] = self::HEADER.$this->queriesFile($queryOperations, $queryTree, $schemaImport);
         $files['mutations.generated.ts'] = self::HEADER.$this->mutationsFile($mutationOperations, $mutationTree);
@@ -93,8 +94,8 @@ final readonly class ZeroTypeScriptGenerator
         $hasOperations = $operations !== [];
         $imports = ['import {defineQueries'.($hasOperations ? ', defineQuery' : '')."} from '@rocicorp/zero';"];
 
-        if ($this->usesZod($operations)) {
-            $imports[] = "import {z} from 'zod';";
+        if ($this->usesValidation($operations)) {
+            $imports[] = $this->validation->import();
         }
         if ($hasOperations) {
             $imports[] = "import {zql} from '{$schemaImport}';";
@@ -116,8 +117,8 @@ final readonly class ZeroTypeScriptGenerator
         $hasOperations = $operations !== [];
         $imports = ['import {defineMutators'.($hasOperations ? ', defineMutator' : '')."} from '@rocicorp/zero';"];
 
-        if ($this->usesZod($operations)) {
-            $imports[] = "import {z} from 'zod';";
+        if ($this->usesValidation($operations)) {
+            $imports[] = $this->validation->import();
         }
         if ($hasOperations) {
             if ($inputImport = $this->inputImportLine($operations)) {
@@ -130,7 +131,7 @@ final readonly class ZeroTypeScriptGenerator
     }
 
     /** @param array<string, Operation> $operations */
-    private function usesZod(array $operations): bool
+    private function usesValidation(array $operations): bool
     {
         foreach ($operations as $operation) {
             if (in_array(ArgumentShape::from($operation->method)->kind, ['scalar', 'object'], true)) {
@@ -209,11 +210,6 @@ final readonly class ZeroTypeScriptGenerator
         $schema = GeneratedPaths::schema();
         $exports[] = ['path' => $schema, 'source' => $this->fileContents($schema)];
 
-        if (config('laravel-zero.frontend.framework', 'react') === 'react') {
-            $provider = GeneratedPaths::provider();
-            $exports[] = ['path' => $provider, 'source' => $this->fileContents($provider)];
-        }
-
         return self::HEADER.implode("\n", array_map(
             fn (array $export): string => ($this->hasOnlyTypeExports($export['source']) ? 'export type *' : 'export *')." from '".GeneratedPaths::moduleImport($barrel, $export['path'])."';",
             $exports,
@@ -266,10 +262,10 @@ final readonly class ZeroTypeScriptGenerator
      */
     private function inputs(array $operations): array
     {
-        $compiler = new ZodRuleCompiler;
         $filterSources = [];
         $filterSymbols = [];
         $schemas = [];
+        $notices = [];
         foreach ($operations as $operation) {
             $shape = ArgumentShape::from($operation->method);
             if ($shape->kind !== 'input') {
@@ -291,13 +287,15 @@ final readonly class ZeroTypeScriptGenerator
                 $fieldSchemas[$filterInputClass::filterField()] = ZeroFilterCompiler::schemaName($definition);
             }
             $name = lcfirst(class_basename($class)).'Schema';
-            $schemas[$class] = "export const {$name} = ".$compiler->object($input->rules(), class_basename($class), $input->messages(), $fieldSchemas).';';
+            $generated = $this->validation->input($input->rules(), class_basename($class), $input->messages(), $fieldSchemas);
+            $schemas[$class] = "export const {$name} = ".$generated->source.';';
+            $notices = [...$notices, ...$generated->notices];
         }
         ksort($filterSources);
         ksort($schemas);
         $sources = [...array_values($filterSources), ...array_values($schemas)];
 
-        return [implode("\n", $sources).($sources ? "\n" : ''), $compiler->notices()];
+        return [implode("\n", $sources).($sources ? "\n" : ''), $notices];
     }
 
     /**
