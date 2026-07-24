@@ -5,10 +5,12 @@ namespace NickWelsh\LaravelZero\Http;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Validation\ValidationException;
+use InvalidArgumentException;
 use NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape;
 use NickWelsh\LaravelZero\Compiler\Diagnostics\ZeroCompilerException;
 use NickWelsh\LaravelZero\Context\ZeroContextResolver;
 use NickWelsh\LaravelZero\Discovery\ZeroRegistry;
+use NickWelsh\LaravelZero\Dynamic\DynamicQueryRegistry;
 use NickWelsh\LaravelZero\Queries\ZeroQueryBuilder;
 use Stringable;
 use Throwable;
@@ -17,7 +19,11 @@ use UnexpectedValueException;
 /** @phpstan-type QueryRequest array{id: string, name: string, args: list<mixed>} */
 final readonly class ZeroQueryEndpoint
 {
-    public function __construct(private ZeroRegistry $registry, private ZeroContextResolver $contexts) {}
+    public function __construct(
+        private ZeroRegistry $registry,
+        private DynamicQueryRegistry $dynamic,
+        private ZeroContextResolver $contexts,
+    ) {}
 
     public function __invoke(Request $request): JsonResponse
     {
@@ -57,6 +63,16 @@ final readonly class ZeroQueryEndpoint
             $id = $item['id'];
             $name = $item['name'];
             try {
+                if (config('laravel-zero.dynamic_queries.enabled', true) === true && ($dynamic = $this->dynamic->find($name)) !== null) {
+                    if (count($item['args']) !== 1 || ! is_array($item['args'][0]) || array_is_list($item['args'][0])) {
+                        throw new InvalidArgumentException('Dynamic Zero queries expect one object argument.');
+                    }
+                    /** @var array<string, mixed> $arguments */
+                    $arguments = $item['args'][0];
+                    $responses[] = ['id' => $id, 'name' => $name, 'ast' => $dynamic->build($arguments)->toAst()];
+
+                    continue;
+                }
                 $operation = $this->registry->query($name);
                 $arguments = ArgumentShape::from($operation->method)->hydrate($item['args']);
                 $result = $operation->method->invokeArgs($operation->instance(), [$context, ...$arguments]);
@@ -65,6 +81,8 @@ final readonly class ZeroQueryEndpoint
                 }
                 $responses[] = ['id' => $id, 'name' => $name, 'ast' => $result->toAst()];
             } catch (ValidationException $error) {
+                $responses[] = ['error' => 'parse', 'id' => $id, 'name' => $name, 'message' => $error->getMessage()];
+            } catch (InvalidArgumentException $error) {
                 $responses[] = ['error' => 'parse', 'id' => $id, 'name' => $name, 'message' => $error->getMessage()];
             } catch (ZeroCompilerException $error) {
                 $responses[] = ['error' => str_starts_with($error->diagnosticCode, 'ZERO-A') ? 'parse' : 'app', 'id' => $id, 'name' => $name, 'message' => $error->getMessage()];

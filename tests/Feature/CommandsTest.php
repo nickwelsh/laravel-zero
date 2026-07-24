@@ -3,9 +3,11 @@
 use Illuminate\Filesystem\Filesystem;
 use Illuminate\Foundation\Http\Middleware\PreventRequestForgery;
 use Illuminate\Support\ServiceProvider;
+use NickWelsh\LaravelZero\Dynamic\DynamicQueryRegistry;
 use NickWelsh\LaravelZero\Frontend\React;
 use NickWelsh\LaravelZero\Installation\FrontendScaffolder;
 use NickWelsh\LaravelZero\LaravelZeroServiceProvider;
+use NickWelsh\LaravelZero\Tests\Fixtures\DynamicParty;
 use NickWelsh\LaravelZero\Tests\Fixtures\FakeFrontend;
 
 it('generates deterministically and checks freshness', function (): void {
@@ -96,6 +98,8 @@ it('bridges Laravel Zero configuration to Eloquent Zero', function (): void {
         ->and(config('eloquent-zero.table_name_casing'))->toBe(config('laravel-zero.generation.table_name_casing'))
         ->and(config('eloquent-zero.column_name_casing'))->toBe(config('laravel-zero.generation.column_name_casing'))
         ->and(config('eloquent-zero.use_wayfinder'))->toBe(config('laravel-zero.generation.use_wayfinder'))
+        ->and(config('eloquent-zero.generate_zod_schemas'))->toBeTrue()
+        ->and(config('eloquent-zero.generate_polymorphic_helpers'))->toBeTrue()
         ->and(config('eloquent-zero.connection'))->toBe(config('laravel-zero.database.connection'))
         ->and(config('eloquent-zero.allow_multiple_connections'))->toBe(config('laravel-zero.database.allow_multiple_connections'))
         ->and(config('eloquent-zero.publication_name'))->toBe(config('laravel-zero.database.publication_name'));
@@ -175,6 +179,33 @@ it('scaffolds a React provider without globals when configured', function (): vo
         expect(app(FrontendScaffolder::class)->scaffold())->toBe([$provider, $frontendBarrel])
             ->and($files->get($provider))->toContain('import.meta.env.VITE_ZERO_CACHE_URL', 'type AppZeroProviderProps = {')
             ->and($files->exists($globals))->toBeFalse();
+    } finally {
+        $files->deleteDirectory($directory);
+    }
+});
+
+it('scaffolds the React dynamic query hook for opted-in models', function (): void {
+    $files = new Filesystem;
+    $directory = sys_get_temp_dir().'/laravel-zero-'.uniqid();
+    $frontend = $directory.'/frontend';
+    $barrel = $directory.'/index.ts';
+
+    try {
+        config()->set('laravel-zero.generation.models', [DynamicParty::class]);
+        config()->set('laravel-zero.frontend', [
+            'framework' => React::class,
+            'output_path' => $frontend,
+            'barrel_path' => $barrel,
+            'use_globals' => false,
+            'globals_path' => $directory.'/globals.ts',
+        ]);
+        app()->forgetInstance(DynamicQueryRegistry::class);
+
+        app(FrontendScaffolder::class)->scaffold();
+
+        expect($files->get($frontend.'/dynamic.ts'))
+            ->toContain('export function useDynamicQuery<TResult>', 'query.parse(value)')
+            ->and($files->get($barrel))->toContain("export * from './frontend/dynamic';");
     } finally {
         $files->deleteDirectory($directory);
     }

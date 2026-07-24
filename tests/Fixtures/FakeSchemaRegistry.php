@@ -10,6 +10,12 @@ final class FakeSchemaRegistry implements ZeroSchemaRegistry
 {
     public function model(string $modelClass): ZeroModelSchema
     {
+        if ($modelClass === Tag::class) {
+            return new ZeroModelSchema($modelClass, 'tags', 'tag', [
+                'id' => 'id', 'name' => 'name',
+            ], ['id']);
+        }
+
         if ($modelClass === EmailAddress::class) {
             return new ZeroModelSchema($modelClass, 'email_addresses', 'emailAddress', [
                 'id' => 'id', 'party_id' => 'partyId', 'is_primary' => 'isPrimary',
@@ -26,5 +32,7 @@ final class FakeSchemaRegistry implements ZeroSchemaRegistry
     public function models(): iterable
     {
         yield Party::class => $this->model(Party::class);
+        yield DynamicParty::class => $this->model(DynamicParty::class);
+        yield Tag::class => $this->model(Tag::class);
     }
 }

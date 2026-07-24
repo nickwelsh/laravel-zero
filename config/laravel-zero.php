@@ -47,6 +47,10 @@ return [
         'allow_multiple_connections' => false,
         'publication_name' => env('ZERO_APP_PUBLICATIONS'),
     ],
+    'dynamic_queries' => [
+        'enabled' => true,
+        'max_limit' => 100,
+    ],
     'frontend' => [
         'framework' => React::class,
         'output_path' => resource_path('js/zero/generated/frontend'),

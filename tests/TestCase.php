@@ -59,6 +59,16 @@ abstract class TestCase extends Orchestra
             $table->string('party_id');
             $table->boolean('is_primary');
         });
+        Schema::create('tags', function (Blueprint $table): void {
+            $table->string('id')->primary();
+            $table->string('name');
+        });
+        Schema::create('taggables', function (Blueprint $table): void {
+            $table->string('tag_id');
+            $table->string('taggable_type');
+            $table->string('taggable_id');
+            $table->primary(['tag_id', 'taggable_type', 'taggable_id']);
+        });
         Schema::create('zero_0.clients', function (Blueprint $table): void {
             $table->string('clientGroupID');
             $table->string('clientID');

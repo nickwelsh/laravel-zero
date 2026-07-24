@@ -106,6 +106,68 @@ public function paginated(
 
 The enum values use server-side column names. Generation verifies every case against the model schema, maps each case to its client-side column name, and emits a Zod enum. The same enum is hydrated before the PHP query runs, so values outside the allowlist are rejected on both client and server paths. Plain string literals remain supported for fixed columns; unrestricted dynamic string columns produce `ZERO-Q104`.
 
+### Dynamic model queries
+
+Models can opt into client-built queries without defining one PHP query method per shape. The model owns the filter, include, and sort allowlists:
+
+```php
+use NickWelsh\LaravelZero\Queries\AllowedFilter;
+use NickWelsh\LaravelZero\Queries\ZeroQueryBuilder;
+
+#[ScopedBy([TenantScope::class])]
+final class Party extends Model
+{
+    public function zeroQueryBuilder(): ZeroQueryBuilder
+    {
+        return ZeroQueryBuilder::for($this)
+            ->allowedFilters(
+                AllowedFilter::exact('id'),
+                'type',
+                'display_name',
+                'created_at',
+                'updated_at',
+            )
+            ->allowedIncludes('person', 'company', 'household', 'tags')
+            ->allowedSorts('id', 'type', 'display_name', 'created_at', 'updated_at');
+    }
+
+    public function tags(): MorphToMany
+    {
+        return $this->morphToMany(Tag::class, 'taggable');
+    }
+}
+```
+
+`zero:generate` exports an immutable, typed model builder. Use the generated React helper so row Zod schemas are applied and polymorphic pivot rows are flattened into the requested relationship:
+
+```tsx
+import {Party} from '@/zero';
+import {useDynamicQuery} from '@/zero/frontend';
+
+const [parties] = useDynamicQuery(
+    Party
+        .with(['person', 'tags'])
+        .where('type', 'person')
+        .orderBy(orderBy, orderByDirection)
+        .limit(50),
+);
+```
+
+The server rebuilds the query from the model allowlists; it never accepts a client AST directly. Eloquent global scopes are applied first and are not emitted to TypeScript. Basic `where`, null, and `in` constraints (including nested AND groups) are supported for global scopes. A scope containing OR predicates, joins, selects, grouping, ordering, limits, or an unsupported raw/subquery condition fails closed instead of silently dropping an authorization constraint.
+
+`MorphToMany` includes use generated internal relationships for the pivot and related table. Both client and server constrain the pivot's morph-type column to Eloquent's `getMorphClass()` value before related rows are returned, preventing IDs belonging to another morph type from being merged. The React helper removes the internal pivot shape and exposes the requested relation name.
+
+Generated row schemas coerce database values for application use: date/time values with `z.coerce.date()`, numeric values with `z.coerce.number()`, booleans with `z.coerce.boolean()`, and PostgreSQL bigint values with `z.coerce.bigint()`. These parsers affect values returned by `useDynamicQuery`; Zero's stored values remain JSON-compatible.
+
+Dynamic queries are enabled by default. Their maximum client-selected limit defaults to 100:
+
+```php
+'dynamic_queries' => [
+    'enabled' => true,
+    'max_limit' => 100,
+],
+```
+
 ### Advanced filter groups
 
 For data-grid filters with nested AND/OR groups, define a server-owned filter schema. Fields and relationships are explicit allowlists; protected columns never become filterable unless they are deliberately registered:

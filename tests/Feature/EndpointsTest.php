@@ -1,11 +1,49 @@
 <?php
 
+use NickWelsh\LaravelZero\Dynamic\DynamicQueryRegistry;
+use NickWelsh\LaravelZero\Tests\Fixtures\DynamicParty;
 use NickWelsh\LaravelZero\Tests\Fixtures\Party;
 
 it('serves authoritative query AST', function (): void {
     $this->postJson('/zero/query', ['transform', [['id' => 'q1', 'name' => 'directory.party.byId', 'args' => ['party-1']]]])
         ->assertOk()->assertJsonPath('kind', 'QueryResponse')->assertJsonPath('userID', 'user-1')
         ->assertJsonPath('queries.0.ast.table', 'parties')->assertJsonPath('queries.0.ast.where.conditions.0.right.value', 'user-1');
+});
+
+it('serves scoped dynamic queries and discriminator-safe morph includes', function (): void {
+    config()->set('laravel-zero.generation.models', [DynamicParty::class]);
+    app()->forgetInstance(DynamicQueryRegistry::class);
+
+    $payload = ['transform', [[
+        'id' => 'dynamic-party',
+        'name' => 'models.dynamicParty',
+        'args' => [[
+            'filters' => [['field' => 'id', 'operator' => '=', 'value' => 'party-1']],
+            'includes' => ['tags'],
+            'orderBy' => [['display_name', 'desc']],
+            'limit' => 20,
+        ]],
+    ]]];
+
+    $this->postJson('/zero/query', $payload)->assertOk()
+        ->assertJsonPath('queries.0.ast.where.conditions.0.left.name', 'user_id')
+        ->assertJsonPath('queries.0.ast.where.conditions.0.right.value', 'tenant-1')
+        ->assertJsonPath('queries.0.ast.where.conditions.1.left.name', 'id')
+        ->assertJsonPath('queries.0.ast.related.0.subquery.table', 'taggables')
+        ->assertJsonPath('queries.0.ast.related.0.subquery.where.left.name', 'taggable_type')
+        ->assertJsonPath('queries.0.ast.related.0.subquery.where.right.value', DynamicParty::class)
+        ->assertJsonPath('queries.0.ast.related.0.subquery.related.0.subquery.table', 'tags')
+        ->assertJsonPath('queries.0.ast.orderBy.0.0', 'display_name');
+
+    $payload = ['transform', [[
+        'id' => 'dynamic-private',
+        'name' => 'models.dynamicParty',
+        'args' => [[
+            'filters' => [['field' => 'user_id', 'operator' => '=', 'value' => 'attacker']],
+        ]],
+    ]]];
+
+    $this->postJson('/zero/query', $payload)->assertJsonPath('queries.0.error', 'parse');
 });
 
 it('serves recursive grid filters and rejects private filter fields', function (): void {

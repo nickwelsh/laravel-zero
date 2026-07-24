@@ -16,6 +16,7 @@ use NickWelsh\LaravelZero\Context\ZeroContextResolver;
 use NickWelsh\LaravelZero\Contracts\ValidationSchema;
 use NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry;
 use NickWelsh\LaravelZero\Discovery\ZeroRegistry;
+use NickWelsh\LaravelZero\Dynamic\DynamicQueryRegistry;
 use NickWelsh\LaravelZero\Installation\FrontendScaffolder;
 use NickWelsh\LaravelZero\Schema\EloquentZeroSchemaRegistry;
 use NickWelsh\LaravelZero\Support\GeneratedPaths;
@@ -40,6 +41,7 @@ final class LaravelZeroServiceProvider extends PackageServiceProvider
 
         $this->app->singleton(ZeroSchemaRegistry::class, EloquentZeroSchemaRegistry::class);
         $this->app->singleton(ZeroRegistry::class);
+        $this->app->singleton(DynamicQueryRegistry::class);
         $this->app->singleton(FrontendScaffolder::class);
         $this->app->singleton(ValidationSchema::class, function ($app): ValidationSchema {
             /** @var Container $app */
@@ -123,6 +125,8 @@ final class LaravelZeroServiceProvider extends PackageServiceProvider
             'eloquent-zero.table_name_casing' => $config->get('laravel-zero.generation.table_name_casing', Casing::Camel),
             'eloquent-zero.column_name_casing' => $config->get('laravel-zero.generation.column_name_casing', Casing::Camel),
             'eloquent-zero.use_wayfinder' => $config->get('laravel-zero.generation.use_wayfinder', false),
+            'eloquent-zero.generate_zod_schemas' => $config->get('laravel-zero.dynamic_queries.enabled', true),
+            'eloquent-zero.generate_polymorphic_helpers' => $config->get('laravel-zero.dynamic_queries.enabled', true),
             'eloquent-zero.connection' => $config->get('laravel-zero.database.connection'),
             'eloquent-zero.allow_multiple_connections' => $config->get('laravel-zero.database.allow_multiple_connections', false),
             'eloquent-zero.publication_name' => $config->get('laravel-zero.database.publication_name'),

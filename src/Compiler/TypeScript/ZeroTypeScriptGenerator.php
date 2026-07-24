@@ -7,6 +7,7 @@ use NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape;
 use NickWelsh\LaravelZero\Compiler\Context\ContextTypeCompiler;
 use NickWelsh\LaravelZero\Compiler\Filters\ZeroFilterCompiler;
 use NickWelsh\LaravelZero\Compiler\Mutations\ZeroMutationCompiler;
+use NickWelsh\LaravelZero\Compiler\Queries\DynamicQueryCompiler;
 use NickWelsh\LaravelZero\Compiler\Queries\ZeroQueryCompiler;
 use NickWelsh\LaravelZero\Contracts\ValidationSchema;
 use NickWelsh\LaravelZero\Discovery\Operation;
@@ -36,6 +37,7 @@ final readonly class ZeroTypeScriptGenerator
         private ZeroRegistry $registry,
         private ContextTypeCompiler $contexts,
         private ZeroQueryCompiler $queries,
+        private DynamicQueryCompiler $dynamicQueries,
         private ZeroMutationCompiler $mutations,
         private ZeroFilterCompiler $filters,
         private ValidationSchema $validation,
@@ -49,6 +51,10 @@ final readonly class ZeroTypeScriptGenerator
         $mutationOperations = $this->registry->mutations();
         [$inputSource, $notices] = $this->inputs([...$queryOperations, ...$mutationOperations]);
         $queryTree = $this->tree($queryOperations, fn (Operation $operation): string => $this->queries->compile($operation));
+        $dynamicDefinitions = $this->dynamicQueries->definitions();
+        foreach ($dynamicDefinitions as $name => $source) {
+            $queryTree = $this->appendToTree($queryTree, explode('.', $name), $source);
+        }
         $mutationTree = $this->tree($mutationOperations, fn (Operation $operation): string => $this->mutations->compile($operation));
         $schemaImport = GeneratedPaths::moduleImport(GeneratedPaths::outputDirectory().'/context.generated.ts', GeneratedPaths::schema());
         $contextClass = $this->stringConfig('laravel-zero.context.class');
@@ -64,7 +70,7 @@ final readonly class ZeroTypeScriptGenerator
         $manifest = [
             '_generated' => 'This file is generated. Do not edit directly.',
             'zeroVersion' => config('laravel-zero.zero_version', '1.8.0') ?: '1.8.0',
-            'queries' => array_keys($queryOperations),
+            'queries' => [...array_keys($queryOperations), ...array_keys($dynamicDefinitions)],
             'mutations' => array_keys($mutationOperations),
             'serverOnlyValidationRules' => $notices,
         ];
@@ -75,7 +81,7 @@ final readonly class ZeroTypeScriptGenerator
         if ($inputSource !== '') {
             $files['inputs.generated.ts'] = self::HEADER.$this->validation->import()."\n\n".$inputSource;
         }
-        $files['queries.generated.ts'] = self::HEADER.$this->queriesFile($queryOperations, $queryTree, $schemaImport);
+        $files['queries.generated.ts'] = self::HEADER.$this->queriesFile($queryOperations, $queryTree, $schemaImport, $dynamicDefinitions !== []);
         $files['mutations.generated.ts'] = self::HEADER.$this->mutationsFile($mutationOperations, $mutationTree);
         $files['manifest.generated.json'] = json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)."\n";
 
@@ -89,23 +95,30 @@ final readonly class ZeroTypeScriptGenerator
      * @param  array<string, Operation>  $operations
      * @param  TypeScriptTree  $tree
      */
-    private function queriesFile(array $operations, array $tree, string $schemaImport): string
+    private function queriesFile(array $operations, array $tree, string $schemaImport, bool $hasDynamic): string
     {
-        $hasOperations = $operations !== [];
+        $hasOperations = $operations !== [] || $hasDynamic;
         $imports = ['import {defineQueries'.($hasOperations ? ', defineQuery' : '')."} from '@rocicorp/zero';"];
 
         if ($this->usesValidation($operations)) {
             $imports[] = $this->validation->import();
         }
+        if ($hasDynamic && ! in_array("import {z} from 'zod';", $imports, true)) {
+            $imports[] = "import {z} from 'zod';";
+        }
         if ($hasOperations) {
-            $imports[] = "import {zql} from '{$schemaImport}';";
+            $schemaSymbols = ['zql', ...$this->dynamicQueries->schemaImports()];
+            $imports[] = 'import {'.implode(', ', array_unique($schemaSymbols))."} from '{$schemaImport}';";
             if ($inputImport = $this->inputImportLine($operations)) {
                 $imports[] = rtrim($inputImport);
             }
             $imports[] = "import './context.generated';";
         }
 
-        return implode("\n", $imports)."\n\nexport const queries = defineQueries(".$this->renderTree($tree).");\n";
+        $runtime = $this->dynamicQueries->runtime();
+
+        return implode("\n", $imports)."\n\nexport const queries = defineQueries(".$this->renderTree($tree).");\n"
+            .($runtime === '' ? '' : "\n{$runtime}\n");
     }
 
     /**

@@ -3,6 +3,7 @@
 namespace NickWelsh\LaravelZero\Queries;
 
 use BackedEnum;
+use Illuminate\Database\Eloquent\Model;
 use InvalidArgumentException;
 use NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry;
 use NickWelsh\LaravelZero\Filters\ZeroFilterDefinition;
@@ -35,12 +36,97 @@ final class ZeroQueryBuilder
     /** @var list<array{relationship: ZeroRelationshipSchema, builder: self}> */
     private array $related = [];
 
+    /** @var list<array<string, mixed>> */
+    private array $rawRelated = [];
+
+    /** @var array<string, AllowedFilter> */
+    private array $dynamicFilters = [];
+
+    /** @var array<string, true> */
+    private array $dynamicIncludes = [];
+
+    /** @var array<string, true> */
+    private array $dynamicSorts = [];
+
     private ?int $limitValue = null;
 
     private ?string $alias = null;
 
     /** @param class-string $modelClass */
     public function __construct(private readonly ZeroSchemaRegistry $registry, private readonly string $modelClass) {}
+
+    public static function for(Model|string $model): self
+    {
+        /** @var class-string $modelClass */
+        $modelClass = $model instanceof Model ? $model::class : $model;
+
+        return new self(app(ZeroSchemaRegistry::class), $modelClass);
+    }
+
+    public function allowedFilters(AllowedFilter|string ...$filters): self
+    {
+        foreach ($filters as $filter) {
+            $filter = is_string($filter) ? AllowedFilter::field($filter) : $filter;
+            $this->schema()->clientColumn($filter->name);
+            $this->dynamicFilters[$filter->name] = $filter;
+        }
+
+        return $this;
+    }
+
+    public function allowedIncludes(string ...$includes): self
+    {
+        foreach ($includes as $include) {
+            if ($include === '') {
+                throw new InvalidArgumentException('Allowed Zero include names must not be empty.');
+            }
+            $this->dynamicIncludes[$include] = true;
+        }
+
+        return $this;
+    }
+
+    public function allowedSorts(string ...$sorts): self
+    {
+        foreach ($sorts as $sort) {
+            $this->schema()->clientColumn($sort);
+            $this->dynamicSorts[$sort] = true;
+        }
+
+        return $this;
+    }
+
+    /** @return array<string, AllowedFilter> */
+    public function dynamicFilters(): array
+    {
+        return $this->dynamicFilters;
+    }
+
+    /** @return list<string> */
+    public function dynamicIncludes(): array
+    {
+        return array_keys($this->dynamicIncludes);
+    }
+
+    /** @return list<string> */
+    public function dynamicSorts(): array
+    {
+        return array_keys($this->dynamicSorts);
+    }
+
+    /** @return class-string */
+    public function modelClass(): string
+    {
+        return $this->modelClass;
+    }
+
+    /** @param array<string, mixed> $relationship */
+    public function addRawRelated(array $relationship): self
+    {
+        $this->rawRelated[] = $relationship;
+
+        return $this;
+    }
 
     public function where(string|ZeroQueryColumn $column, mixed $operatorOrValue, mixed $value = null): self
     {
@@ -178,11 +264,14 @@ final class ZeroQueryBuilder
                 $serverNames,
             );
         }
-        if ($this->related !== []) {
-            $ast['related'] = array_map(
-                fn (array $related): array => $this->relationshipAst($related['relationship'], $related['builder'], $serverNames),
-                $this->related,
-            );
+        if ($this->related !== [] || ($serverNames && $this->rawRelated !== [])) {
+            $ast['related'] = [
+                ...array_map(
+                    fn (array $related): array => $this->relationshipAst($related['relationship'], $related['builder'], $serverNames),
+                    $this->related,
+                ),
+                ...($serverNames ? $this->rawRelated : []),
+            ];
         }
         if ($this->limitValue !== null) {
             $ast['limit'] = $this->limitValue;

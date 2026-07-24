@@ -2,6 +2,8 @@
 
 namespace NickWelsh\LaravelZero\Frontend;
 
+use Illuminate\Filesystem\Filesystem;
+use NickWelsh\LaravelZero\Dynamic\DynamicQueryRegistry;
 use NickWelsh\LaravelZero\Support\GeneratedPaths;
 
 final readonly class React extends Frontend
@@ -12,6 +14,11 @@ final readonly class React extends Frontend
         'ZERO_QUERY_URL' => 'export const ZERO_QUERY_URL = import.meta.env.VITE_ZERO_QUERY_URL;',
     ];
 
+    public function __construct(Filesystem $files, private DynamicQueryRegistry $dynamic)
+    {
+        parent::__construct($files);
+    }
+
     protected function generatedFiles(string $outputPath): array
     {
         $providerPath = $outputPath.'/provider.tsx';
@@ -19,7 +26,7 @@ final readonly class React extends Frontend
             ? __DIR__.'/../../stubs/react/provider.globals.tsx.stub'
             : __DIR__.'/../../stubs/react/provider.tsx.stub';
 
-        return [
+        $files = [
             'provider.tsx' => str_replace(
                 ['{{ context_import }}', '{{ mutations_import }}', '{{ schema_import }}', '{{ props_declaration }}'],
                 [
@@ -31,11 +38,39 @@ final readonly class React extends Frontend
                 $this->files->get($stub),
             ),
         ];
+
+        if ($this->dynamic->all() !== []) {
+            $dynamicPath = $outputPath.'/dynamic.ts';
+            $queriesImport = GeneratedPaths::moduleImport($dynamicPath, GeneratedPaths::outputDirectory().'/queries.generated.ts');
+            $files['dynamic.ts'] = <<<TS
+import type { QueryResultDetails } from '@rocicorp/zero';
+import { useQuery, type UseQueryOptions } from '@rocicorp/zero/react';
+import type { DynamicQueryRequest } from '{$queriesImport}';
+
+export function useDynamicQuery<TResult>(
+    query: DynamicQueryRequest<TResult>,
+    options?: UseQueryOptions | boolean,
+): readonly [TResult, QueryResultDetails] {
+    const [value, details] = useQuery(query.request as never, options);
+
+    return [query.parse(value), details];
+}
+TS;
+        }
+
+        return $files;
     }
 
     protected function barrel(string $barrelPath, string $outputPath): string
     {
-        return "export * from '".GeneratedPaths::moduleImport($barrelPath, $outputPath.'/provider.tsx')."';\n";
+        $exports = [
+            "export * from '".GeneratedPaths::moduleImport($barrelPath, $outputPath.'/provider.tsx')."';",
+        ];
+        if ($this->dynamic->all() !== []) {
+            $exports[] = "export * from '".GeneratedPaths::moduleImport($barrelPath, $outputPath.'/dynamic.ts')."';";
+        }
+
+        return implode("\n", $exports)."\n";
     }
 
     protected function scaffoldAdditionalFiles(): array

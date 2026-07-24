@@ -10,10 +10,12 @@ use NickWelsh\LaravelZero\Compiler\Inputs\ZodRuleCompiler;
 use NickWelsh\LaravelZero\Compiler\TypeScript\ZeroTypeScriptGenerator;
 use NickWelsh\LaravelZero\Contracts\ValidationSchema;
 use NickWelsh\LaravelZero\Discovery\ZeroRegistry;
+use NickWelsh\LaravelZero\Dynamic\DynamicQueryRegistry;
 use NickWelsh\LaravelZero\Queries\ZeroOrderDirection;
 use NickWelsh\LaravelZero\Schema\EloquentZeroSchemaRegistry;
 use NickWelsh\LaravelZero\Tests\Fixtures\AllowedQueries;
 use NickWelsh\LaravelZero\Tests\Fixtures\CreatePartyInput;
+use NickWelsh\LaravelZero\Tests\Fixtures\DynamicParty;
 use NickWelsh\LaravelZero\Tests\Fixtures\FakeValidationSchema;
 use NickWelsh\LaravelZero\Tests\Fixtures\Party;
 use NickWelsh\LaravelZero\Tests\Fixtures\PartySort;
@@ -260,4 +262,45 @@ it('resolves model metadata through the eloquent-zero bridge', function (): void
         ->and($schema->clientTable)->toBe('parties')
         ->and($schema->clientColumn('user_id'))->toBe('userId')
         ->and($schema->primaryKey)->toBe(['id']);
+});
+
+it('generates allowlisted dynamic model queries and typed client builders', function (): void {
+    config()->set('laravel-zero.generation.models', [DynamicParty::class]);
+    app()->forgetInstance(DynamicQueryRegistry::class);
+
+    $source = app(ZeroTypeScriptGenerator::class)->render()['files']['queries.generated.ts'];
+
+    expect($source)
+        ->toContain('models: {', 'dynamicParty: defineQuery(')
+        ->toContain('case "display_name": query = query.where("displayName"')
+        ->toContain("case \"tags\": query = query.related('__zeroMorphTagsPivot'")
+        ->toContain('pivot.where("taggableType", "NickWelsh\\\\LaravelZero\\\\Tests\\\\Fixtures\\\\DynamicParty")')
+        ->toContain('export class DynamicQueryBuilder<')
+        ->toContain('export const DynamicParty = createDynamicModel<ParsedParty')
+        ->toContain('parser: partySchema.passthrough()');
+});
+
+it('can disable dynamic model query generation', function (): void {
+    config()->set('laravel-zero.generation.models', [DynamicParty::class]);
+    config()->set('laravel-zero.dynamic_queries.enabled', false);
+    app()->forgetInstance(DynamicQueryRegistry::class);
+
+    $source = app(ZeroTypeScriptGenerator::class)->render()['files']['queries.generated.ts'];
+
+    expect($source)
+        ->not->toContain('dynamicParty: defineQuery(', 'export class DynamicQueryBuilder<', 'partySchema');
+});
+
+it('imports Zod directly for dynamic queries with a custom validation compiler', function (): void {
+    config()->set('laravel-zero.generation.models', [DynamicParty::class]);
+    config()->set('laravel-zero.validation.schema', FakeValidationSchema::class);
+    app()->forgetInstance(ValidationSchema::class);
+    app()->forgetInstance(DynamicQueryRegistry::class);
+
+    $source = app(ZeroTypeScriptGenerator::class)->render()['files']['queries.generated.ts'];
+
+    expect($source)
+        ->toContain("import {z} from 'zod';")
+        ->toContain("import {schema} from 'fake-validation';")
+        ->toContain('dynamicParty: defineQuery(');
 });
