@@ -16,13 +16,19 @@ final class ZodRuleCompiler
     /**
      * @param  array<string, mixed>  $rules
      * @param  array<string, string>  $messages
+     * @param  array<string, string>  $fieldSchemas
      */
-    public function object(array $rules, string $inputClass, array $messages = []): string
+    public function object(array $rules, string $inputClass, array $messages = [], array $fieldSchemas = []): string
     {
         $fields = [];
         $refinements = [];
         foreach ($rules as $field => $definition) {
             if (str_contains($field, '.')) {
+                continue;
+            }
+            if (array_key_exists($field, $fieldSchemas)) {
+                $fields[$field] = $fieldSchemas[$field];
+
                 continue;
             }
             $fieldRules = $this->rules($definition);

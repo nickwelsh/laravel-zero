@@ -4,6 +4,7 @@
     "queries": [
         "directory.party.byId",
         "directory.party.byIdWithArchived",
+        "directory.party.grid",
         "directory.party.withPrimaryEmail"
     ],
     "mutations": [

@@ -3,6 +3,7 @@
 import {defineQueries, defineQuery} from '@rocicorp/zero';
 import {z} from 'zod';
 import {zql} from './schema.generated';
+import {applyPartyFilters, partyGridInputSchema} from './inputs.generated';
 import './context.generated';
 
 export const queries = defineQueries({
@@ -15,6 +16,10 @@ export const queries = defineQueries({
       byIdWithArchived: defineQuery(
         z.object({id: z.string(), includeArchived: z.boolean().optional()}),
         ({ctx, args}) => zql.party.where("userId", ctx.user_id).where("id", args.id),
+      ),
+      grid: defineQuery(
+        partyGridInputSchema,
+        ({ctx, args}) => zql.party.where("userId", ctx.user_id).where(filter => applyPartyFilters(filter, args.filter)).limit(args.limit),
       ),
       withPrimaryEmail: defineQuery(
         z.string(),

@@ -1,129 +1,83 @@
-// This file is generated. Do not edit directly.
+<?php
 
-import {z} from 'zod';
+namespace NickWelsh\LaravelZero\Compiler\Filters;
 
-import { z as partyFiltersZod } from 'zod';
+use NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry;
+use RuntimeException;
 
-type partyFiltersValue = string | number | boolean | readonly (string | number | boolean)[];
+/**
+ * Compiles a filter definition graph into self-contained TypeScript.
+ *
+ * Domain integration assumptions are isolated in ZeroFilterDomainAdapter.
+ *
+ * @phpstan-import-type FilterDefinition from ZeroFilterDomainAdapter
+ * @phpstan-import-type FilterField from ZeroFilterDomainAdapter
+ * @phpstan-import-type FilterRelationship from ZeroFilterDomainAdapter
+ */
+final readonly class ZeroFilterCompiler
+{
+    private ZeroFilterDomainAdapter $adapter;
 
-export type PartyFilterNode =
-  | {type: 'condition'; field: string; operator: string; value?: partyFiltersValue}
-  | {type: 'group'; combinator: 'and' | 'or'; children: PartyFilterNode[]}
-  | {type: 'relationship'; relationship: string; quantifier: 'some'; filter?: PartyFilterNode};
-
-export const partyFilters = {
-    "rootDefinitionId": "NickWelsh\\LaravelZero\\Tests\\Fixtures\\PartyFilters",
-    "definitions": {
-        "NickWelsh\\LaravelZero\\Tests\\Fixtures\\EmailAddressFilters": {
-            "id": "NickWelsh\\LaravelZero\\Tests\\Fixtures\\EmailAddressFilters",
-            "modelClass": "NickWelsh\\LaravelZero\\Tests\\Fixtures\\EmailAddress",
-            "fields": [
-                {
-                    "id": "primary",
-                    "label": "Primary email",
-                    "column": "is_primary",
-                    "clientColumn": "isPrimary",
-                    "kind": "boolean",
-                    "operators": [
-                        "equals",
-                        "not_equals"
-                    ],
-                    "values": []
-                },
-                {
-                    "id": "id",
-                    "label": "Email ID",
-                    "column": "id",
-                    "clientColumn": "id",
-                    "kind": "string",
-                    "operators": [
-                        "equals",
-                        "not_equals",
-                        "contains",
-                        "not_contains",
-                        "starts_with",
-                        "ends_with",
-                        "in",
-                        "not_in"
-                    ],
-                    "values": []
-                }
-            ],
-            "relationships": [],
-            "limits": {
-                "maxDepth": 3,
-                "maxRelationshipDepth": 3,
-                "maxNodes": 50,
-                "maxChildren": 20,
-                "maxInValues": 100,
-                "maxStringLength": 1000
-            }
-        },
-        "NickWelsh\\LaravelZero\\Tests\\Fixtures\\PartyFilters": {
-            "id": "NickWelsh\\LaravelZero\\Tests\\Fixtures\\PartyFilters",
-            "modelClass": "NickWelsh\\LaravelZero\\Tests\\Fixtures\\Party",
-            "fields": [
-                {
-                    "id": "name",
-                    "label": "Party name",
-                    "column": "display_name",
-                    "clientColumn": "displayName",
-                    "kind": "string",
-                    "operators": [
-                        "equals",
-                        "contains"
-                    ],
-                    "values": []
-                },
-                {
-                    "id": "kind",
-                    "label": "Party type",
-                    "column": "reference_code",
-                    "clientColumn": "referenceCode",
-                    "kind": "enum",
-                    "operators": [
-                        "equals",
-                        "not_equals",
-                        "in",
-                        "not_in"
-                    ],
-                    "values": [
-                        {
-                            "value": "person",
-                            "label": "Person"
-                        },
-                        {
-                            "value": "company",
-                            "label": "Company"
-                        },
-                        {
-                            "value": "household",
-                            "label": "Household"
-                        }
-                    ]
-                }
-            ],
-            "relationships": [
-                {
-                    "id": "emails",
-                    "label": "Email addresses",
-                    "relationship": "emailAddresses",
-                    "targetDefinitionId": "NickWelsh\\LaravelZero\\Tests\\Fixtures\\EmailAddressFilters"
-                }
-            ],
-            "limits": {
-                "maxDepth": 3,
-                "maxRelationshipDepth": 3,
-                "maxNodes": 50,
-                "maxChildren": 20,
-                "maxInValues": 100,
-                "maxStringLength": 1000
-            }
-        }
+    public function __construct(private ZeroSchemaRegistry $schemas)
+    {
+        $this->adapter = new ZeroFilterDomainAdapter($schemas);
     }
-} as const;
 
-type partyFiltersRuntimeField = {
+    /** @param class-string $definitionClass */
+    public static function metadataName(string $definitionClass): string
+    {
+        return lcfirst(self::basename($definitionClass));
+    }
+
+    /** @param class-string $definitionClass */
+    public static function schemaName(string $definitionClass): string
+    {
+        return lcfirst(self::nodeStem($definitionClass)).'Schema';
+    }
+
+    /** @param class-string $definitionClass */
+    public static function applyName(string $definitionClass): string
+    {
+        return 'apply'.self::basename($definitionClass);
+    }
+
+    /** @param class-string $definitionClass */
+    public static function typeName(string $definitionClass): string
+    {
+        return self::nodeStem($definitionClass).'Node';
+    }
+
+    /** @param class-string $definitionClass */
+    public function compile(string $definitionClass): string
+    {
+        $definitions = [];
+        $classesById = [];
+        $this->collect($definitionClass, $definitions, $classesById);
+        ksort($definitions, SORT_STRING);
+
+        $metadata = self::metadataName($definitionClass);
+        $schema = self::schemaName($definitionClass);
+        $apply = self::applyName($definitionClass);
+        $type = self::typeName($definitionClass);
+        $rootDefinitionId = $this->adapter->definitionId($definitionClass);
+        $metadataJson = json_encode([
+            'rootDefinitionId' => $rootDefinitionId,
+            'definitions' => $definitions,
+        ], JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE | JSON_THROW_ON_ERROR);
+
+        $source = <<<'TYPESCRIPT'
+import { z as __ZOD__ } from 'zod';
+
+type __PREFIX__Value = string | number | boolean | readonly (string | number | boolean)[];
+
+export type __NODE_TYPE__ =
+  | {type: 'condition'; field: string; operator: string; value?: __PREFIX__Value}
+  | {type: 'group'; combinator: 'and' | 'or'; children: __NODE_TYPE__[]}
+  | {type: 'relationship'; relationship: string; quantifier: 'some'; filter?: __NODE_TYPE__};
+
+export const __METADATA__ = __METADATA_JSON__ as const;
+
+type __PREFIX__RuntimeField = {
   readonly id: string;
   readonly label: string;
   readonly column: string;
@@ -133,18 +87,18 @@ type partyFiltersRuntimeField = {
   readonly values: readonly {readonly value: unknown; readonly label: string}[];
 };
 
-type partyFiltersRuntimeRelationship = {
+type __PREFIX__RuntimeRelationship = {
   readonly id: string;
   readonly label: string;
   readonly relationship: string;
   readonly targetDefinitionId: string;
 };
 
-type partyFiltersRuntimeDefinition = {
+type __PREFIX__RuntimeDefinition = {
   readonly id: string;
   readonly modelClass: string;
-  readonly fields: readonly partyFiltersRuntimeField[];
-  readonly relationships: readonly partyFiltersRuntimeRelationship[];
+  readonly fields: readonly __PREFIX__RuntimeField[];
+  readonly relationships: readonly __PREFIX__RuntimeRelationship[];
   readonly limits: {
     readonly maxDepth: number;
     readonly maxRelationshipDepth: number;
@@ -155,18 +109,18 @@ type partyFiltersRuntimeDefinition = {
   };
 };
 
-type partyFiltersSemanticOperator = {
+type __PREFIX__SemanticOperator = {
   readonly zql: string;
   readonly mode: 'literal' | 'in' | 'null' | 'contains' | 'startsWith' | 'endsWith' | 'empty';
   readonly negate?: boolean;
 };
 
-const partyFiltersDefinitions = partyFilters.definitions as unknown as Readonly<Record<string, partyFiltersRuntimeDefinition>>;
+const __PREFIX__Definitions = __METADATA__.definitions as unknown as Readonly<Record<string, __PREFIX__RuntimeDefinition>>;
 
-const partyFiltersIsRecord = (value: unknown): value is Record<string, unknown> =>
+const __PREFIX__IsRecord = (value: unknown): value is Record<string, unknown> =>
   typeof value === 'object' && value !== null && !Array.isArray(value);
 
-const partyFiltersHasOnlyKeys = (
+const __PREFIX__HasOnlyKeys = (
   value: Record<string, unknown>,
   allowed: readonly string[],
   path: (string | number)[],
@@ -178,10 +132,10 @@ const partyFiltersHasOnlyKeys = (
   return false;
 };
 
-const partyFiltersNormalize = (value: string): string =>
+const __PREFIX__Normalize = (value: string): string =>
   value.trim().toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '');
 
-const partyFiltersSemantic = (operator: string): partyFiltersSemanticOperator | null => {
+const __PREFIX__Semantic = (operator: string): __PREFIX__SemanticOperator | null => {
   switch (operator.trim().toUpperCase()) {
     case '=': return {zql: '=', mode: 'literal'};
     case '!=':
@@ -200,7 +154,7 @@ const partyFiltersSemantic = (operator: string): partyFiltersSemanticOperator | 
     case 'NOT ILIKE': return {zql: 'NOT ILIKE', mode: 'literal'};
   }
 
-  switch (partyFiltersNormalize(operator)) {
+  switch (__PREFIX__Normalize(operator)) {
     case 'eq':
     case 'equal':
     case 'equals':
@@ -247,17 +201,17 @@ const partyFiltersSemantic = (operator: string): partyFiltersSemanticOperator | 
   }
 };
 
-const partyFiltersEscapeLike = (value: unknown): string =>
+const __PREFIX__EscapeLike = (value: unknown): string =>
   String(value).replace(/[\\%_]/g, '\\$&');
 
-const partyFiltersValidateScalar = (
+const __PREFIX__ValidateScalar = (
   value: unknown,
-  field: partyFiltersRuntimeField,
+  field: __PREFIX__RuntimeField,
   maxStringLength: number,
   path: (string | number)[],
   issue: (message: string, path: (string | number)[]) => void,
 ): void => {
-  const kind = partyFiltersNormalize(field.kind);
+  const kind = __PREFIX__Normalize(field.kind);
   let valid = true;
 
   if (['string', 'text', 'uuid', 'date', 'datetime', 'date_time', 'timestamp'].includes(kind)) {
@@ -288,11 +242,11 @@ const partyFiltersValidateScalar = (
   }
 };
 
-const partyFiltersValidate = (
+const __PREFIX__Validate = (
   input: unknown,
   issue: (message: string, path: (string | number)[]) => void,
 ): void => {
-  const root = partyFiltersDefinitions[partyFilters.rootDefinitionId];
+  const root = __PREFIX__Definitions[__METADATA__.rootDefinitionId];
   if (!root) {
     issue('Root filter definition metadata is missing.', []);
     return;
@@ -307,7 +261,7 @@ const partyFiltersValidate = (
     path: (string | number)[],
   ): void => {
     nodes += 1;
-    const definition = partyFiltersDefinitions[definitionId];
+    const definition = __PREFIX__Definitions[definitionId];
     if (!definition) {
       issue(`Unknown filter definition [${definitionId}].`, path);
       return;
@@ -316,13 +270,13 @@ const partyFiltersValidate = (
       issue('Filter exceeds the maximum node count.', path);
       return;
     }
-    if (!partyFiltersIsRecord(value) || typeof value.type !== 'string') {
+    if (!__PREFIX__IsRecord(value) || typeof value.type !== 'string') {
       issue('Filter node must be an object with a type.', path);
       return;
     }
 
     if (value.type === 'condition') {
-      if (!partyFiltersHasOnlyKeys(value, ['type', 'field', 'operator', 'value'], path, issue)) return;
+      if (!__PREFIX__HasOnlyKeys(value, ['type', 'field', 'operator', 'value'], path, issue)) return;
       if (typeof value.field !== 'string') {
         issue('Condition field must be a string.', [...path, 'field']);
         return;
@@ -340,7 +294,7 @@ const partyFiltersValidate = (
         issue(`Operator [${value.operator}] is not allowed for field [${field.id}].`, [...path, 'operator']);
         return;
       }
-      const semantic = partyFiltersSemantic(value.operator);
+      const semantic = __PREFIX__Semantic(value.operator);
       if (!semantic) {
         issue(`Operator [${value.operator}] has no ZQL mapping.`, [...path, 'operator']);
         return;
@@ -365,7 +319,7 @@ const partyFiltersValidate = (
           issue('IN values exceed the configured maximum.', [...path, 'value']);
           return;
         }
-        value.value.forEach((entry, index) => partyFiltersValidateScalar(
+        value.value.forEach((entry, index) => __PREFIX__ValidateScalar(
           entry,
           field,
           definition.limits.maxStringLength,
@@ -374,12 +328,12 @@ const partyFiltersValidate = (
         ));
         return;
       }
-      partyFiltersValidateScalar(value.value, field, definition.limits.maxStringLength, [...path, 'value'], issue);
+      __PREFIX__ValidateScalar(value.value, field, definition.limits.maxStringLength, [...path, 'value'], issue);
       return;
     }
 
     if (value.type === 'group') {
-      if (!partyFiltersHasOnlyKeys(value, ['type', 'combinator', 'children'], path, issue)) return;
+      if (!__PREFIX__HasOnlyKeys(value, ['type', 'combinator', 'children'], path, issue)) return;
       if (value.combinator !== 'and' && value.combinator !== 'or') {
         issue('Group combinator must be "and" or "or".', [...path, 'combinator']);
       }
@@ -408,7 +362,7 @@ const partyFiltersValidate = (
     }
 
     if (value.type === 'relationship') {
-      if (!partyFiltersHasOnlyKeys(value, ['type', 'relationship', 'quantifier', 'filter'], path, issue)) return;
+      if (!__PREFIX__HasOnlyKeys(value, ['type', 'relationship', 'quantifier', 'filter'], path, issue)) return;
       if (typeof value.relationship !== 'string') {
         issue('Relationship id must be a string.', [...path, 'relationship']);
         return;
@@ -435,29 +389,29 @@ const partyFiltersValidate = (
     issue(`Unknown filter node type [${value.type}].`, [...path, 'type']);
   };
 
-  visit(input, partyFilters.rootDefinitionId, 0, 0, []);
+  visit(input, __METADATA__.rootDefinitionId, 0, 0, []);
 };
 
-export const partyFilterSchema = partyFiltersZod.custom<PartyFilterNode>((value): value is PartyFilterNode => true).superRefine(
-  (value, context) => partyFiltersValidate(
+export const __SCHEMA__ = __ZOD__.custom<__NODE_TYPE__>((value): value is __NODE_TYPE__ => true).superRefine(
+  (value, context) => __PREFIX__Validate(
     value,
     (message, path) => context.addIssue({code: 'custom', message, path}),
   ),
 );
 
-const partyFiltersCanonicalValue = (field: partyFiltersRuntimeField, value: unknown): unknown => {
+const __PREFIX__CanonicalValue = (field: __PREFIX__RuntimeField, value: unknown): unknown => {
   if (field.values.length === 0) return value;
   const option = field.values.find(candidate => Object.is(candidate.value, value));
   if (!option) throw new Error(`Value is not an allowed option for filter field [${field.id}].`);
   return option.value;
 };
 
-const partyFiltersApplyNode = (expressionBuilder: any, node: PartyFilterNode, definitionId: string): any => {
-  const definition = partyFiltersDefinitions[definitionId];
+const __PREFIX__ApplyNode = (expressionBuilder: any, node: __NODE_TYPE__, definitionId: string): any => {
+  const definition = __PREFIX__Definitions[definitionId];
   if (!definition) throw new Error(`Unknown filter definition [${definitionId}].`);
 
   if (node.type === 'group') {
-    const conditions = node.children.map(child => partyFiltersApplyNode(expressionBuilder, child, definitionId));
+    const conditions = node.children.map(child => __PREFIX__ApplyNode(expressionBuilder, child, definitionId));
     return node.combinator === 'and' ? expressionBuilder.and(...conditions) : expressionBuilder.or(...conditions);
   }
 
@@ -469,7 +423,7 @@ const partyFiltersApplyNode = (expressionBuilder: any, node: PartyFilterNode, de
     return expressionBuilder.exists(
       relationship.relationship,
       (query: any) => query.where(
-        (relatedExpressionBuilder: any) => partyFiltersApplyNode(relatedExpressionBuilder, node.filter as PartyFilterNode, relationship.targetDefinitionId),
+        (relatedExpressionBuilder: any) => __PREFIX__ApplyNode(relatedExpressionBuilder, node.filter as __NODE_TYPE__, relationship.targetDefinitionId),
       ),
     );
   }
@@ -477,7 +431,7 @@ const partyFiltersApplyNode = (expressionBuilder: any, node: PartyFilterNode, de
   const field = definition.fields.find(candidate => candidate.id === node.field);
   if (!field) throw new Error(`Unknown filter field [${node.field}].`);
   if (!field.operators.includes(node.operator)) throw new Error(`Operator [${node.operator}] is not allowed for filter field [${field.id}].`);
-  const semantic = partyFiltersSemantic(node.operator);
+  const semantic = __PREFIX__Semantic(node.operator);
   if (!semantic) throw new Error(`Operator [${node.operator}] has no ZQL mapping.`);
 
   if (semantic.mode === 'null') return expressionBuilder.cmp(field.clientColumn, semantic.zql, null);
@@ -487,19 +441,101 @@ const partyFiltersApplyNode = (expressionBuilder: any, node: PartyFilterNode, de
     return expressionBuilder.cmp(
       field.clientColumn,
       semantic.zql,
-      node.value.map(value => partyFiltersCanonicalValue(field, value)),
+      node.value.map(value => __PREFIX__CanonicalValue(field, value)),
     );
   }
 
-  const value = partyFiltersCanonicalValue(field, node.value);
-  if (semantic.mode === 'contains') return expressionBuilder.cmp(field.clientColumn, semantic.zql, `%${partyFiltersEscapeLike(value)}%`);
-  if (semantic.mode === 'startsWith') return expressionBuilder.cmp(field.clientColumn, semantic.zql, `${partyFiltersEscapeLike(value)}%`);
-  if (semantic.mode === 'endsWith') return expressionBuilder.cmp(field.clientColumn, semantic.zql, `%${partyFiltersEscapeLike(value)}`);
+  const value = __PREFIX__CanonicalValue(field, node.value);
+  if (semantic.mode === 'contains') return expressionBuilder.cmp(field.clientColumn, semantic.zql, `%${__PREFIX__EscapeLike(value)}%`);
+  if (semantic.mode === 'startsWith') return expressionBuilder.cmp(field.clientColumn, semantic.zql, `${__PREFIX__EscapeLike(value)}%`);
+  if (semantic.mode === 'endsWith') return expressionBuilder.cmp(field.clientColumn, semantic.zql, `%${__PREFIX__EscapeLike(value)}`);
   return expressionBuilder.cmp(field.clientColumn, semantic.zql, value);
 };
 
-export const applyPartyFilters = (expressionBuilder: any, node: PartyFilterNode): any =>
-  partyFiltersApplyNode(expressionBuilder, node, partyFilters.rootDefinitionId);
+export const __APPLY__ = (expressionBuilder: any, node: __NODE_TYPE__): any =>
+  __PREFIX__ApplyNode(expressionBuilder, node, __METADATA__.rootDefinitionId);
+TYPESCRIPT;
 
-export const createPartyInputSchema = z.object({id: z.string(), display_name: z.string().min(2), password_confirmation: z.any().optional(), reference_code: z.any().optional()}).refine(data => data["password_confirmation"] === undefined || data["password_confirmation"] === data["display_name"], { error: "The confirmation does not match the display name.", path: ["password_confirmation"] });
-export const partyGridInputSchema = z.object({limit: z.number().int().gte(1).lte(100), filter: partyFilterSchema});
+        return strtr($source, [
+            '__ZOD__' => $metadata.'Zod',
+            '__NODE_TYPE__' => $type,
+            '__METADATA__' => $metadata,
+            '__METADATA_JSON__' => $metadataJson,
+            '__PREFIX__' => $metadata,
+            '__SCHEMA__' => $schema,
+            '__APPLY__' => $apply,
+        ])."\n";
+    }
+
+    /**
+     * @param  class-string  $definitionClass
+     * @param  array<string, array<string, mixed>>  $definitions
+     * @param  array<string, class-string>  $classesById
+     */
+    private function collect(string $definitionClass, array &$definitions, array &$classesById): void
+    {
+        $definitionId = $this->adapter->definitionId($definitionClass);
+        if (isset($classesById[$definitionId]) && $classesById[$definitionId] !== $definitionClass) {
+            throw new RuntimeException("Filter definition id [{$definitionId}] is shared by [{$classesById[$definitionId]}] and [{$definitionClass}].");
+        }
+        if (isset($definitions[$definitionId])) {
+            return;
+        }
+
+        $definition = $this->adapter->definition($definitionClass);
+        $classesById[$definitionId] = $definitionClass;
+        $definitions[$definitionId] = $this->metadataDefinition($definition);
+
+        $relationships = array_values($definition['relationships']);
+        usort($relationships, static fn (array $left, array $right): int => $left['targetDefinitionId'] <=> $right['targetDefinitionId'] ?: $left['id'] <=> $right['id']);
+
+        foreach ($relationships as $relationship) {
+            $target = $this->adapter->definition($relationship['definitionClass']);
+            $this->adapter->verifyRelationshipModel(
+                $definition['modelClass'],
+                $relationship['relationship'],
+                $target['modelClass'],
+            );
+            $this->collect($relationship['definitionClass'], $definitions, $classesById);
+        }
+    }
+
+    /**
+     * @param  FilterDefinition  $definition
+     * @return array<string, mixed>
+     */
+    private function metadataDefinition(array $definition): array
+    {
+        return [
+            'id' => $definition['id'],
+            'modelClass' => $definition['modelClass'],
+            'fields' => array_values($definition['fields']),
+            'relationships' => array_map(
+                static fn (array $relationship): array => [
+                    'id' => $relationship['id'],
+                    'label' => $relationship['label'],
+                    'relationship' => $relationship['relationship'],
+                    'targetDefinitionId' => $relationship['targetDefinitionId'],
+                ],
+                array_values($definition['relationships']),
+            ),
+            'limits' => $definition['limits'],
+        ];
+    }
+
+    /** @param class-string $definitionClass */
+    private static function basename(string $definitionClass): string
+    {
+        $position = strrpos($definitionClass, '\\');
+
+        return $position === false ? $definitionClass : substr($definitionClass, $position + 1);
+    }
+
+    /** @param class-string $definitionClass */
+    private static function nodeStem(string $definitionClass): string
+    {
+        $basename = self::basename($definitionClass);
+
+        return str_ends_with($basename, 'Filters') ? substr($basename, 0, -1) : $basename;
+    }
+}

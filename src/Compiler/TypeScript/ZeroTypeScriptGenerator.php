@@ -5,11 +5,13 @@ namespace NickWelsh\LaravelZero\Compiler\TypeScript;
 use Illuminate\Filesystem\Filesystem;
 use NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape;
 use NickWelsh\LaravelZero\Compiler\Context\ContextTypeCompiler;
+use NickWelsh\LaravelZero\Compiler\Filters\ZeroFilterCompiler;
 use NickWelsh\LaravelZero\Compiler\Inputs\ZodRuleCompiler;
 use NickWelsh\LaravelZero\Compiler\Mutations\ZeroMutationCompiler;
 use NickWelsh\LaravelZero\Compiler\Queries\ZeroQueryCompiler;
 use NickWelsh\LaravelZero\Discovery\Operation;
 use NickWelsh\LaravelZero\Discovery\ZeroRegistry;
+use NickWelsh\LaravelZero\Inputs\ZeroFilterInput;
 use NickWelsh\LaravelZero\Inputs\ZeroInput;
 use NickWelsh\LaravelZero\Support\GeneratedPaths;
 use ReflectionNamedType;
@@ -35,6 +37,7 @@ final readonly class ZeroTypeScriptGenerator
         private ContextTypeCompiler $contexts,
         private ZeroQueryCompiler $queries,
         private ZeroMutationCompiler $mutations,
+        private ZeroFilterCompiler $filters,
         private Filesystem $files,
     ) {}
 
@@ -264,6 +267,8 @@ final readonly class ZeroTypeScriptGenerator
     private function inputs(array $operations): array
     {
         $compiler = new ZodRuleCompiler;
+        $filterSources = [];
+        $filterSymbols = [];
         $schemas = [];
         foreach ($operations as $operation) {
             $shape = ArgumentShape::from($operation->method);
@@ -276,12 +281,43 @@ final readonly class ZeroTypeScriptGenerator
             }
             /** @var ZeroInput $input */
             $input = new $class;
+            $fieldSchemas = [];
+            if (is_subclass_of($class, ZeroFilterInput::class)) {
+                /** @var class-string<ZeroFilterInput> $filterInputClass */
+                $filterInputClass = $class;
+                $definition = $filterInputClass::filterDefinition();
+                $this->reserveFilterSymbols($filterSymbols, $definition);
+                $filterSources[$definition] = $this->filters->compile($definition);
+                $fieldSchemas[$filterInputClass::filterField()] = ZeroFilterCompiler::schemaName($definition);
+            }
             $name = lcfirst(class_basename($class)).'Schema';
-            $schemas[$class] = "export const {$name} = ".$compiler->object($input->rules(), class_basename($class), $input->messages()).';';
+            $schemas[$class] = "export const {$name} = ".$compiler->object($input->rules(), class_basename($class), $input->messages(), $fieldSchemas).';';
         }
+        ksort($filterSources);
         ksort($schemas);
+        $sources = [...array_values($filterSources), ...array_values($schemas)];
 
-        return [implode("\n", $schemas).($schemas ? "\n" : ''), $compiler->notices()];
+        return [implode("\n", $sources).($sources ? "\n" : ''), $compiler->notices()];
+    }
+
+    /**
+     * @param  array<string, class-string>  $symbols
+     * @param  class-string  $definition
+     */
+    private function reserveFilterSymbols(array &$symbols, string $definition): void
+    {
+        foreach ([
+            ZeroFilterCompiler::metadataName($definition),
+            ZeroFilterCompiler::schemaName($definition),
+            ZeroFilterCompiler::applyName($definition),
+            ZeroFilterCompiler::typeName($definition),
+        ] as $symbol) {
+            $existing = $symbols[$symbol] ?? null;
+            if ($existing !== null && $existing !== $definition) {
+                throw new UnexpectedValueException("Filter definitions [{$existing}] and [{$definition}] generate the same TypeScript symbol [{$symbol}]. Rename one definition.");
+            }
+            $symbols[$symbol] = $definition;
+        }
     }
 
     /** @param array<string, Operation> $operations */
@@ -291,7 +327,13 @@ final readonly class ZeroTypeScriptGenerator
         foreach ($operations as $operation) {
             $shape = ArgumentShape::from($operation->method);
             if ($shape->kind === 'input') {
-                $names[] = lcfirst(class_basename($this->inputClass($shape))).'Schema';
+                $class = $this->inputClass($shape);
+                $names[] = lcfirst(class_basename($class)).'Schema';
+                if (is_subclass_of($class, ZeroFilterInput::class)) {
+                    /** @var class-string<ZeroFilterInput> $filterInputClass */
+                    $filterInputClass = $class;
+                    $names[] = ZeroFilterCompiler::applyName($filterInputClass::filterDefinition());
+                }
             }
         }
         sort($names);

@@ -10,6 +10,53 @@
     },
     "limit": 1
   },
+  "withPrimaryEmailExists": {
+    "table": "party",
+    "where": {
+      "type": "correlatedSubquery",
+      "related": {
+        "system": "client",
+        "correlation": {"parentField": ["id"], "childField": ["partyId"]},
+        "subquery": {
+          "table": "emailAddress",
+          "alias": "zsubq_emailAddresses",
+          "where": {"type": "simple", "left": {"type": "column", "name": "isPrimary"}, "right": {"type": "literal", "value": true}, "op": "="}
+        }
+      },
+      "op": "EXISTS"
+    }
+  },
+  "grid": {
+    "table": "party",
+    "where": {
+      "type": "and",
+      "conditions": [
+        {"type": "simple", "left": {"type": "column", "name": "userId"}, "right": {"type": "literal", "value": "user-1"}, "op": "="},
+        {"type": "simple", "left": {"type": "column", "name": "displayName"}, "right": {"type": "literal", "value": "%Acme%"}, "op": "ILIKE"},
+        {
+          "type": "or",
+          "conditions": [
+            {"type": "simple", "left": {"type": "column", "name": "referenceCode"}, "right": {"type": "literal", "value": "person"}, "op": "="},
+            {"type": "simple", "left": {"type": "column", "name": "referenceCode"}, "right": {"type": "literal", "value": "company"}, "op": "="}
+          ]
+        },
+        {
+          "type": "correlatedSubquery",
+          "related": {
+            "system": "client",
+            "correlation": {"parentField": ["id"], "childField": ["partyId"]},
+            "subquery": {
+              "table": "emailAddress",
+              "alias": "zsubq_emailAddresses",
+              "where": {"type": "simple", "left": {"type": "column", "name": "isPrimary"}, "right": {"type": "literal", "value": true}, "op": "="}
+            }
+          },
+          "op": "EXISTS"
+        }
+      ]
+    },
+    "limit": 25
+  },
   "withPrimaryEmail": {
     "table": "party",
     "where": {

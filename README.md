@@ -55,7 +55,7 @@ final class PartyQueries implements ZeroQueries
 }
 ```
 
-Models use `HasZero`. Supported runtime operations: `where`, `whereIn`, `whereNotIn`, null checks, `orderBy`, `limit`, `one`, and direct relationships.
+Models use `HasZero`. Supported runtime operations: `where`, `whereIn`, `whereNotIn`, null checks, `whereExists`, `applyFilter`, `orderBy`, `limit`, `one`, and direct relationships.
 
 Dynamic filter and sort columns must be allowlisted with string-backed enums implementing `ZeroQueryColumn`. Define separate enums when the allowed filter and sort fields differ; do not include private or tenant-scoping columns unless callers should be able to select them:
 
@@ -89,6 +89,160 @@ public function paginated(
 ```
 
 The enum values use server-side column names. Generation verifies every case against the model schema, maps each case to its client-side column name, and emits a Zod enum. The same enum is hydrated before the PHP query runs, so values outside the allowlist are rejected on both client and server paths. Plain string literals remain supported for fixed columns; unrestricted dynamic string columns produce `ZERO-Q104`.
+
+### Advanced filter groups
+
+For data-grid filters with nested AND/OR groups, define a server-owned filter schema. Fields and relationships are explicit allowlists; protected columns never become filterable unless they are deliberately registered:
+
+```php
+use NickWelsh\LaravelZero\Filters\ZeroFilterBuilder;
+use NickWelsh\LaravelZero\Filters\ZeroFilterDefinition;
+use NickWelsh\LaravelZero\Filters\ZeroFilterOperator;
+
+final class PartyFilters extends ZeroFilterDefinition
+{
+    public function model(): string
+    {
+        return Party::class;
+    }
+
+    public function define(ZeroFilterBuilder $filter): void
+    {
+        $filter->string('name', 'display_name')
+            ->label('Party name')
+            ->operators(
+                ZeroFilterOperator::Equals,
+                ZeroFilterOperator::Contains,
+            );
+
+        $filter->enum('type', PartyType::class, 'party_type')
+            ->label('Party type');
+
+        $filter->relationship(
+            'emails',
+            'emailAddresses',
+            EmailAddressFilters::class,
+        )->label('Email addresses');
+    }
+}
+```
+
+`label()` is optional and defaults to a humanized field or relationship ID. Backed-enum fields automatically generate value/label options. Other finite fields can declare UI options explicitly:
+
+```php
+$filter->string('status')
+    ->label('Status')
+    ->values([
+        'active' => 'Active',
+        'archived' => 'Archived',
+    ]);
+```
+
+Create one input containing the filter and any other grid arguments:
+
+```php
+use NickWelsh\LaravelZero\Inputs\ZeroFilterInput;
+
+final class PartyGridInput extends ZeroFilterInput
+{
+    public static function filterDefinition(): string
+    {
+        return PartyFilters::class;
+    }
+
+    protected function additionalRules(): array
+    {
+        return [
+            'limit' => ['required', 'integer', 'min:1', 'max:100'],
+        ];
+    }
+}
+```
+
+Apply it after immutable authorization constraints so user-controlled OR groups cannot escape their scope:
+
+```php
+public function grid(ZeroContext $context, PartyGridInput $input): ZeroQueryBuilder
+{
+    return Party::zeroQuery()
+        ->where('user_id', $context->user_id)
+        ->applyFilter($input->filter, PartyFilters::class)
+        ->limit($input->limit);
+}
+```
+
+The filter wire format has condition, group, and relationship nodes:
+
+```json
+{
+  "type": "group",
+  "combinator": "and",
+  "children": [
+    {"type": "condition", "field": "name", "operator": "contains", "value": "Acme"},
+    {
+      "type": "group",
+      "combinator": "or",
+      "children": [
+        {"type": "condition", "field": "type", "operator": "equals", "value": "person"},
+        {"type": "condition", "field": "type", "operator": "equals", "value": "company"}
+      ]
+    },
+    {"type": "relationship", "relationship": "emails", "quantifier": "some"}
+  ]
+}
+```
+
+Generation exports the recursive Zod schema, node type, ZQL helper, and UI metadata through `inputs.generated.ts` and the public barrel. For `PartyFilters`, import `partyFilters` to access every definition's field IDs, labels, server/client columns, kinds, operators, values, relationships, and limits:
+
+```ts
+import {partyFilters} from '@/zero'
+
+const root = partyFilters.definitions[partyFilters.rootDefinitionId]
+const fields = root.fields
+const relationships = root.relationships
+```
+
+Both Laravel and generated Zod reject unknown fields, relationships, operators, value types, excessive nesting, excessive nodes, oversized groups, and oversized `in` lists. Defaults are three group levels, three relationship levels, 50 total nodes, 20 children per group, 100 `in` values, and 1,000 characters per string. Override the protected limit properties on a definition when a screen needs stricter bounds.
+
+Supported V1 relationship quantification is `some`, which compiles to ZQL `EXISTS`. Relationship counts remain unsupported by Zero, and `none` is intentionally omitted because Zero 1.8 cannot reliably execute `NOT EXISTS` against an incomplete client replica.
+
+### Related filtering and ordering
+
+Filter parent rows through a relationship with `whereExists`. The callback is scoped to the related model, so use an allowlist enum whose cases are columns on that model—no dot notation is needed:
+
+```php
+enum EmailAddressFilter: string implements ZeroQueryColumn
+{
+    case Address = 'address';
+    case IsPrimary = 'is_primary';
+}
+
+return Party::zeroQuery()->whereExists(
+    'emailAddresses',
+    fn (ZeroQueryBuilder $emails) => $emails->where($field, $value),
+);
+```
+
+`whereExists` callbacks can contain any supported filter operation and can nest another `whereExists` to traverse multiple relationships.
+
+ZQL cannot order parent rows by a related row's column, so values such as `company.display_name` are not valid sort fields. If that ordering is required, store a sortable value on the parent table or introduce another denormalized sort key.
+
+You can order the rows returned inside an included relationship:
+
+```php
+enum EmailAddressSort: string implements ZeroQueryColumn
+{
+    case Address = 'address';
+    case CreatedAt = 'created_at';
+}
+
+return Party::zeroQuery()->related(
+    'emailAddresses',
+    fn (ZeroQueryBuilder $emails) => $emails->orderBy($orderBy, $direction),
+);
+```
+
+This changes the order of `emailAddresses` within each party; it does not change the order of the parties themselves.
 
 ## Mutation
 

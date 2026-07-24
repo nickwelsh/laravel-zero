@@ -7,6 +7,7 @@ it('discovers deterministic names', function (): void {
     expect(array_keys(app(ZeroRegistry::class)->queries()))->toBe([
         'directory.party.byId',
         'directory.party.byIdWithArchived',
+        'directory.party.grid',
         'directory.party.withPrimaryEmail',
     ]);
 });

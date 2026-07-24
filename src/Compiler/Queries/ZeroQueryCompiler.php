@@ -6,8 +6,11 @@ use BackedEnum;
 use InvalidArgumentException;
 use NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape;
 use NickWelsh\LaravelZero\Compiler\Diagnostics\ZeroCompilerException;
+use NickWelsh\LaravelZero\Compiler\Filters\ZeroFilterCompiler;
 use NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry;
 use NickWelsh\LaravelZero\Discovery\Operation;
+use NickWelsh\LaravelZero\Filters\ZeroFilterDefinition;
+use NickWelsh\LaravelZero\Inputs\ZeroFilterInput;
 use NickWelsh\LaravelZero\Queries\ZeroQueryColumn;
 use NickWelsh\LaravelZero\Schema\ZeroModelSchema;
 use PhpParser\Node;
@@ -50,11 +53,11 @@ final readonly class ZeroQueryCompiler
         foreach ($calls as $call) {
             $name = $call->name instanceof Node\Identifier ? $call->name->toString() : '';
             $arguments = $call->getArgs();
-            $supported = ['where', 'whereIn', 'whereNotIn', 'whereNull', 'whereNotNull', 'orderBy', 'limit', 'one', 'related'];
+            $supported = ['where', 'whereIn', 'whereNotIn', 'whereNull', 'whereNotNull', 'whereExists', 'applyFilter', 'orderBy', 'limit', 'one', 'related'];
             if (! in_array($name, $supported, true)) {
                 throw $this->error($operation, $call, "Unsupported query operation [{$name}].", 'Use a documented V1 ZeroQueryBuilder operation.');
             }
-            if ($name === 'related') {
+            if (in_array($name, ['related', 'whereExists'], true)) {
                 $relationshipName = $arguments[0]->value ?? null;
                 if (! $relationshipName instanceof Node\Scalar\String_) {
                     throw $this->error($operation, $call, 'Relationship name must be a string literal.');
@@ -66,7 +69,19 @@ final readonly class ZeroQueryCompiler
                     $relatedModel = $relationship->relatedModel;
                     $rendered .= ', '.$this->relationshipCallback($arguments[1]->value, $relatedModel, $operation, $shape);
                 }
-                $expression .= ".related({$rendered})";
+                $expression .= ".{$name}({$rendered})";
+
+                continue;
+            }
+            if ($name === 'applyFilter') {
+                if (count($arguments) !== 2) {
+                    throw $this->error($operation, $call, 'applyFilter expects a filter value and a filter definition class.');
+                }
+                $definition = $this->filterDefinitionClass($arguments[1]->value, $operation);
+                $this->assertFilterInput($shape, $definition, $schema, $arguments[0]->value, $operation, $call);
+                $filter = $this->expression($arguments[0]->value, $operation, $shape);
+                $apply = ZeroFilterCompiler::applyName($definition);
+                $expression .= ".where(filter => {$apply}(filter, {$filter}))";
 
                 continue;
             }
@@ -261,6 +276,55 @@ final readonly class ZeroQueryCompiler
         }
 
         throw $this->error($operation, $expression, 'Unsupported portable query expression.', 'Use an argument, context/input property, literal, array, or backed enum case.');
+    }
+
+    /** @return class-string<ZeroFilterDefinition> */
+    private function filterDefinitionClass(Expr $expression, Operation $operation): string
+    {
+        if (! $expression instanceof Expr\ClassConstFetch || ! $expression->name instanceof Node\Identifier || strtolower($expression->name->toString()) !== 'class' || ! $expression->class instanceof Node\Name) {
+            throw $this->error($operation, $expression, 'Filter definition must be a class literal.');
+        }
+
+        $definition = $this->resolvedName($expression->class);
+        if (! class_exists($definition) || ! is_subclass_of($definition, ZeroFilterDefinition::class)) {
+            throw $this->error($operation, $expression, "Filter definition [{$definition}] must extend ".ZeroFilterDefinition::class.'.');
+        }
+
+        return $definition;
+    }
+
+    /** @param class-string<ZeroFilterDefinition> $definition */
+    private function assertFilterInput(ArgumentShape $shape, string $definition, ZeroModelSchema $querySchema, Expr $filter, Operation $operation, Node $node): void
+    {
+        if ($shape->kind !== 'input') {
+            throw $this->error($operation, $node, 'applyFilter requires a ZeroFilterInput query argument.');
+        }
+        $parameter = $shape->parameters[0] ?? null;
+        $type = $parameter?->getType();
+        if (! $type instanceof ReflectionNamedType) {
+            throw $this->error($operation, $node, 'applyFilter requires a ZeroFilterInput query argument.');
+        }
+        $input = $type->getName();
+        if (! is_subclass_of($input, ZeroFilterInput::class)) {
+            throw $this->error($operation, $node, 'applyFilter requires a ZeroFilterInput query argument.');
+        }
+
+        /** @var class-string<ZeroFilterInput> $input */
+        $expected = $input::filterDefinition();
+        if ($expected !== $definition) {
+            throw $this->error($operation, $node, "Filter input [{$input}] is configured for [{$expected}], not [{$definition}].");
+        }
+
+        $filterField = $input::filterField();
+        $parameterName = $parameter->getName();
+        if (! $filter instanceof Expr\PropertyFetch || ! $filter->name instanceof Node\Identifier || $filter->name->toString() !== $filterField || ! $filter->var instanceof Expr\Variable || $filter->var->name !== $parameterName) {
+            throw $this->error($operation, $filter, "applyFilter must use the validated [\${$parameterName}->{$filterField}] input property.");
+        }
+
+        $filterSchema = ZeroFilterDefinition::make($definition)->schema($this->schemas);
+        if ($filterSchema->model !== $querySchema->modelClass) {
+            throw $this->error($operation, $node, "Filter definition [{$definition}] targets model [{$filterSchema->model}], but this query targets [{$querySchema->modelClass}].");
+        }
     }
 
     private function columnExpression(Expr $expression, ZeroModelSchema $schema, Operation $operation, ArgumentShape $shape): string

@@ -5,6 +5,8 @@ namespace NickWelsh\LaravelZero\Tests\Fixtures\Zero;
 use NickWelsh\LaravelZero\Attributes\ZeroQueryCollection;
 use NickWelsh\LaravelZero\Contracts\ZeroQueries;
 use NickWelsh\LaravelZero\Tests\Fixtures\Party;
+use NickWelsh\LaravelZero\Tests\Fixtures\PartyFilters;
+use NickWelsh\LaravelZero\Tests\Fixtures\PartyGridInput;
 use NickWelsh\LaravelZero\Tests\Fixtures\TestZeroContext;
 
 #[ZeroQueryCollection('directory.party')]
@@ -23,6 +25,14 @@ final class PartyQueries implements ZeroQueries
             ->where('user_id', $context->user_id)
             ->where('id', $id)
             ->one();
+    }
+
+    public function grid(TestZeroContext $context, PartyGridInput $input)
+    {
+        return Party::zeroQuery()
+            ->where('user_id', $context->user_id)
+            ->applyFilter($input->filter, PartyFilters::class)
+            ->limit($input->limit);
     }
 
     public function withPrimaryEmail(TestZeroContext $context, string $id)

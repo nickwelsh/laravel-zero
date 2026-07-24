@@ -24,6 +24,22 @@ it('imports the generated schema without its TypeScript extension', function ():
         ->and($files['queries.generated.ts'])->toContain("from './schema.generated';");
 });
 
+it('generates recursive filter schemas, UI metadata, labels, values, and query helpers', function (): void {
+    $files = app(ZeroTypeScriptGenerator::class)->render()['files'];
+
+    expect($files['inputs.generated.ts'])
+        ->toContain('export const partyFilters =')
+        ->toContain('"id": "name"', '"label": "Party name"', '"column": "display_name"', '"clientColumn": "displayName"')
+        ->toContain('"id": "kind"', '"label": "Party type"', '"value": "person"', '"label": "Person"')
+        ->toContain('"id": "emails"', '"label": "Email addresses"')
+        ->toContain('export const partyFilterSchema =')
+        ->toContain('export const applyPartyFilters =')
+        ->toContain('export const partyGridInputSchema = z.object({limit: z.number().int().gte(1).lte(100), filter: partyFilterSchema})')
+        ->and($files['queries.generated.ts'])
+        ->toContain('import {applyPartyFilters, partyGridInputSchema} from \'./inputs.generated\';')
+        ->toContain('filter => applyPartyFilters(filter, args.filter)');
+});
+
 it('omits empty generated modules and their barrel exports', function (): void {
     $filesystem = new Filesystem;
     $directory = sys_get_temp_dir().'/laravel-zero-'.uniqid();

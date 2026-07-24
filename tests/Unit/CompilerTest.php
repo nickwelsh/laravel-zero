@@ -60,6 +60,40 @@ it('compiles allowlisted dynamic filters', function (): void {
         ->toContain('.where(({"display_name": "displayName", "id": "id"} as const)[args.field], args.value)');
 });
 
+it('compiles allowlisted filters inside relationship existence queries', function (): void {
+    $operation = new Operation('query', 'allowed.filteredByEmail', 'allowed', AllowedQueries::class, new ReflectionMethod(AllowedQueries::class, 'filteredByEmail'));
+    $source = (new ZeroQueryCompiler(new FakeSchemaRegistry))->compile($operation);
+
+    expect($source)
+        ->toContain('field: z.enum(["is_primary"])')
+        ->toContain('.whereExists("emailAddresses", emailAddresses => emailAddresses.where(({"is_primary": "isPrimary"} as const)[args.field], args.value))');
+});
+
+it('compiles allowlisted ordering for included relationship rows', function (): void {
+    $operation = new Operation('query', 'allowed.withSortedEmails', 'allowed', AllowedQueries::class, new ReflectionMethod(AllowedQueries::class, 'withSortedEmails'));
+    $source = (new ZeroQueryCompiler(new FakeSchemaRegistry))->compile($operation);
+
+    expect($source)
+        ->toContain('orderBy: z.enum(["id"]).optional()')
+        ->toContain('.related("emailAddresses", emailAddresses => emailAddresses.orderBy(({"id": "id"} as const)[args.orderBy ?? "id"], args.direction ?? "asc"))');
+});
+
+it('compiles recursive filter inputs through generated helpers', function (): void {
+    $operation = app(ZeroRegistry::class)->query('directory.party.grid');
+    $source = (new ZeroQueryCompiler(new FakeSchemaRegistry))->compile($operation);
+
+    expect($source)
+        ->toContain('partyGridInputSchema')
+        ->toContain('.where("userId", ctx.user_id).where(filter => applyPartyFilters(filter, args.filter)).limit(args.limit)');
+});
+
+it('rejects mismatched and unvalidated filter applications', function (string $method): void {
+    $operation = new Operation('query', 'allowed.'.$method, 'allowed', AllowedQueries::class, new ReflectionMethod(AllowedQueries::class, $method));
+
+    expect(fn () => (new ZeroQueryCompiler(new FakeSchemaRegistry))->compile($operation))
+        ->toThrow(ZeroCompilerException::class, 'ZERO-Q104');
+})->with(['mismatchedFilter', 'unvalidatedFilter']);
+
 it('rejects unrestricted dynamic query columns', function (): void {
     $operation = new Operation('query', 'allowed.unsafe', 'allowed', AllowedQueries::class, new ReflectionMethod(AllowedQueries::class, 'unsafe'));
 

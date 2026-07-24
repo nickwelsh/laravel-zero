@@ -8,6 +8,37 @@ it('serves authoritative query AST', function (): void {
         ->assertJsonPath('queries.0.ast.table', 'parties')->assertJsonPath('queries.0.ast.where.conditions.0.right.value', 'user-1');
 });
 
+it('serves recursive grid filters and rejects private filter fields', function (): void {
+    $filter = [
+        'type' => 'group',
+        'combinator' => 'and',
+        'children' => [
+            ['type' => 'condition', 'field' => 'name', 'operator' => 'contains', 'value' => 'Acme'],
+            ['type' => 'relationship', 'relationship' => 'emails', 'quantifier' => 'some'],
+        ],
+    ];
+
+    $this->postJson('/zero/query', ['transform', [[
+        'id' => 'q-grid',
+        'name' => 'directory.party.grid',
+        'args' => [['filter' => $filter, 'limit' => 25]],
+    ]]])->assertOk()
+        ->assertJsonPath('queries.0.ast.where.conditions.1.right.value', '%Acme%')
+        ->assertJsonPath('queries.0.ast.where.conditions.2.op', 'EXISTS')
+        ->assertJsonPath('queries.0.ast.limit', 25);
+
+    $this->postJson('/zero/query', ['transform', [[
+        'id' => 'q-private',
+        'name' => 'directory.party.grid',
+        'args' => [['filter' => [
+            'type' => 'condition',
+            'field' => 'user_id',
+            'operator' => 'equals',
+            'value' => 'attacker',
+        ], 'limit' => 25]],
+    ]]])->assertJsonPath('queries.0.error', 'parse');
+});
+
 it('returns structured query parse and application errors', function (): void {
     $this->postJson('/zero/query', ['bad'])->assertJsonPath('kind', 'TransformFailed')->assertJsonPath('reason', 'parse');
     $this->postJson('/zero/query', ['transform', [
