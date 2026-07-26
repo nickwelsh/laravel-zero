@@ -1,0 +1,46 @@
+---
+title: "CheckCommand"
+description: "class NickWelsh\\LaravelZero\\Commands\\CheckCommand"
+---
+
+# CheckCommand
+
+`NickWelsh\LaravelZero\Commands\CheckCommand`
+
+```php
+final class CheckCommand extends Illuminate\Console\Command
+```
+
+**Extends:** <ApiLink symbol="Illuminate\Console\Command" />
+
+## Properties
+
+### signature
+
+```php
+protected $signature = 'zero:check';
+```
+
+### description
+
+```php
+protected $description = 'Check generated Zero files';
+```
+
+## Methods
+
+### handle
+
+```php
+public function handle(NickWelsh\LaravelZero\Compiler\TypeScript\ZeroTypeScriptGenerator $generator): int
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$generator` | `NickWelsh\LaravelZero\Compiler\TypeScript\ZeroTypeScriptGenerator` |  |
+
+**Returns:** `int`
+
+## Source
+
+[src/Commands/CheckCommand.php:8](https://github.com/nickwelsh/laravel-zero/blob/main/src/Commands/CheckCommand.php#L8)

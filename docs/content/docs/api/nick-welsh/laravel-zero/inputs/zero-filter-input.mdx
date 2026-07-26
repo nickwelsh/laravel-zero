@@ -1,0 +1,52 @@
+---
+title: "ZeroFilterInput"
+description: "class NickWelsh\\LaravelZero\\Inputs\\ZeroFilterInput"
+---
+
+# ZeroFilterInput
+
+`NickWelsh\LaravelZero\Inputs\ZeroFilterInput`
+
+```php
+abstract class ZeroFilterInput extends NickWelsh\LaravelZero\Inputs\ZeroInput
+```
+
+**Extends:** <ApiLink symbol="NickWelsh\LaravelZero\Inputs\ZeroInput" />
+
+## Methods
+
+### filterDefinition
+
+```php
+public static abstract function filterDefinition(): string
+```
+
+**Returns:** `string`
+
+### filterField
+
+```php
+public static function filterField(): string
+```
+
+**Returns:** `string`
+
+### rules
+
+```php
+public final function rules(): array
+```
+
+**Returns:** `array` — mixed&gt;
+
+### additionalRules
+
+```php
+protected function additionalRules(): array
+```
+
+**Returns:** `array` — mixed&gt;
+
+## Source
+
+[src/Inputs/ZeroFilterInput.php:9](https://github.com/nickwelsh/laravel-zero/blob/main/src/Inputs/ZeroFilterInput.php#L9)

@@ -1,0 +1,271 @@
+---
+title: "ZeroQueryBuilder"
+description: "type: 'simple', op: string, left: array{type: 'column', name: string}, right: array{type: 'literal', value: mixed} }"
+---
+
+# ZeroQueryBuilder
+
+`NickWelsh\LaravelZero\Queries\ZeroQueryBuilder`
+
+type: 'simple', op: string, left: array&#123;type: 'column', name: string&#125;, right: array&#123;type: 'literal', value: mixed&#125; &#125;
+
+```php
+final class ZeroQueryBuilder
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry $registry, string $modelClass)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$registry` | `NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry` |  |
+| `$modelClass` | `string` |  |
+
+### for
+
+```php
+public static function for(Illuminate\Database\Eloquent\Model|string $model): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$model` | `Illuminate\Database\Eloquent\Model|string` |  |
+
+**Returns:** `self`
+
+### allowedFilters
+
+```php
+public function allowedFilters(NickWelsh\LaravelZero\Queries\AllowedFilter|string ...$filters): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `...$filters` | `NickWelsh\LaravelZero\Queries\AllowedFilter|string` |  |
+
+**Returns:** `self`
+
+### allowedIncludes
+
+```php
+public function allowedIncludes(string ...$includes): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `...$includes` | `string` |  |
+
+**Returns:** `self`
+
+### allowedSorts
+
+```php
+public function allowedSorts(string ...$sorts): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `...$sorts` | `string` |  |
+
+**Returns:** `self`
+
+### dynamicFilters
+
+```php
+public function dynamicFilters(): array
+```
+
+**Returns:** `array` — AllowedFilter&gt;
+
+### dynamicIncludes
+
+```php
+public function dynamicIncludes(): array
+```
+
+**Returns:** `array`
+
+### dynamicSorts
+
+```php
+public function dynamicSorts(): array
+```
+
+**Returns:** `array`
+
+### modelClass
+
+```php
+public function modelClass(): string
+```
+
+**Returns:** `string`
+
+### addRawRelated
+
+```php
+public function addRawRelated(array $relationship): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$relationship` | `array` |  |
+
+**Returns:** `self`
+
+### where
+
+```php
+public function where(string|NickWelsh\LaravelZero\Queries\ZeroQueryColumn $column, mixed $operatorOrValue, mixed $value = null): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$column` | `string|NickWelsh\LaravelZero\Queries\ZeroQueryColumn` |  |
+| `$operatorOrValue` | `mixed` |  |
+| `$value` | `mixed` |  |
+
+**Returns:** `self`
+
+### whereIn
+
+```php
+public function whereIn(string|NickWelsh\LaravelZero\Queries\ZeroQueryColumn $column, array $values): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$column` | `string|NickWelsh\LaravelZero\Queries\ZeroQueryColumn` |  |
+| `$values` | `array` |  |
+
+**Returns:** `self`
+
+### whereNotIn
+
+```php
+public function whereNotIn(string|NickWelsh\LaravelZero\Queries\ZeroQueryColumn $column, array $values): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$column` | `string|NickWelsh\LaravelZero\Queries\ZeroQueryColumn` |  |
+| `$values` | `array` |  |
+
+**Returns:** `self`
+
+### whereNull
+
+```php
+public function whereNull(string|NickWelsh\LaravelZero\Queries\ZeroQueryColumn $column): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$column` | `string|NickWelsh\LaravelZero\Queries\ZeroQueryColumn` |  |
+
+**Returns:** `self`
+
+### whereNotNull
+
+```php
+public function whereNotNull(string|NickWelsh\LaravelZero\Queries\ZeroQueryColumn $column): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$column` | `string|NickWelsh\LaravelZero\Queries\ZeroQueryColumn` |  |
+
+**Returns:** `self`
+
+### whereExists
+
+```php
+public function whereExists(string $relationship, ?callable $callback = null): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$relationship` | `string` |  |
+| `$callback` | `?callable` |  |
+
+**Returns:** `self`
+
+### applyFilter
+
+```php
+public function applyFilter(array $filter, string $definition): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$filter` | `array` |  |
+| `$definition` | `string` |  |
+
+**Returns:** `self`
+
+### orderBy
+
+```php
+public function orderBy(string|NickWelsh\LaravelZero\Queries\ZeroQueryColumn $column, string|NickWelsh\LaravelZero\Queries\ZeroOrderDirection $direction = 'asc'): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$column` | `string|NickWelsh\LaravelZero\Queries\ZeroQueryColumn` |  |
+| `$direction` | `string|NickWelsh\LaravelZero\Queries\ZeroOrderDirection` |  |
+
+**Returns:** `self`
+
+### limit
+
+```php
+public function limit(int $limit): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$limit` | `int` |  |
+
+**Returns:** `self`
+
+### one
+
+```php
+public function one(): self
+```
+
+**Returns:** `self`
+
+### related
+
+```php
+public function related(string $name, ?callable $callback = null): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$name` | `string` |  |
+| `$callback` | `?callable` |  |
+
+**Returns:** `self`
+
+### toAst
+
+```php
+public function toAst(bool $serverNames = true): array
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$serverNames` | `bool` |  |
+
+**Returns:** `array` — mixed&gt;
+
+## Source
+
+[src/Queries/ZeroQueryBuilder.php:28](https://github.com/nickwelsh/laravel-zero/blob/main/src/Queries/ZeroQueryBuilder.php#L28)

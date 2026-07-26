@@ -1,0 +1,135 @@
+---
+title: "Installation"
+description: "Install Laravel Zero, publish its application files, and connect the generated React provider."
+---
+
+Before installing Laravel Zero, make sure the application meets these
+requirements:
+
+- PHP 8.4 or newer
+- Laravel 11, 12, or 13
+- PostgreSQL for the generated Eloquent schema and Zero replication
+- Node.js and a frontend package manager
+- React when using the included frontend integration
+
+Laravel Zero currently targets `@rocicorp/zero` 1.8.0 and Zod 4.
+
+## Install the PHP package
+
+Install Laravel Zero with Composer:
+
+```bash
+composer require nickwelsh/laravel-zero
+```
+
+The package installs `nickwelsh/eloquent-zero` as its schema generator and is
+discovered automatically by Laravel.
+
+## Install the frontend dependencies
+
+Install the matching Zero client and Zod:
+
+```bash
+npm install @rocicorp/zero@1.8.0 zod@^4
+```
+
+Use your application's package manager in place of npm. React and your normal
+Laravel frontend stack should already be installed.
+
+## Publish the application files
+
+Publish the complete application scaffold:
+
+```bash
+php artisan vendor:publish --tag=zero
+```
+
+This publishes `config/laravel-zero.php`, creates the context classes under
+`app/Zero`, and scaffolds the configured frontend integration. With the default
+React integration, it also creates the generated provider, a frontend barrel,
+and any missing Zero URL exports in `resources/js/globals.ts`.
+
+To publish only part of the scaffold:
+
+```bash
+php artisan vendor:publish --tag=zero-config
+php artisan vendor:publish --tag=zero-context
+```
+
+## Configure the endpoint URLs
+
+The generated React provider reads the cache, query, and mutation URLs from Vite
+environment variables:
+
+```dotenv
+VITE_ZERO_CACHE_URL=https://zero.example.com
+VITE_ZERO_QUERY_URL=/zero/query
+VITE_ZERO_MUTATE_URL=/zero/mutate
+```
+
+The cache URL points to your Zero cache service. The query and mutation URLs
+point to the Laravel routes registered by this package. Their defaults match the
+published route configuration.
+
+## Review the user context
+
+The published `App\Zero\ContextResolver` converts the authenticated request into
+an `App\Zero\ZeroContext`:
+
+```php
+final class ContextResolver implements ZeroContextResolver
+{
+    public function resolve(Request $request): object
+    {
+        return new ZeroContext(
+            (string) $request->user()->getAuthIdentifier(),
+        );
+    }
+}
+```
+
+Add tenant IDs, roles, or other trusted request context here. A query or mutation
+receives this object as its first argument. Do not accept these values from the
+query arguments themselves.
+
+## Generate the client
+
+After configuring model discovery and your database, generate the TypeScript
+artifacts:
+
+```bash
+php artisan zero:generate
+```
+
+Run generation whenever a model schema, query, mutation, input, filter, policy
+registration, or relevant configuration value changes. See
+[Commands and generation](/docs/guide/operations/commands-and-generation/) for
+the generated file layout and a CI workflow.
+
+## Mount the provider
+
+Wrap the authenticated part of your React application with the generated
+provider:
+
+```tsx
+import { AppZeroProvider } from '@/zero/frontend';
+
+export function App({ user, children }) {
+    return (
+        <AppZeroProvider userId={String(user.id)}>
+            {children}
+        </AppZeroProvider>
+    );
+}
+```
+
+Applications using generated default mutations should also pass a stable ID
+factory:
+
+```tsx
+<AppZeroProvider userId={String(user.id)} generateId={() => crypto.randomUUID()}>
+    {children}
+</AppZeroProvider>
+```
+
+You are now ready to define [your first query](/docs/guide/getting-started/first-query/).

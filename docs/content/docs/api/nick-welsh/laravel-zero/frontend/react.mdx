@@ -1,0 +1,65 @@
+---
+title: "React"
+description: "class NickWelsh\\LaravelZero\\Frontend\\React"
+---
+
+# React
+
+`NickWelsh\LaravelZero\Frontend\React`
+
+```php
+final readonly class React extends NickWelsh\LaravelZero\Frontend\Frontend
+```
+
+**Extends:** <ApiLink symbol="NickWelsh\LaravelZero\Frontend\Frontend" />
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(Illuminate\Filesystem\Filesystem $files, NickWelsh\LaravelZero\Dynamic\DynamicQueryRegistry $dynamic, NickWelsh\LaravelZero\Dynamic\DynamicMutationRegistry $mutations)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$files` | `Illuminate\Filesystem\Filesystem` |  |
+| `$dynamic` | `NickWelsh\LaravelZero\Dynamic\DynamicQueryRegistry` |  |
+| `$mutations` | `NickWelsh\LaravelZero\Dynamic\DynamicMutationRegistry` |  |
+
+### generatedFiles
+
+```php
+protected function generatedFiles(string $outputPath): array
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$outputPath` | `string` |  |
+
+**Returns:** `array`
+
+### barrel
+
+```php
+protected function barrel(string $barrelPath, string $outputPath): string
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$barrelPath` | `string` |  |
+| `$outputPath` | `string` |  |
+
+**Returns:** `string`
+
+### scaffoldAdditionalFiles
+
+```php
+protected function scaffoldAdditionalFiles(): array
+```
+
+**Returns:** `array`
+
+## Source
+
+[src/Frontend/React.php:10](https://github.com/nickwelsh/laravel-zero/blob/main/src/Frontend/React.php#L10)

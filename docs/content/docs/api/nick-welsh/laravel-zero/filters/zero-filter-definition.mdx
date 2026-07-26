@@ -1,0 +1,112 @@
+---
+title: "ZeroFilterDefinition"
+description: "class NickWelsh\\LaravelZero\\Filters\\ZeroFilterDefinition"
+---
+
+# ZeroFilterDefinition
+
+`NickWelsh\LaravelZero\Filters\ZeroFilterDefinition`
+
+```php
+abstract class ZeroFilterDefinition
+```
+
+## Properties
+
+### maxDepth
+
+```php
+protected int $maxDepth = 3;
+```
+
+**Returns:** `int`
+
+### maxRelationshipDepth
+
+```php
+protected int $maxRelationshipDepth = 3;
+```
+
+**Returns:** `int`
+
+### maxNodes
+
+```php
+protected int $maxNodes = 50;
+```
+
+**Returns:** `int`
+
+### maxChildren
+
+```php
+protected int $maxChildren = 20;
+```
+
+**Returns:** `int`
+
+### maxInValues
+
+```php
+protected int $maxInValues = 100;
+```
+
+**Returns:** `int`
+
+### maxStringLength
+
+```php
+protected int $maxStringLength = 1000;
+```
+
+**Returns:** `int`
+
+## Methods
+
+### model
+
+```php
+public abstract function model(): string
+```
+
+**Returns:** `string`
+
+### define
+
+```php
+public abstract function define(NickWelsh\LaravelZero\Filters\ZeroFilterBuilder $filter): void
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$filter` | `NickWelsh\LaravelZero\Filters\ZeroFilterBuilder` |  |
+
+**Returns:** `void`
+
+### schema
+
+```php
+public final function schema(NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry $registry): NickWelsh\LaravelZero\Filters\ZeroFilterSchema
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$registry` | `NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry` |  |
+
+**Returns:** `NickWelsh\LaravelZero\Filters\ZeroFilterSchema`
+
+### make
+
+```php
+public static final function make(string $definition): NickWelsh\LaravelZero\Filters\ZeroFilterDefinition
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$definition` | `string` |  |
+
+**Returns:** `NickWelsh\LaravelZero\Filters\ZeroFilterDefinition`
+
+## Source
+
+[src/Filters/ZeroFilterDefinition.php:8](https://github.com/nickwelsh/laravel-zero/blob/main/src/Filters/ZeroFilterDefinition.php#L8)

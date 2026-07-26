@@ -1,0 +1,93 @@
+---
+title: "ZeroFilterCompiler"
+description: "Compiles a filter definition graph into self-contained TypeScript."
+---
+
+# ZeroFilterCompiler
+
+`NickWelsh\LaravelZero\Compiler\Filters\ZeroFilterCompiler`
+
+Compiles a filter definition graph into self-contained TypeScript.
+
+Domain integration assumptions are isolated in ZeroFilterDomainAdapter.
+
+```php
+final readonly class ZeroFilterCompiler
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry $schemas, ?NickWelsh\LaravelZero\Contracts\ValidationSchema $validation = null)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$schemas` | `NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry` |  |
+| `$validation` | `?NickWelsh\LaravelZero\Contracts\ValidationSchema` |  |
+
+### metadataName
+
+```php
+public static function metadataName(string $definitionClass): string
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$definitionClass` | `string` |  |
+
+**Returns:** `string`
+
+### schemaName
+
+```php
+public static function schemaName(string $definitionClass): string
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$definitionClass` | `string` |  |
+
+**Returns:** `string`
+
+### applyName
+
+```php
+public static function applyName(string $definitionClass): string
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$definitionClass` | `string` |  |
+
+**Returns:** `string`
+
+### typeName
+
+```php
+public static function typeName(string $definitionClass): string
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$definitionClass` | `string` |  |
+
+**Returns:** `string`
+
+### compile
+
+```php
+public function compile(string $definitionClass): string
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$definitionClass` | `string` |  |
+
+**Returns:** `string`
+
+## Source
+
+[src/Compiler/Filters/ZeroFilterCompiler.php:19](https://github.com/nickwelsh/laravel-zero/blob/main/src/Compiler/Filters/ZeroFilterCompiler.php#L19)

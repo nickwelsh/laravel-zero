@@ -1,0 +1,118 @@
+---
+title: "Dynamic Model Queries"
+description: "Expose a model-owned, typed query builder with explicit filter, include, and sort allowlists."
+---
+
+Dynamic model queries let the client compose several approved query shapes
+without requiring one PHP method for every combination. The server does not
+accept a client AST. It reconstructs the query from the model's allowlists.
+
+## Configure the model
+
+Return a <ApiLink symbol="NickWelsh\LaravelZero\Queries\ZeroQueryBuilder" /> from
+the model:
+
+```php
+use Illuminate\Database\Eloquent\Attributes\ScopedBy;
+use NickWelsh\LaravelZero\Queries\AllowedFilter;
+use NickWelsh\LaravelZero\Queries\ZeroQueryBuilder;
+
+#[ScopedBy([TenantScope::class])]
+final class Party extends Model
+{
+    use HasZero;
+
+    public function zeroQueryBuilder(): ZeroQueryBuilder
+    {
+        return ZeroQueryBuilder::for($this)
+            ->allowedFilters(
+                AllowedFilter::exact('id'),
+                'type',
+                'display_name',
+                'created_at',
+                'updated_at',
+            )
+            ->allowedIncludes(
+                'person',
+                'company',
+                'household',
+                'tags',
+            )
+            ->allowedSorts(
+                'id',
+                'type',
+                'display_name',
+                'created_at',
+                'updated_at',
+            );
+    }
+}
+```
+
+The method is the public contract. A field or relationship omitted here cannot
+be selected dynamically.
+
+## Query from React
+
+Generation exports an immutable model builder and a generated React helper:
+
+```tsx
+import { Party } from '@/zero';
+import { useDynamicQuery } from '@/zero/frontend';
+
+const [parties] = useDynamicQuery(
+    Party
+        .with(['person', 'tags'])
+        .where('type', 'person')
+        .orderBy('displayName', 'asc')
+        .limit(50),
+);
+```
+
+Column names in TypeScript follow the configured client casing. Model allowlists
+continue to use the server-side database column names.
+
+## Global scopes
+
+Eloquent global scopes are applied on the server before dynamic client
+constraints. Laravel Zero can translate basic `where`, null, `in`, and nested
+AND constraints used by a global scope.
+
+A scope containing OR predicates, joins, selects, grouping, ordering, limits,
+raw expressions, or unsupported subqueries fails closed. It is safer for
+generation to stop than to silently omit an authorization constraint.
+
+## Included relationships
+
+Direct relationships listed in `allowedIncludes` may be selected with `with`.
+`MorphToMany` includes use generated internal pivot relationships. Both client
+and server constrain the pivot morph type to Eloquent's `getMorphClass()` value,
+then the React helper exposes the requested relationship rather than the
+internal pivot shape.
+
+## Parsed result values
+
+The generated row schema converts common database representations for
+application use:
+
+- date and time values use `z.coerce.date()`
+- numeric values use `z.coerce.number()`
+- booleans use `z.coerce.boolean()`
+- PostgreSQL bigint values use `z.coerce.bigint()`
+
+The parsing occurs on values returned by `useDynamicQuery`; values stored in the
+Zero replica remain JSON-compatible.
+
+## Limits
+
+Dynamic queries are enabled by default and apply a server-configured maximum:
+
+```php
+'dynamic_queries' => [
+    'enabled' => true,
+    'max_limit' => 100,
+],
+```
+
+Treat this maximum as an operational guardrail. It does not replace model
+allowlists, global scopes, or request authentication.

@@ -1,0 +1,10 @@
+{
+    "title": "Contracts",
+    "pages": [
+        "validation-schema",
+        "zero-default-mutation",
+        "zero-mutations",
+        "zero-queries",
+        "zero-schema-registry"
+    ]
+}

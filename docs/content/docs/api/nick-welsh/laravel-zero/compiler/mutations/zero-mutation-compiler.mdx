@@ -1,0 +1,41 @@
+---
+title: "ZeroMutationCompiler"
+description: "class NickWelsh\\LaravelZero\\Compiler\\Mutations\\ZeroMutationCompiler"
+---
+
+# ZeroMutationCompiler
+
+`NickWelsh\LaravelZero\Compiler\Mutations\ZeroMutationCompiler`
+
+```php
+final readonly class ZeroMutationCompiler
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry $schemas, ?NickWelsh\LaravelZero\Contracts\ValidationSchema $validation = null)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$schemas` | `NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry` |  |
+| `$validation` | `?NickWelsh\LaravelZero\Contracts\ValidationSchema` |  |
+
+### compile
+
+```php
+public function compile(NickWelsh\LaravelZero\Discovery\Operation $operation): string
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$operation` | `NickWelsh\LaravelZero\Discovery\Operation` |  |
+
+**Returns:** `string`
+
+## Source
+
+[src/Compiler/Mutations/ZeroMutationCompiler.php:22](https://github.com/nickwelsh/laravel-zero/blob/main/src/Compiler/Mutations/ZeroMutationCompiler.php#L22)

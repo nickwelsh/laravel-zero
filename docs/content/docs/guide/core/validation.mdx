@@ -1,0 +1,93 @@
+---
+title: "Inputs and Validation"
+description: "Share portable validation between Laravel and generated Zod schemas without weakening server validation."
+---
+
+Inputs collect structured query or mutation arguments. Laravel always validates
+them on the server. When a rule has a safe client representation, Laravel Zero
+also emits it into the generated Zod 4 schema.
+
+## Define an input
+
+Extend <ApiLink symbol="NickWelsh\LaravelZero\Inputs\ZeroQueryInput" /> or
+<ApiLink symbol="NickWelsh\LaravelZero\Inputs\ZeroMutationInput" />:
+
+```php
+final class CreatePartyInput extends ZeroMutationInput
+{
+    public function rules(): array
+    {
+        return [
+            'display_name' => ['required', 'string', 'max:120'],
+            'email' => ['required', 'email'],
+            'password' => ['required', 'confirmed', Password::defaults()],
+            'password_confirmation' => ['required', 'string'],
+        ];
+    }
+
+    public function messages(): array
+    {
+        return [
+            'password.confirmed' => 'The passwords do not match.',
+            'email.email' => 'Enter a valid email address.',
+        ];
+    }
+}
+```
+
+Use `$input->validated()` for the validated array or access a validated field as
+`$input->display_name`.
+
+## Portable and server-only rules
+
+Scalar, string, numeric, array, enum, and common object-level rules can become
+Zod checks. `confirmed` and `same`, for example, become object refinements.
+
+Rules that depend on a database, service, application callback, or unsupported
+Laravel behavior remain server-only and are recorded in the generated manifest.
+Client validation improves feedback; it never replaces the Laravel validator.
+
+## Password defaults
+
+Laravel's fluent `Password` rule is resolved during generation. Minimum and
+maximum length plus `letters()`, `mixedCase()`, `numbers()`, and `symbols()`
+become Zod checks. `uncompromised()` and unsupported custom password rules remain
+server-only.
+
+Because `Password::defaults()` may vary by environment, run `zero:generate`
+after the target environment's service providers have booted. Do not reuse
+artifacts generated under different password defaults.
+
+## Controlling writes
+
+Named mutation builders distinguish three categories:
+
+```php
+return Party::zeroMutate()
+    ->serverOnly(['user_id', 'reference_code'])
+    ->ignore('password_confirmation')
+    ->create([
+        ...$input->validated(),
+        'user_id' => $context->user_id,
+        'reference_code' => $referenceCodes->next(),
+    ]);
+```
+
+- Normal values may participate in generated optimistic effects.
+- `serverOnly` values are authoritative values that the client cannot calculate.
+- `ignore` values are validated but removed from both client and server writes.
+
+## Portable PHP subset
+
+Generated effects support arguments, context and input properties, scalar
+literals, arrays, backed enums, direct builder chains, validated-input spreads,
+and sequential mutation calls.
+
+Laravel Zero rejects arbitrary service results in client effects, dynamic calls,
+Eloquent query analysis, loops, recursion, network or filesystem work, and
+general PHP transpilation. Server-only PHP may remain unrestricted when the
+generated optimistic effect does not depend on its result.
+
+Compiler failures include a diagnostic code. Fix the unsupported or ambiguous
+construct instead of working around the diagnostic with a broader client
+permission.

@@ -1,0 +1,104 @@
+---
+title: "Troubleshooting"
+description: "Resolve stale output, discovery failures, unsafe dynamic queries, endpoint errors, and frontend integration problems."
+---
+
+## A query or mutation is missing
+
+Check that:
+
+1. The class lives under the matching `discovery.queries` or
+   `discovery.mutators` path.
+2. The class has the matching collection attribute.
+3. It implements `ZeroQueries` or `ZeroMutations`.
+4. The operation method is public.
+5. You ran `php artisan zero:generate`.
+6. A cached registry was cleared with `php artisan zero:clear`.
+
+## Generated files are stale
+
+Run:
+
+```bash
+php artisan zero:generate
+php artisan zero:check
+```
+
+If generation changes files unexpectedly, confirm the current environment,
+database schema, model discovery paths, casing configuration, and password-rule
+defaults. Generated output is deterministic only when those inputs match.
+
+## Generation reports an unsafe or unsupported query
+
+Laravel Zero intentionally compiles a limited portable PHP subset. Common causes
+include:
+
+- an unrestricted string used as a dynamic column
+- an unsupported Eloquent or Zero builder operation
+- a global scope containing OR, joins, raw expressions, grouping, or limits
+- a service, filesystem, or network result used by a generated client effect
+- loops, recursion, or dynamic method calls in compiled code
+
+Use the diagnostic code to find the failing construct. Prefer a smaller explicit
+allowlist or move the non-portable work into a server-only path.
+
+## The dynamic query rejects a field or relationship
+
+The server reconstructs dynamic queries from `allowedFilters`,
+`allowedIncludes`, and `allowedSorts`. Add the server-side database name to the
+correct list, regenerate, and use the generated client-side name in TypeScript.
+
+Do not broaden the allowlist until the field is safe for every authenticated
+caller that can reach the model.
+
+## The mutation is unauthorized
+
+For default mutations, verify that:
+
+- the model has `ZeroAuthorizeMutations`
+- the referenced policy is container-resolvable
+- `create`, `update`, or `delete` has the expected Laravel signature
+- relationship mutations are allowed by the parent model's `update` policy
+- the request's authenticated user and context identify the same tenant
+
+Named mutation collections should use the same application authorization rules
+as controllers or jobs that perform the equivalent write.
+
+## The provider cannot connect
+
+Verify the three frontend URLs:
+
+```dotenv
+VITE_ZERO_CACHE_URL=https://zero.example.com
+VITE_ZERO_QUERY_URL=/zero/query
+VITE_ZERO_MUTATE_URL=/zero/mutate
+```
+
+Then confirm the two Laravel routes exist:
+
+```bash
+php artisan route:list --name=zero
+```
+
+If the application changed `routes.prefix`, update both frontend endpoint URLs.
+Also check authentication cookies, CORS policy, secure-cookie settings, and the
+middleware applied to the protocol routes.
+
+## Client values have unexpected types
+
+Use the generated `useDynamicQuery` or frontend `useQuery` helper for dynamic
+model builders. Those helpers apply the generated row Zod parser. Calling Zero's
+hook directly bypasses Laravel Zero's date, number, boolean, and bigint coercion.
+
+## The docs API reference is empty
+
+This repository is a Laravel package, so the Testbench base path must resolve to
+the repository root. Keep `testbench.yaml` with:
+
+```yaml
+laravel: ./
+```
+
+Then run the documentation generator from the repository root. A successful
+generation reports the number of API symbols; zero symbols usually means it
+analyzed Testbench's internal fixture instead of this package's `src` directory.

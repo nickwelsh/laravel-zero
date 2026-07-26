@@ -1,0 +1,379 @@
+{
+    "symbols": {
+        "NickWelsh\\LaravelZero\\Attributes\\ZeroAuthorizeMutations": {
+            "url": "/docs/api/nick-welsh/laravel-zero/attributes/zero-authorize-mutations",
+            "kind": "class",
+            "label": "ZeroAuthorizeMutations"
+        },
+        "NickWelsh\\LaravelZero\\Attributes\\ZeroDefaultMutations": {
+            "url": "/docs/api/nick-welsh/laravel-zero/attributes/zero-default-mutations",
+            "kind": "class",
+            "label": "ZeroDefaultMutations"
+        },
+        "NickWelsh\\LaravelZero\\Attributes\\ZeroMutationCollection": {
+            "url": "/docs/api/nick-welsh/laravel-zero/attributes/zero-mutation-collection",
+            "kind": "class",
+            "label": "ZeroMutationCollection"
+        },
+        "NickWelsh\\LaravelZero\\Attributes\\ZeroQueryCollection": {
+            "url": "/docs/api/nick-welsh/laravel-zero/attributes/zero-query-collection",
+            "kind": "class",
+            "label": "ZeroQueryCollection"
+        },
+        "NickWelsh\\LaravelZero\\Commands\\CheckCommand": {
+            "url": "/docs/api/nick-welsh/laravel-zero/commands/check-command",
+            "kind": "class",
+            "label": "CheckCommand"
+        },
+        "NickWelsh\\LaravelZero\\Commands\\ClearRegistryCommand": {
+            "url": "/docs/api/nick-welsh/laravel-zero/commands/clear-registry-command",
+            "kind": "class",
+            "label": "ClearRegistryCommand"
+        },
+        "NickWelsh\\LaravelZero\\Commands\\GenerateCommand": {
+            "url": "/docs/api/nick-welsh/laravel-zero/commands/generate-command",
+            "kind": "class",
+            "label": "GenerateCommand"
+        },
+        "NickWelsh\\LaravelZero\\Compiler\\Arguments\\ArgumentShape": {
+            "url": "/docs/api/nick-welsh/laravel-zero/compiler/arguments/argument-shape",
+            "kind": "class",
+            "label": "ArgumentShape"
+        },
+        "NickWelsh\\LaravelZero\\Compiler\\Context\\ContextTypeCompiler": {
+            "url": "/docs/api/nick-welsh/laravel-zero/compiler/context/context-type-compiler",
+            "kind": "class",
+            "label": "ContextTypeCompiler"
+        },
+        "NickWelsh\\LaravelZero\\Compiler\\Diagnostics\\ZeroCompilerException": {
+            "url": "/docs/api/nick-welsh/laravel-zero/compiler/diagnostics/zero-compiler-exception",
+            "kind": "class",
+            "label": "ZeroCompilerException"
+        },
+        "NickWelsh\\LaravelZero\\Compiler\\Filters\\ZeroFilterCompiler": {
+            "url": "/docs/api/nick-welsh/laravel-zero/compiler/filters/zero-filter-compiler",
+            "kind": "class",
+            "label": "ZeroFilterCompiler"
+        },
+        "NickWelsh\\LaravelZero\\Compiler\\Filters\\ZeroFilterDomainAdapter": {
+            "url": "/docs/api/nick-welsh/laravel-zero/compiler/filters/zero-filter-domain-adapter",
+            "kind": "class",
+            "label": "ZeroFilterDomainAdapter"
+        },
+        "NickWelsh\\LaravelZero\\Compiler\\Inputs\\ZodRuleCompiler": {
+            "url": "/docs/api/nick-welsh/laravel-zero/compiler/inputs/zod-rule-compiler",
+            "kind": "class",
+            "label": "ZodRuleCompiler"
+        },
+        "NickWelsh\\LaravelZero\\Compiler\\Mutations\\DynamicMutationCompiler": {
+            "url": "/docs/api/nick-welsh/laravel-zero/compiler/mutations/dynamic-mutation-compiler",
+            "kind": "class",
+            "label": "DynamicMutationCompiler"
+        },
+        "NickWelsh\\LaravelZero\\Compiler\\Mutations\\ZeroMutationCompiler": {
+            "url": "/docs/api/nick-welsh/laravel-zero/compiler/mutations/zero-mutation-compiler",
+            "kind": "class",
+            "label": "ZeroMutationCompiler"
+        },
+        "NickWelsh\\LaravelZero\\Compiler\\Queries\\DynamicQueryCompiler": {
+            "url": "/docs/api/nick-welsh/laravel-zero/compiler/queries/dynamic-query-compiler",
+            "kind": "class",
+            "label": "DynamicQueryCompiler"
+        },
+        "NickWelsh\\LaravelZero\\Compiler\\Queries\\ZeroQueryCompiler": {
+            "url": "/docs/api/nick-welsh/laravel-zero/compiler/queries/zero-query-compiler",
+            "kind": "class",
+            "label": "ZeroQueryCompiler"
+        },
+        "NickWelsh\\LaravelZero\\Compiler\\TypeScript\\ZeroTypeScriptGenerator": {
+            "url": "/docs/api/nick-welsh/laravel-zero/compiler/type-script/zero-type-script-generator",
+            "kind": "class",
+            "label": "ZeroTypeScriptGenerator"
+        },
+        "NickWelsh\\LaravelZero\\Context\\NullZeroContextResolver": {
+            "url": "/docs/api/nick-welsh/laravel-zero/context/null-zero-context-resolver",
+            "kind": "class",
+            "label": "NullZeroContextResolver"
+        },
+        "NickWelsh\\LaravelZero\\Context\\ZeroContext": {
+            "url": "/docs/api/nick-welsh/laravel-zero/context/zero-context",
+            "kind": "class",
+            "label": "ZeroContext"
+        },
+        "NickWelsh\\LaravelZero\\Context\\ZeroContextResolver": {
+            "url": "/docs/api/nick-welsh/laravel-zero/context/zero-context-resolver",
+            "kind": "interface",
+            "label": "ZeroContextResolver"
+        },
+        "NickWelsh\\LaravelZero\\Contracts\\ValidationSchema": {
+            "url": "/docs/api/nick-welsh/laravel-zero/contracts/validation-schema",
+            "kind": "interface",
+            "label": "ValidationSchema"
+        },
+        "NickWelsh\\LaravelZero\\Contracts\\ZeroDefaultMutation": {
+            "url": "/docs/api/nick-welsh/laravel-zero/contracts/zero-default-mutation",
+            "kind": "interface",
+            "label": "ZeroDefaultMutation"
+        },
+        "NickWelsh\\LaravelZero\\Contracts\\ZeroMutations": {
+            "url": "/docs/api/nick-welsh/laravel-zero/contracts/zero-mutations",
+            "kind": "interface",
+            "label": "ZeroMutations"
+        },
+        "NickWelsh\\LaravelZero\\Contracts\\ZeroQueries": {
+            "url": "/docs/api/nick-welsh/laravel-zero/contracts/zero-queries",
+            "kind": "interface",
+            "label": "ZeroQueries"
+        },
+        "NickWelsh\\LaravelZero\\Contracts\\ZeroSchemaRegistry": {
+            "url": "/docs/api/nick-welsh/laravel-zero/contracts/zero-schema-registry",
+            "kind": "interface",
+            "label": "ZeroSchemaRegistry"
+        },
+        "NickWelsh\\LaravelZero\\Discovery\\Operation": {
+            "url": "/docs/api/nick-welsh/laravel-zero/discovery/operation",
+            "kind": "class",
+            "label": "Operation"
+        },
+        "NickWelsh\\LaravelZero\\Discovery\\ZeroRegistry": {
+            "url": "/docs/api/nick-welsh/laravel-zero/discovery/zero-registry",
+            "kind": "class",
+            "label": "ZeroRegistry"
+        },
+        "NickWelsh\\LaravelZero\\Dynamic\\DynamicModelMutation": {
+            "url": "/docs/api/nick-welsh/laravel-zero/dynamic/dynamic-model-mutation",
+            "kind": "class",
+            "label": "DynamicModelMutation"
+        },
+        "NickWelsh\\LaravelZero\\Dynamic\\DynamicModelQuery": {
+            "url": "/docs/api/nick-welsh/laravel-zero/dynamic/dynamic-model-query",
+            "kind": "class",
+            "label": "DynamicModelQuery"
+        },
+        "NickWelsh\\LaravelZero\\Dynamic\\DynamicMutationRegistry": {
+            "url": "/docs/api/nick-welsh/laravel-zero/dynamic/dynamic-mutation-registry",
+            "kind": "class",
+            "label": "DynamicMutationRegistry"
+        },
+        "NickWelsh\\LaravelZero\\Dynamic\\DynamicQueryRegistry": {
+            "url": "/docs/api/nick-welsh/laravel-zero/dynamic/dynamic-query-registry",
+            "kind": "class",
+            "label": "DynamicQueryRegistry"
+        },
+        "NickWelsh\\LaravelZero\\Dynamic\\EloquentScopeApplicator": {
+            "url": "/docs/api/nick-welsh/laravel-zero/dynamic/eloquent-scope-applicator",
+            "kind": "class",
+            "label": "EloquentScopeApplicator"
+        },
+        "NickWelsh\\LaravelZero\\Dynamic\\ModelDiscovery": {
+            "url": "/docs/api/nick-welsh/laravel-zero/dynamic/model-discovery",
+            "kind": "class",
+            "label": "ModelDiscovery"
+        },
+        "NickWelsh\\LaravelZero\\Filters\\ZeroFilterBuilder": {
+            "url": "/docs/api/nick-welsh/laravel-zero/filters/zero-filter-builder",
+            "kind": "class",
+            "label": "ZeroFilterBuilder"
+        },
+        "NickWelsh\\LaravelZero\\Filters\\ZeroFilterCombinator": {
+            "url": "/docs/api/nick-welsh/laravel-zero/filters/zero-filter-combinator",
+            "kind": "enum",
+            "label": "ZeroFilterCombinator"
+        },
+        "NickWelsh\\LaravelZero\\Filters\\ZeroFilterDefinition": {
+            "url": "/docs/api/nick-welsh/laravel-zero/filters/zero-filter-definition",
+            "kind": "class",
+            "label": "ZeroFilterDefinition"
+        },
+        "NickWelsh\\LaravelZero\\Filters\\ZeroFilterField": {
+            "url": "/docs/api/nick-welsh/laravel-zero/filters/zero-filter-field",
+            "kind": "class",
+            "label": "ZeroFilterField"
+        },
+        "NickWelsh\\LaravelZero\\Filters\\ZeroFilterKind": {
+            "url": "/docs/api/nick-welsh/laravel-zero/filters/zero-filter-kind",
+            "kind": "enum",
+            "label": "ZeroFilterKind"
+        },
+        "NickWelsh\\LaravelZero\\Filters\\ZeroFilterOperator": {
+            "url": "/docs/api/nick-welsh/laravel-zero/filters/zero-filter-operator",
+            "kind": "enum",
+            "label": "ZeroFilterOperator"
+        },
+        "NickWelsh\\LaravelZero\\Filters\\ZeroFilterQuantifier": {
+            "url": "/docs/api/nick-welsh/laravel-zero/filters/zero-filter-quantifier",
+            "kind": "enum",
+            "label": "ZeroFilterQuantifier"
+        },
+        "NickWelsh\\LaravelZero\\Filters\\ZeroFilterRelationship": {
+            "url": "/docs/api/nick-welsh/laravel-zero/filters/zero-filter-relationship",
+            "kind": "class",
+            "label": "ZeroFilterRelationship"
+        },
+        "NickWelsh\\LaravelZero\\Filters\\ZeroFilterSchema": {
+            "url": "/docs/api/nick-welsh/laravel-zero/filters/zero-filter-schema",
+            "kind": "class",
+            "label": "ZeroFilterSchema"
+        },
+        "NickWelsh\\LaravelZero\\Filters\\ZeroFilterValidator": {
+            "url": "/docs/api/nick-welsh/laravel-zero/filters/zero-filter-validator",
+            "kind": "class",
+            "label": "ZeroFilterValidator"
+        },
+        "NickWelsh\\LaravelZero\\Frontend\\Frontend": {
+            "url": "/docs/api/nick-welsh/laravel-zero/frontend/frontend",
+            "kind": "class",
+            "label": "Frontend"
+        },
+        "NickWelsh\\LaravelZero\\Frontend\\React": {
+            "url": "/docs/api/nick-welsh/laravel-zero/frontend/react",
+            "kind": "class",
+            "label": "React"
+        },
+        "NickWelsh\\LaravelZero\\Http\\ZeroMutateEndpoint": {
+            "url": "/docs/api/nick-welsh/laravel-zero/http/zero-mutate-endpoint",
+            "kind": "class",
+            "label": "ZeroMutateEndpoint"
+        },
+        "NickWelsh\\LaravelZero\\Http\\ZeroQueryEndpoint": {
+            "url": "/docs/api/nick-welsh/laravel-zero/http/zero-query-endpoint",
+            "kind": "class",
+            "label": "ZeroQueryEndpoint"
+        },
+        "NickWelsh\\LaravelZero\\Inputs\\ZeroFilterInput": {
+            "url": "/docs/api/nick-welsh/laravel-zero/inputs/zero-filter-input",
+            "kind": "class",
+            "label": "ZeroFilterInput"
+        },
+        "NickWelsh\\LaravelZero\\Inputs\\ZeroInput": {
+            "url": "/docs/api/nick-welsh/laravel-zero/inputs/zero-input",
+            "kind": "class",
+            "label": "ZeroInput"
+        },
+        "NickWelsh\\LaravelZero\\Inputs\\ZeroMutationInput": {
+            "url": "/docs/api/nick-welsh/laravel-zero/inputs/zero-mutation-input",
+            "kind": "class",
+            "label": "ZeroMutationInput"
+        },
+        "NickWelsh\\LaravelZero\\Inputs\\ZeroQueryInput": {
+            "url": "/docs/api/nick-welsh/laravel-zero/inputs/zero-query-input",
+            "kind": "class",
+            "label": "ZeroQueryInput"
+        },
+        "NickWelsh\\LaravelZero\\Installation\\FrontendScaffolder": {
+            "url": "/docs/api/nick-welsh/laravel-zero/installation/frontend-scaffolder",
+            "kind": "class",
+            "label": "FrontendScaffolder"
+        },
+        "NickWelsh\\LaravelZero\\LaravelZeroServiceProvider": {
+            "url": "/docs/api/nick-welsh/laravel-zero/laravel-zero-service-provider",
+            "kind": "class",
+            "label": "LaravelZeroServiceProvider"
+        },
+        "NickWelsh\\LaravelZero\\Mutations\\AuthorizesZeroMutations": {
+            "url": "/docs/api/nick-welsh/laravel-zero/mutations/authorizes-zero-mutations",
+            "kind": "trait",
+            "label": "AuthorizesZeroMutations"
+        },
+        "NickWelsh\\LaravelZero\\Mutations\\ZeroCreateMutation": {
+            "url": "/docs/api/nick-welsh/laravel-zero/mutations/zero-create-mutation",
+            "kind": "class",
+            "label": "ZeroCreateMutation"
+        },
+        "NickWelsh\\LaravelZero\\Mutations\\ZeroDeleteMutation": {
+            "url": "/docs/api/nick-welsh/laravel-zero/mutations/zero-delete-mutation",
+            "kind": "class",
+            "label": "ZeroDeleteMutation"
+        },
+        "NickWelsh\\LaravelZero\\Mutations\\ZeroMutationBuilder": {
+            "url": "/docs/api/nick-welsh/laravel-zero/mutations/zero-mutation-builder",
+            "kind": "class",
+            "label": "ZeroMutationBuilder"
+        },
+        "NickWelsh\\LaravelZero\\Mutations\\ZeroUpdateMutation": {
+            "url": "/docs/api/nick-welsh/laravel-zero/mutations/zero-update-mutation",
+            "kind": "class",
+            "label": "ZeroUpdateMutation"
+        },
+        "NickWelsh\\LaravelZero\\Protocol\\AlreadyProcessedMutation": {
+            "url": "/docs/api/nick-welsh/laravel-zero/protocol/already-processed-mutation",
+            "kind": "class",
+            "label": "AlreadyProcessedMutation"
+        },
+        "NickWelsh\\LaravelZero\\Protocol\\DatabaseMutationFailure": {
+            "url": "/docs/api/nick-welsh/laravel-zero/protocol/database-mutation-failure",
+            "kind": "class",
+            "label": "DatabaseMutationFailure"
+        },
+        "NickWelsh\\LaravelZero\\Protocol\\OutOfOrderMutation": {
+            "url": "/docs/api/nick-welsh/laravel-zero/protocol/out-of-order-mutation",
+            "kind": "class",
+            "label": "OutOfOrderMutation"
+        },
+        "NickWelsh\\LaravelZero\\Protocol\\ZeroMutationProcessor": {
+            "url": "/docs/api/nick-welsh/laravel-zero/protocol/zero-mutation-processor",
+            "kind": "class",
+            "label": "ZeroMutationProcessor"
+        },
+        "NickWelsh\\LaravelZero\\Queries\\AllowedFilter": {
+            "url": "/docs/api/nick-welsh/laravel-zero/queries/allowed-filter",
+            "kind": "class",
+            "label": "AllowedFilter"
+        },
+        "NickWelsh\\LaravelZero\\Queries\\ZeroOrderDirection": {
+            "url": "/docs/api/nick-welsh/laravel-zero/queries/zero-order-direction",
+            "kind": "enum",
+            "label": "ZeroOrderDirection"
+        },
+        "NickWelsh\\LaravelZero\\Queries\\ZeroQueryBuilder": {
+            "url": "/docs/api/nick-welsh/laravel-zero/queries/zero-query-builder",
+            "kind": "class",
+            "label": "ZeroQueryBuilder"
+        },
+        "NickWelsh\\LaravelZero\\Queries\\ZeroQueryColumn": {
+            "url": "/docs/api/nick-welsh/laravel-zero/queries/zero-query-column",
+            "kind": "interface",
+            "label": "ZeroQueryColumn"
+        },
+        "NickWelsh\\LaravelZero\\Rules\\ZeroFilterRule": {
+            "url": "/docs/api/nick-welsh/laravel-zero/rules/zero-filter-rule",
+            "kind": "class",
+            "label": "ZeroFilterRule"
+        },
+        "NickWelsh\\LaravelZero\\Schema\\EloquentZeroSchemaRegistry": {
+            "url": "/docs/api/nick-welsh/laravel-zero/schema/eloquent-zero-schema-registry",
+            "kind": "class",
+            "label": "EloquentZeroSchemaRegistry"
+        },
+        "NickWelsh\\LaravelZero\\Schema\\ZeroModelSchema": {
+            "url": "/docs/api/nick-welsh/laravel-zero/schema/zero-model-schema",
+            "kind": "class",
+            "label": "ZeroModelSchema"
+        },
+        "NickWelsh\\LaravelZero\\Schema\\ZeroRelationshipSchema": {
+            "url": "/docs/api/nick-welsh/laravel-zero/schema/zero-relationship-schema",
+            "kind": "class",
+            "label": "ZeroRelationshipSchema"
+        },
+        "NickWelsh\\LaravelZero\\Support\\GeneratedPaths": {
+            "url": "/docs/api/nick-welsh/laravel-zero/support/generated-paths",
+            "kind": "class",
+            "label": "GeneratedPaths"
+        },
+        "NickWelsh\\LaravelZero\\Support\\HasZero": {
+            "url": "/docs/api/nick-welsh/laravel-zero/support/has-zero",
+            "kind": "trait",
+            "label": "HasZero"
+        },
+        "NickWelsh\\LaravelZero\\Validation\\GeneratedValidationSchema": {
+            "url": "/docs/api/nick-welsh/laravel-zero/validation/generated-validation-schema",
+            "kind": "class",
+            "label": "GeneratedValidationSchema"
+        },
+        "NickWelsh\\LaravelZero\\Validation\\Zod": {
+            "url": "/docs/api/nick-welsh/laravel-zero/validation/zod",
+            "kind": "class",
+            "label": "Zod"
+        }
+    }
+}

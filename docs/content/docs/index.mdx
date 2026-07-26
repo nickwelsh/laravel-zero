@@ -1,0 +1,40 @@
+---
+title: "Laravel Zero"
+description: "Laravel-first Zero queries, mutations, and generated TypeScript."
+---
+
+Laravel Zero makes PHP the source of truth for [Zero](https://zero.rocicorp.dev/)
+queries and mutations. Define the allowed data operations in Laravel, then
+generate a typed TypeScript client with Zod validation and optimistic effects.
+
+It is designed for Laravel applications that want Zero's local-first client
+without moving authorization, validation, or mutation policy out of the server.
+
+## Start here
+
+- [Installation](/docs/guide/getting-started/installation/) covers requirements,
+  package publishing, frontend dependencies, and endpoint configuration.
+- [Your first query](/docs/guide/getting-started/first-query/) walks from an
+  Eloquent model to a generated client query.
+- [Queries](/docs/guide/core/queries/) and
+  [mutations](/docs/guide/core/mutations/) explain the two server-owned operation
+  styles.
+- [Security](/docs/guide/advanced/security/) describes the trust boundary and
+  the allowlists that must remain server-owned.
+- [API Reference](/docs/api/) is generated directly from the current PHP source.
+
+> [!WARNING]
+> Laravel Zero currently exposes an experimental V1 API and is pinned to
+> `@rocicorp/zero` 1.8.0. Expect breaking changes until the package reaches a
+> stable release.
+
+## How it fits together
+
+Laravel Zero discovers attributed PHP classes and opt-in Eloquent models. The
+`zero:generate` command compiles those definitions into deterministic
+TypeScript, while the `/zero/query` and `/zero/mutate` endpoints execute the
+server-owned query and mutation paths for the authenticated user.
+
+The companion `nickwelsh/eloquent-zero` package generates the Zero schema from
+your Eloquent models and PostgreSQL metadata. Laravel Zero configures it
+automatically, so an application maintains one `config/laravel-zero.php` file.

@@ -1,0 +1,117 @@
+---
+title: "ZeroMutationBuilder"
+description: "class NickWelsh\\LaravelZero\\Mutations\\ZeroMutationBuilder"
+---
+
+# ZeroMutationBuilder
+
+`NickWelsh\LaravelZero\Mutations\ZeroMutationBuilder`
+
+```php
+final class ZeroMutationBuilder
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry $registry, string $modelClass)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$registry` | `NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry` |  |
+| `$modelClass` | `string` |  |
+
+### serverOnly
+
+```php
+public function serverOnly(string|array $fields): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$fields` | `string|array` |  |
+
+**Returns:** `self`
+
+### ignore
+
+```php
+public function ignore(string|array $fields): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$fields` | `string|array` |  |
+
+**Returns:** `self`
+
+### serverOnlyFields
+
+```php
+public function serverOnlyFields(): array
+```
+
+**Returns:** `array`
+
+### ignoredFields
+
+```php
+public function ignoredFields(): array
+```
+
+**Returns:** `array`
+
+### create
+
+```php
+public function create(array $values): Illuminate\Database\Eloquent\Model
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$values` | `array` |  |
+
+**Returns:** `Illuminate\Database\Eloquent\Model`
+
+### update
+
+```php
+public function update(array $values): ?Illuminate\Database\Eloquent\Model
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$values` | `array` |  |
+
+**Returns:** `?Illuminate\Database\Eloquent\Model`
+
+### upsert
+
+```php
+public function upsert(array $values): Illuminate\Database\Eloquent\Model
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$values` | `array` |  |
+
+**Returns:** `Illuminate\Database\Eloquent\Model`
+
+### delete
+
+```php
+public function delete(array $values): bool
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$values` | `array` |  |
+
+**Returns:** `bool`
+
+## Source
+
+[src/Mutations/ZeroMutationBuilder.php:9](https://github.com/nickwelsh/laravel-zero/blob/main/src/Mutations/ZeroMutationBuilder.php#L9)

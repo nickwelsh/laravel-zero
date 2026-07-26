@@ -1,0 +1,57 @@
+---
+title: "ZeroModelSchema"
+description: "class NickWelsh\\LaravelZero\\Schema\\ZeroModelSchema"
+---
+
+# ZeroModelSchema
+
+`NickWelsh\LaravelZero\Schema\ZeroModelSchema`
+
+```php
+final readonly class ZeroModelSchema
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(string $modelClass, string $serverTable, string $clientTable, array $columns, array $primaryKey, array $relationships = [])
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$modelClass` | `string` |  |
+| `$serverTable` | `string` |  |
+| `$clientTable` | `string` |  |
+| `$columns` | `array` |  |
+| `$primaryKey` | `array` |  |
+| `$relationships` | `array` |  |
+
+### clientColumn
+
+```php
+public function clientColumn(string $serverColumn): string
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$serverColumn` | `string` |  |
+
+**Returns:** `string`
+
+### relationship
+
+```php
+public function relationship(string $name): NickWelsh\LaravelZero\Schema\ZeroRelationshipSchema
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$name` | `string` |  |
+
+**Returns:** `NickWelsh\LaravelZero\Schema\ZeroRelationshipSchema`
+
+## Source
+
+[src/Schema/ZeroModelSchema.php:7](https://github.com/nickwelsh/laravel-zero/blob/main/src/Schema/ZeroModelSchema.php#L7)

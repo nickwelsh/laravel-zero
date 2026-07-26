@@ -1,0 +1,54 @@
+---
+title: "AllowedFilter"
+description: "class NickWelsh\\LaravelZero\\Queries\\AllowedFilter"
+---
+
+# AllowedFilter
+
+`NickWelsh\LaravelZero\Queries\AllowedFilter`
+
+```php
+final readonly class AllowedFilter
+```
+
+## Methods
+
+### exact
+
+```php
+public static function exact(string $name): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$name` | `string` |  |
+
+**Returns:** `self`
+
+### field
+
+```php
+public static function field(string $name): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$name` | `string` |  |
+
+**Returns:** `self`
+
+### allows
+
+```php
+public function allows(string $operator): bool
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$operator` | `string` |  |
+
+**Returns:** `bool`
+
+## Source
+
+[src/Queries/AllowedFilter.php:5](https://github.com/nickwelsh/laravel-zero/blob/main/src/Queries/AllowedFilter.php#L5)

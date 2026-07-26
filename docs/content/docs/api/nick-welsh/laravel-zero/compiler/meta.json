@@ -1,0 +1,13 @@
+{
+    "title": "Compiler",
+    "pages": [
+        "arguments",
+        "context",
+        "diagnostics",
+        "filters",
+        "inputs",
+        "mutations",
+        "queries",
+        "type-script"
+    ]
+}

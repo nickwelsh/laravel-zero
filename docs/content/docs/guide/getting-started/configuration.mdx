@@ -1,0 +1,154 @@
+---
+title: "Configuration"
+description: "Configure discovery, routes, schema generation, database access, validation, and frontend output."
+---
+
+Laravel Zero keeps its application configuration in
+`config/laravel-zero.php`. The same file also supplies the model and database
+settings used by Eloquent Zero, so there is no second schema-generator config to
+publish.
+
+## Context
+
+The context resolver creates trusted data for every query and mutation:
+
+```php
+'context' => [
+    'class' => App\Zero\ZeroContext::class,
+    'resolver' => App\Zero\ContextResolver::class,
+    'user_id_field' => 'user_id',
+],
+```
+
+`class` is used while generating the TypeScript context type. `resolver` is
+resolved from Laravel's container for each request. `user_id_field` identifies
+the context property returned to Zero as the current user ID.
+
+## Operation discovery
+
+Queries and mutators have independent discovery roots:
+
+```php
+'discovery' => [
+    'queries' => [app_path('Zero/Queries')],
+    'mutators' => [app_path('Zero/Mutators')],
+    'cache' => env('ZERO_REGISTRY_CACHE', false),
+    'cache_key' => 'laravel-zero.registry.v1',
+],
+```
+
+Only attributed classes inside these directories become named operations.
+Enable registry caching in long-running production environments and clear it
+after deploying operation changes:
+
+```bash
+php artisan zero:clear
+```
+
+## Routes
+
+Laravel Zero registers two POST routes:
+
+```php
+'routes' => [
+    'enabled' => true,
+    'prefix' => 'zero',
+    'middleware' => ['web', 'auth'],
+    'except_from_csrf' => true,
+],
+```
+
+The defaults produce `/zero/query` and `/zero/mutate`, both protected by the
+`web` and `auth` middleware. Changing `prefix` also updates the automatic CSRF
+exclusions. Set `except_from_csrf` to `false` only when your client sends a valid
+Laravel CSRF token.
+
+## Schema generation
+
+The `generation` block controls both Eloquent discovery and TypeScript output:
+
+```php
+'generation' => [
+    'output_directory' => resource_path('js/zero/generated'),
+    'barrel_path' => resource_path('js/zero/index.ts'),
+    'generate_schema' => true,
+    'schema_path' => resource_path('js/zero/generated/schema.generated.ts'),
+    'declaration_style' => 'interface',
+    'mode' => Mode::OptOut,
+    'model_search_directories' => [app_path('Models')],
+    'models' => [],
+    'tables' => [],
+    'table_name_casing' => Casing::Camel,
+    'column_name_casing' => Casing::Camel,
+    'use_wayfinder' => false,
+],
+```
+
+`Mode::OptOut` discovers models automatically unless they are ignored.
+`Mode::OptIn` is useful when the application should expose only an explicit
+model set. Use `models` and `tables` to narrow discovery further.
+
+Set `declaration_style` to `type` when generated context and provider
+declarations should use TypeScript aliases instead of interfaces.
+
+## Database
+
+```php
+'database' => [
+    'connection' => null,
+    'allow_multiple_connections' => false,
+    'publication_name' => env('ZERO_APP_PUBLICATIONS'),
+],
+```
+
+A `null` connection uses Laravel's default connection. The selected connection
+must match the physical connection used by participating models. Keep multiple
+connections disabled unless the Zero deployment and publication design
+deliberately supports them.
+
+## Dynamic operations
+
+```php
+'dynamic_queries' => [
+    'enabled' => true,
+    'max_limit' => 100,
+],
+
+'default_mutations' => [
+    'enabled' => true,
+],
+```
+
+These features still require model-level allowlists or attributes. The global
+flags are emergency and application-wide controls, not permission grants.
+
+## Frontend
+
+```php
+'frontend' => [
+    'framework' => React::class,
+    'output_path' => resource_path('js/zero/generated/frontend'),
+    'barrel_path' => resource_path('js/zero/frontend/index.ts'),
+    'use_globals' => true,
+    'globals_path' => resource_path('js/globals.ts'),
+],
+```
+
+Set `framework` to `null` to disable frontend scaffolding, or supply a class
+extending <ApiLink symbol="NickWelsh\LaravelZero\Frontend\Frontend" /> for
+another integration. When `use_globals` is false, the generated React provider
+reads `import.meta.env` directly.
+
+## Validation
+
+Zod is the default generated validation target:
+
+```php
+'validation' => [
+    'schema' => Zod::class,
+],
+```
+
+Replace it with a class implementing
+<ApiLink symbol="NickWelsh\LaravelZero\Contracts\ValidationSchema" /> to control
+input, argument, and recursive-filter schemas.

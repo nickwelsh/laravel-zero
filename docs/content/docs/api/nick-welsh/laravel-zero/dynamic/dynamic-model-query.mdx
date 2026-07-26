@@ -1,0 +1,67 @@
+---
+title: "DynamicModelQuery"
+description: "class NickWelsh\\LaravelZero\\Dynamic\\DynamicModelQuery"
+---
+
+# DynamicModelQuery
+
+`NickWelsh\LaravelZero\Dynamic\DynamicModelQuery`
+
+```php
+final readonly class DynamicModelQuery
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(string $modelClass, string $name, NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry $schemas, NickWelsh\LaravelZero\Dynamic\EloquentScopeApplicator $scopes)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$modelClass` | `string` |  |
+| `$name` | `string` |  |
+| `$schemas` | `NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry` |  |
+| `$scopes` | `NickWelsh\LaravelZero\Dynamic\EloquentScopeApplicator` |  |
+
+### modelClass
+
+```php
+public function modelClass(): string
+```
+
+**Returns:** `string`
+
+### definition
+
+```php
+public function definition(): NickWelsh\LaravelZero\Queries\ZeroQueryBuilder
+```
+
+**Returns:** `NickWelsh\LaravelZero\Queries\ZeroQueryBuilder`
+
+### build
+
+```php
+public function build(array $args): NickWelsh\LaravelZero\Queries\ZeroQueryBuilder
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$args` | `array` |  |
+
+**Returns:** `NickWelsh\LaravelZero\Queries\ZeroQueryBuilder`
+
+### includes
+
+```php
+public function includes(): array
+```
+
+**Returns:** `array` — Relation&lt;Model, Model, mixed&gt;&gt;
+
+## Source
+
+[src/Dynamic/DynamicModelQuery.php:16](https://github.com/nickwelsh/laravel-zero/blob/main/src/Dynamic/DynamicModelQuery.php#L16)

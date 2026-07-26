@@ -1,0 +1,42 @@
+---
+title: "EloquentZeroSchemaRegistry"
+description: "Runtime bridge until eloquent-zero exposes its planned registry contract. Applications may bind ZeroSchemaRegistry to eloquent-zero's metadata provider."
+---
+
+# EloquentZeroSchemaRegistry
+
+`NickWelsh\LaravelZero\Schema\EloquentZeroSchemaRegistry`
+
+Runtime bridge until eloquent-zero exposes its planned registry contract. Applications may bind ZeroSchemaRegistry to eloquent-zero's metadata provider.
+
+```php
+final class EloquentZeroSchemaRegistry implements NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry
+```
+
+**Implements:** <ApiLink symbol="NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry" />
+
+## Methods
+
+### model
+
+```php
+public function model(string $modelClass): NickWelsh\LaravelZero\Schema\ZeroModelSchema
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$modelClass` | `string` |  |
+
+**Returns:** `NickWelsh\LaravelZero\Schema\ZeroModelSchema`
+
+### models
+
+```php
+public function models(): iterable
+```
+
+**Returns:** `iterable`
+
+## Source
+
+[src/Schema/EloquentZeroSchemaRegistry.php:23](https://github.com/nickwelsh/laravel-zero/blob/main/src/Schema/EloquentZeroSchemaRegistry.php#L23)

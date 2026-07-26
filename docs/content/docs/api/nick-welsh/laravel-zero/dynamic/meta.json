@@ -1,0 +1,11 @@
+{
+    "title": "Dynamic",
+    "pages": [
+        "dynamic-model-mutation",
+        "dynamic-model-query",
+        "dynamic-mutation-registry",
+        "dynamic-query-registry",
+        "eloquent-scope-applicator",
+        "model-discovery"
+    ]
+}

@@ -1,0 +1,45 @@
+---
+title: "ZeroFilterRule"
+description: "class NickWelsh\\LaravelZero\\Rules\\ZeroFilterRule"
+---
+
+# ZeroFilterRule
+
+`NickWelsh\LaravelZero\Rules\ZeroFilterRule`
+
+```php
+final readonly class ZeroFilterRule implements Illuminate\Contracts\Validation\ValidationRule
+```
+
+**Implements:** <ApiLink symbol="Illuminate\Contracts\Validation\ValidationRule" />
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(NickWelsh\LaravelZero\Filters\ZeroFilterValidator $validator, string $definition)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$validator` | `NickWelsh\LaravelZero\Filters\ZeroFilterValidator` |  |
+| `$definition` | `string` |  |
+
+### validate
+
+```php
+public function validate(string $attribute, mixed $value, Closure $fail): void
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$attribute` | `string` |  |
+| `$value` | `mixed` |  |
+| `$fail` | `Closure` |  |
+
+**Returns:** `void`
+
+## Source
+
+[src/Rules/ZeroFilterRule.php:12](https://github.com/nickwelsh/laravel-zero/blob/main/src/Rules/ZeroFilterRule.php#L12)

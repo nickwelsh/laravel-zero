@@ -1,0 +1,9 @@
+{
+    "title": "Inputs",
+    "pages": [
+        "zero-filter-input",
+        "zero-input",
+        "zero-mutation-input",
+        "zero-query-input"
+    ]
+}

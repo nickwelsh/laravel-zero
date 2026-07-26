@@ -1,0 +1,8 @@
+{
+    "title": "Schema",
+    "pages": [
+        "eloquent-zero-schema-registry",
+        "zero-model-schema",
+        "zero-relationship-schema"
+    ]
+}

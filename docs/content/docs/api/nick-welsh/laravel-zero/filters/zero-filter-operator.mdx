@@ -1,0 +1,120 @@
+---
+title: "ZeroFilterOperator"
+description: "enum NickWelsh\\LaravelZero\\Filters\\ZeroFilterOperator"
+---
+
+# ZeroFilterOperator
+
+`NickWelsh\LaravelZero\Filters\ZeroFilterOperator`
+
+```php
+enum ZeroFilterOperator
+```
+
+## Cases
+
+### Equals
+
+```php
+case Equals = 'equals';
+```
+
+### NotEquals
+
+```php
+case NotEquals = 'not_equals';
+```
+
+### Contains
+
+```php
+case Contains = 'contains';
+```
+
+### NotContains
+
+```php
+case NotContains = 'not_contains';
+```
+
+### StartsWith
+
+```php
+case StartsWith = 'starts_with';
+```
+
+### EndsWith
+
+```php
+case EndsWith = 'ends_with';
+```
+
+### GreaterThan
+
+```php
+case GreaterThan = 'greater_than';
+```
+
+### GreaterThanOrEqual
+
+```php
+case GreaterThanOrEqual = 'greater_than_or_equal';
+```
+
+### LessThan
+
+```php
+case LessThan = 'less_than';
+```
+
+### LessThanOrEqual
+
+```php
+case LessThanOrEqual = 'less_than_or_equal';
+```
+
+### In
+
+```php
+case In = 'in';
+```
+
+### NotIn
+
+```php
+case NotIn = 'not_in';
+```
+
+### IsNull
+
+```php
+case IsNull = 'is_null';
+```
+
+### IsNotNull
+
+```php
+case IsNotNull = 'is_not_null';
+```
+
+## Methods
+
+### requiresValue
+
+```php
+public function requiresValue(): bool
+```
+
+**Returns:** `bool`
+
+### requiresList
+
+```php
+public function requiresList(): bool
+```
+
+**Returns:** `bool`
+
+## Source
+
+[src/Filters/ZeroFilterOperator.php:5](https://github.com/nickwelsh/laravel-zero/blob/main/src/Filters/ZeroFilterOperator.php#L5)

@@ -1,0 +1,112 @@
+---
+title: "Your First Query"
+description: "Expose a scoped Eloquent query and call its generated TypeScript helper."
+---
+
+This walkthrough exposes a query for the authenticated user's projects. The
+server owns the tenant constraint; the client supplies only the project ID.
+
+## Prepare the model
+
+Add the <ApiLink symbol="NickWelsh\LaravelZero\Support\HasZero" /> trait to the
+Eloquent model:
+
+```php
+namespace App\Models;
+
+use Illuminate\Database\Eloquent\Model;
+use NickWelsh\LaravelZero\Support\HasZero;
+
+final class Project extends Model
+{
+    use HasZero;
+}
+```
+
+The trait provides `Project::zeroQuery()` and `Project::zeroMutate()` builders.
+
+## Create a query collection
+
+Create `app/Zero/Queries/ProjectQueries.php`:
+
+```php
+namespace App\Zero\Queries;
+
+use App\Models\Project;
+use App\Zero\ZeroContext;
+use NickWelsh\LaravelZero\Attributes\ZeroQueryCollection;
+use NickWelsh\LaravelZero\Contracts\ZeroQueries;
+use NickWelsh\LaravelZero\Queries\ZeroQueryBuilder;
+
+#[ZeroQueryCollection('projects')]
+final class ProjectQueries implements ZeroQueries
+{
+    public function byId(
+        ZeroContext $context,
+        string $id,
+    ): ZeroQueryBuilder {
+        return Project::zeroQuery()
+            ->where('user_id', $context->user_id)
+            ->where('id', $id)
+            ->one();
+    }
+}
+```
+
+The attribute supplies the collection name. The generated operation name
+combines that collection with the public method name. The context is always the
+first argument and is not supplied by the browser.
+
+Place invariant access constraints first. Here, the authenticated user's ID
+always limits the query regardless of the requested project ID.
+
+## Generate TypeScript
+
+Run:
+
+```bash
+php artisan zero:generate
+```
+
+Generation inspects the collection, validates the supported builder chain, and
+writes the typed query helper and argument schema under
+`resources/js/zero/generated`.
+
+## Use the query
+
+Import the generated query from the public barrel and pass it to Zero:
+
+```tsx
+import { useQuery } from '@rocicorp/zero/react';
+import { queries } from '@/zero';
+
+export function ProjectName({ projectId }: { projectId: string }) {
+    const [project] = useQuery(queries.projects.byId(projectId));
+
+    return <span>{project?.name ?? 'Loading…'}</span>;
+}
+```
+
+The exact generated property names follow the collection name and method. Your
+editor can discover them from the generated types.
+
+## Add an input object when arguments grow
+
+Use a <ApiLink symbol="NickWelsh\LaravelZero\Inputs\ZeroQueryInput" /> subclass
+when a query needs a structured argument:
+
+```php
+final class ProjectSearchInput extends ZeroQueryInput
+{
+    public function rules(): array
+    {
+        return [
+            'term' => ['required', 'string', 'max:100'],
+            'limit' => ['required', 'integer', 'min:1', 'max:50'],
+        ];
+    }
+}
+```
+
+Laravel validates the input on the server. Portable rules are also emitted as a
+Zod schema, so obvious invalid input fails before it reaches the endpoint.

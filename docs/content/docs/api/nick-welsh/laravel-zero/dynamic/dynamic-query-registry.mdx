@@ -1,0 +1,50 @@
+---
+title: "DynamicQueryRegistry"
+description: "class NickWelsh\\LaravelZero\\Dynamic\\DynamicQueryRegistry"
+---
+
+# DynamicQueryRegistry
+
+`NickWelsh\LaravelZero\Dynamic\DynamicQueryRegistry`
+
+```php
+final class DynamicQueryRegistry
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(NickWelsh\LaravelZero\Dynamic\ModelDiscovery $models, NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry $schemas, NickWelsh\LaravelZero\Dynamic\EloquentScopeApplicator $scopes)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$models` | `NickWelsh\LaravelZero\Dynamic\ModelDiscovery` |  |
+| `$schemas` | `NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry` |  |
+| `$scopes` | `NickWelsh\LaravelZero\Dynamic\EloquentScopeApplicator` |  |
+
+### all
+
+```php
+public function all(): array
+```
+
+**Returns:** `array` — DynamicModelQuery&gt;
+
+### find
+
+```php
+public function find(string $name): ?NickWelsh\LaravelZero\Dynamic\DynamicModelQuery
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$name` | `string` |  |
+
+**Returns:** `?NickWelsh\LaravelZero\Dynamic\DynamicModelQuery`
+
+## Source
+
+[src/Dynamic/DynamicQueryRegistry.php:10](https://github.com/nickwelsh/laravel-zero/blob/main/src/Dynamic/DynamicQueryRegistry.php#L10)

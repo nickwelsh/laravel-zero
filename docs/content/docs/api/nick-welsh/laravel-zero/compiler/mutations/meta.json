@@ -1,0 +1,7 @@
+{
+    "title": "Mutations",
+    "pages": [
+        "dynamic-mutation-compiler",
+        "zero-mutation-compiler"
+    ]
+}

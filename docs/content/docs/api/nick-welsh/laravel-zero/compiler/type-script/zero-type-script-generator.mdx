@@ -1,0 +1,60 @@
+---
+title: "ZeroTypeScriptGenerator"
+description: "class NickWelsh\\LaravelZero\\Compiler\\TypeScript\\ZeroTypeScriptGenerator"
+---
+
+# ZeroTypeScriptGenerator
+
+`NickWelsh\LaravelZero\Compiler\TypeScript\ZeroTypeScriptGenerator`
+
+```php
+final readonly class ZeroTypeScriptGenerator
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(NickWelsh\LaravelZero\Discovery\ZeroRegistry $registry, NickWelsh\LaravelZero\Compiler\Context\ContextTypeCompiler $contexts, NickWelsh\LaravelZero\Compiler\Queries\ZeroQueryCompiler $queries, NickWelsh\LaravelZero\Compiler\Queries\DynamicQueryCompiler $dynamicQueries, NickWelsh\LaravelZero\Compiler\Mutations\ZeroMutationCompiler $mutations, NickWelsh\LaravelZero\Compiler\Mutations\DynamicMutationCompiler $dynamicMutations, NickWelsh\LaravelZero\Compiler\Filters\ZeroFilterCompiler $filters, NickWelsh\LaravelZero\Contracts\ValidationSchema $validation, Illuminate\Filesystem\Filesystem $files)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$registry` | `NickWelsh\LaravelZero\Discovery\ZeroRegistry` |  |
+| `$contexts` | `NickWelsh\LaravelZero\Compiler\Context\ContextTypeCompiler` |  |
+| `$queries` | `NickWelsh\LaravelZero\Compiler\Queries\ZeroQueryCompiler` |  |
+| `$dynamicQueries` | `NickWelsh\LaravelZero\Compiler\Queries\DynamicQueryCompiler` |  |
+| `$mutations` | `NickWelsh\LaravelZero\Compiler\Mutations\ZeroMutationCompiler` |  |
+| `$dynamicMutations` | `NickWelsh\LaravelZero\Compiler\Mutations\DynamicMutationCompiler` |  |
+| `$filters` | `NickWelsh\LaravelZero\Compiler\Filters\ZeroFilterCompiler` |  |
+| `$validation` | `NickWelsh\LaravelZero\Contracts\ValidationSchema` |  |
+| `$files` | `Illuminate\Filesystem\Filesystem` |  |
+
+### render
+
+```php
+public function render(): array
+```
+
+**Returns:** `array` — array&lt;string, string&gt;, notices: array&lt;string, list&lt;string&gt;&gt;&#125;
+
+### write
+
+```php
+public function write(): array
+```
+
+**Returns:** `array`
+
+### stale
+
+```php
+public function stale(): array
+```
+
+**Returns:** `array`
+
+## Source
+
+[src/Compiler/TypeScript/ZeroTypeScriptGenerator.php:26](https://github.com/nickwelsh/laravel-zero/blob/main/src/Compiler/TypeScript/ZeroTypeScriptGenerator.php#L26)

@@ -1,0 +1,103 @@
+---
+title: "Commands and Generation"
+description: "Generate deterministic TypeScript, check for stale artifacts, clear discovery caches, and maintain this documentation site."
+---
+
+Laravel Zero provides three application commands:
+
+| Command | Purpose |
+| --- | --- |
+| `php artisan zero:generate` | Generate the schema, queries, mutations, inputs, manifest, barrels, and frontend scaffold. |
+| `php artisan zero:check` | Fail when committed generated Zero files are stale. |
+| `php artisan zero:clear` | Clear the cached query and mutation registry. |
+
+## Generated application files
+
+The default output is:
+
+```text
+resources/js/
+├── globals.ts
+└── zero/
+    ├── index.ts
+    ├── frontend/
+    │   └── index.ts
+    └── generated/
+        ├── context.generated.ts
+        ├── inputs.generated.ts
+        ├── manifest.generated.json
+        ├── mutations.generated.ts
+        ├── queries.generated.ts
+        ├── schema.generated.ts
+        └── frontend/
+            ├── dynamic.ts
+            └── provider.tsx
+```
+
+The exact set depends on enabled features and discovered operations. Generated
+TypeScript files carry a do-not-edit banner. Change PHP or package configuration
+and regenerate instead of patching them by hand.
+
+`zero:generate` delegates schema generation to Eloquent Zero when
+`generation.generate_schema` is true. It then writes named operations, dynamic
+model builders, input schemas, validation metadata, public barrels, and the
+configured frontend integration.
+
+## A CI workflow
+
+Generate in CI, then ask Laravel Zero to verify the result:
+
+```bash
+php artisan zero:generate
+php artisan zero:check
+git diff --exit-code -- resources/js/zero resources/js/globals.ts
+```
+
+Running the explicit Git diff catches any changed tracked scaffold in addition
+to the package's stale-file check.
+
+When validation uses environment-sensitive defaults, such as
+`Password::defaults()`, generate with the same service-provider and environment
+configuration used by the deployed application.
+
+## Discovery caching
+
+Enable caching for a production process:
+
+```dotenv
+ZERO_REGISTRY_CACHE=true
+```
+
+Clear it after deploying added, removed, or renamed query and mutation classes:
+
+```bash
+php artisan zero:clear
+```
+
+## API documentation
+
+The PHP API Reference in this site is generated from `src` by Laravel Fumadocs:
+
+```bash
+vendor/bin/testbench fumadocs:generate --framework=astro --no-interaction
+```
+
+The package's `testbench.yaml` points the documentation command at this
+repository root. The generator owns only paths listed in
+`docs/.fumadocs/generated.json`; handwritten pages under
+`docs/content/docs/guide` are preserved.
+
+To run the Astro site:
+
+```bash
+cd docs
+npm install
+npm run dev
+```
+
+To verify a production build:
+
+```bash
+cd docs
+npm run build
+```

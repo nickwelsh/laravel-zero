@@ -1,0 +1,9 @@
+{
+  "title": "Core Concepts",
+  "pages": [
+    "queries",
+    "dynamic-queries",
+    "mutations",
+    "validation"
+  ]
+}

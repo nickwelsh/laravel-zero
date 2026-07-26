@@ -1,0 +1,9 @@
+{
+    "title": "Attributes",
+    "pages": [
+        "zero-authorize-mutations",
+        "zero-default-mutations",
+        "zero-mutation-collection",
+        "zero-query-collection"
+    ]
+}

@@ -1,0 +1,118 @@
+---
+title: "ZeroFilterBuilder"
+description: "class NickWelsh\\LaravelZero\\Filters\\ZeroFilterBuilder"
+---
+
+# ZeroFilterBuilder
+
+`NickWelsh\LaravelZero\Filters\ZeroFilterBuilder`
+
+```php
+final class ZeroFilterBuilder
+```
+
+## Methods
+
+### string
+
+```php
+public function string(string $id, ?string $column = null): NickWelsh\LaravelZero\Filters\ZeroFilterField
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$id` | `string` |  |
+| `$column` | `?string` |  |
+
+**Returns:** `NickWelsh\LaravelZero\Filters\ZeroFilterField`
+
+### number
+
+```php
+public function number(string $id, ?string $column = null): NickWelsh\LaravelZero\Filters\ZeroFilterField
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$id` | `string` |  |
+| `$column` | `?string` |  |
+
+**Returns:** `NickWelsh\LaravelZero\Filters\ZeroFilterField`
+
+### boolean
+
+```php
+public function boolean(string $id, ?string $column = null): NickWelsh\LaravelZero\Filters\ZeroFilterField
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$id` | `string` |  |
+| `$column` | `?string` |  |
+
+**Returns:** `NickWelsh\LaravelZero\Filters\ZeroFilterField`
+
+### date
+
+```php
+public function date(string $id, ?string $column = null): NickWelsh\LaravelZero\Filters\ZeroFilterField
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$id` | `string` |  |
+| `$column` | `?string` |  |
+
+**Returns:** `NickWelsh\LaravelZero\Filters\ZeroFilterField`
+
+### enum
+
+```php
+public function enum(string $id, string $enum, ?string $column = null): NickWelsh\LaravelZero\Filters\ZeroFilterField
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$id` | `string` |  |
+| `$enum` | `string` |  |
+| `$column` | `?string` |  |
+
+**Returns:** `NickWelsh\LaravelZero\Filters\ZeroFilterField`
+
+### relationship
+
+Register a filterable relationship.
+
+The two-argument form uses the public ID as the server relationship name.
+
+```php
+public function relationship(string $id, string $relationshipName, ?string $definition = null): NickWelsh\LaravelZero\Filters\ZeroFilterRelationship
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$id` | `string` |  |
+| `$relationshipName` | `string` |  |
+| `$definition` | `?string` |  |
+
+**Returns:** `NickWelsh\LaravelZero\Filters\ZeroFilterRelationship`
+
+### fields
+
+```php
+public function fields(): array
+```
+
+**Returns:** `array` — ZeroFilterField&gt;
+
+### relationships
+
+```php
+public function relationships(): array
+```
+
+**Returns:** `array` — ZeroFilterRelationship&gt;
+
+## Source
+
+[src/Filters/ZeroFilterBuilder.php:8](https://github.com/nickwelsh/laravel-zero/blob/main/src/Filters/ZeroFilterBuilder.php#L8)

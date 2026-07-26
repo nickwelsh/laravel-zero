@@ -1,0 +1,49 @@
+---
+title: "DynamicMutationRegistry"
+description: "class NickWelsh\\LaravelZero\\Dynamic\\DynamicMutationRegistry"
+---
+
+# DynamicMutationRegistry
+
+`NickWelsh\LaravelZero\Dynamic\DynamicMutationRegistry`
+
+```php
+final class DynamicMutationRegistry
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(NickWelsh\LaravelZero\Dynamic\ModelDiscovery $models, NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry $schemas)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$models` | `NickWelsh\LaravelZero\Dynamic\ModelDiscovery` |  |
+| `$schemas` | `NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry` |  |
+
+### all
+
+```php
+public function all(): array
+```
+
+**Returns:** `array` — DynamicModelMutation&gt;
+
+### findOperation
+
+```php
+public function findOperation(string $name): ?array
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$name` | `string` |  |
+
+**Returns:** `?array` — string&#125;|null
+
+## Source
+
+[src/Dynamic/DynamicMutationRegistry.php:13](https://github.com/nickwelsh/laravel-zero/blob/main/src/Dynamic/DynamicMutationRegistry.php#L13)

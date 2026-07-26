@@ -1,0 +1,48 @@
+---
+title: "GenerateCommand"
+description: "class NickWelsh\\LaravelZero\\Commands\\GenerateCommand"
+---
+
+# GenerateCommand
+
+`NickWelsh\LaravelZero\Commands\GenerateCommand`
+
+```php
+final class GenerateCommand extends Illuminate\Console\Command
+```
+
+**Extends:** <ApiLink symbol="Illuminate\Console\Command" />
+
+## Properties
+
+### signature
+
+```php
+protected $signature = 'zero:generate';
+```
+
+### description
+
+```php
+protected $description = 'Generate Zero TypeScript definitions';
+```
+
+## Methods
+
+### handle
+
+```php
+public function handle(NickWelsh\LaravelZero\Compiler\TypeScript\ZeroTypeScriptGenerator $generator, NickWelsh\LaravelZero\Installation\FrontendScaffolder $frontend, Illuminate\Filesystem\Filesystem $files): int
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$generator` | `NickWelsh\LaravelZero\Compiler\TypeScript\ZeroTypeScriptGenerator` |  |
+| `$frontend` | `NickWelsh\LaravelZero\Installation\FrontendScaffolder` |  |
+| `$files` | `Illuminate\Filesystem\Filesystem` |  |
+
+**Returns:** `int`
+
+## Source
+
+[src/Commands/GenerateCommand.php:12](https://github.com/nickwelsh/laravel-zero/blob/main/src/Commands/GenerateCommand.php#L12)

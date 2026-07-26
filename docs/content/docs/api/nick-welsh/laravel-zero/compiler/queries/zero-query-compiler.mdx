@@ -1,0 +1,41 @@
+---
+title: "ZeroQueryCompiler"
+description: "class NickWelsh\\LaravelZero\\Compiler\\Queries\\ZeroQueryCompiler"
+---
+
+# ZeroQueryCompiler
+
+`NickWelsh\LaravelZero\Compiler\Queries\ZeroQueryCompiler`
+
+```php
+final readonly class ZeroQueryCompiler
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry $schemas, ?NickWelsh\LaravelZero\Contracts\ValidationSchema $validation = null)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$schemas` | `NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry` |  |
+| `$validation` | `?NickWelsh\LaravelZero\Contracts\ValidationSchema` |  |
+
+### compile
+
+```php
+public function compile(NickWelsh\LaravelZero\Discovery\Operation $operation): string
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$operation` | `NickWelsh\LaravelZero\Discovery\Operation` |  |
+
+**Returns:** `string`
+
+## Source
+
+[src/Compiler/Queries/ZeroQueryCompiler.php:28](https://github.com/nickwelsh/laravel-zero/blob/main/src/Compiler/Queries/ZeroQueryCompiler.php#L28)

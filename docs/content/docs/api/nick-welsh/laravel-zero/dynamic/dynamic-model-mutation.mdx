@@ -1,0 +1,82 @@
+---
+title: "DynamicModelMutation"
+description: "class NickWelsh\\LaravelZero\\Dynamic\\DynamicModelMutation"
+---
+
+# DynamicModelMutation
+
+`NickWelsh\LaravelZero\Dynamic\DynamicModelMutation`
+
+```php
+final readonly class DynamicModelMutation
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(string $modelClass, string $name, string $policyClass, array $operations, NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry $schemas)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$modelClass` | `string` |  |
+| `$name` | `string` |  |
+| `$policyClass` | `string` |  |
+| `$operations` | `array` |  |
+| `$schemas` | `NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry` |  |
+
+### modelClass
+
+```php
+public function modelClass(): string
+```
+
+**Returns:** `string`
+
+### operations
+
+```php
+public function operations(): array
+```
+
+**Returns:** `array`
+
+### allows
+
+```php
+public function allows(string $operation): bool
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$operation` | `string` |  |
+
+**Returns:** `bool`
+
+### relationships
+
+```php
+public function relationships(): array
+```
+
+**Returns:** `array` — Relation&lt;Model, Model, mixed&gt;&gt;
+
+### execute
+
+```php
+public function execute(string $operation, array $args, ?object $user): void
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$operation` | `string` |  |
+| `$args` | `array` |  |
+| `$user` | `?object` |  |
+
+**Returns:** `void`
+
+## Source
+
+[src/Dynamic/DynamicModelMutation.php:16](https://github.com/nickwelsh/laravel-zero/blob/main/src/Dynamic/DynamicModelMutation.php#L16)

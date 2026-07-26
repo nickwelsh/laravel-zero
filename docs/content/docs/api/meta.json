@@ -1,0 +1,9 @@
+{
+    "title": "API Reference",
+    "pages": [
+        "index",
+        "nick-welsh"
+    ],
+    "description": "Generated PHP API documentation.",
+    "root": true
+}

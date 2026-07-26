@@ -1,0 +1,68 @@
+---
+title: "Zod"
+description: "class NickWelsh\\LaravelZero\\Validation\\Zod"
+---
+
+# Zod
+
+`NickWelsh\LaravelZero\Validation\Zod`
+
+```php
+final class Zod implements NickWelsh\LaravelZero\Contracts\ValidationSchema
+```
+
+**Implements:** <ApiLink symbol="NickWelsh\LaravelZero\Contracts\ValidationSchema" />
+
+## Methods
+
+### import
+
+```php
+public function import(): string
+```
+
+**Returns:** `string`
+
+### argument
+
+```php
+public function argument(NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape $shape): ?string
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$shape` | `NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape` |  |
+
+**Returns:** `?string`
+
+### input
+
+```php
+public function input(array $rules, string $inputClass, array $messages = [], array $fieldSchemas = []): NickWelsh\LaravelZero\Validation\GeneratedValidationSchema
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$rules` | `array` |  |
+| `$inputClass` | `string` |  |
+| `$messages` | `array` |  |
+| `$fieldSchemas` | `array` |  |
+
+**Returns:** `NickWelsh\LaravelZero\Validation\GeneratedValidationSchema`
+
+### filter
+
+```php
+public function filter(string $nodeType, string $validateFunction): string
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$nodeType` | `string` |  |
+| `$validateFunction` | `string` |  |
+
+**Returns:** `string`
+
+## Source
+
+[src/Validation/Zod.php:13](https://github.com/nickwelsh/laravel-zero/blob/main/src/Validation/Zod.php#L13)

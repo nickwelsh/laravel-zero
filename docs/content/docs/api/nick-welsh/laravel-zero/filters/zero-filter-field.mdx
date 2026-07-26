@@ -1,0 +1,110 @@
+---
+title: "ZeroFilterField"
+description: "class NickWelsh\\LaravelZero\\Filters\\ZeroFilterField"
+---
+
+# ZeroFilterField
+
+`NickWelsh\LaravelZero\Filters\ZeroFilterField`
+
+```php
+final class ZeroFilterField
+```
+
+## Properties
+
+### operators
+
+```php
+public array $operators;
+```
+
+**Returns:** `array`
+
+### values
+
+```php
+public array $values = [];
+```
+
+**Returns:** `array`
+
+### enumClass
+
+```php
+public ?string $enumClass = null;
+```
+
+**Returns:** `?string`
+
+### clientColumn
+
+```php
+public ?string $clientColumn = null;
+```
+
+**Returns:** `?string`
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(string $id, string $label, string $column, NickWelsh\LaravelZero\Filters\ZeroFilterKind $kind, array $operators)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$id` | `string` |  |
+| `$label` | `string` |  |
+| `$column` | `string` |  |
+| `$kind` | `NickWelsh\LaravelZero\Filters\ZeroFilterKind` |  |
+| `$operators` | `array` |  |
+
+### label
+
+```php
+public function label(string $label): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$label` | `string` |  |
+
+**Returns:** `self`
+
+### operators
+
+```php
+public function operators(NickWelsh\LaravelZero\Filters\ZeroFilterOperator ...$operators): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `...$operators` | `NickWelsh\LaravelZero\Filters\ZeroFilterOperator` |  |
+
+**Returns:** `self`
+
+### nullable
+
+```php
+public function nullable(): self
+```
+
+**Returns:** `self`
+
+### values
+
+```php
+public function values(array $values): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$values` | `array` |  |
+
+**Returns:** `self`
+
+## Source
+
+[src/Filters/ZeroFilterField.php:8](https://github.com/nickwelsh/laravel-zero/blob/main/src/Filters/ZeroFilterField.php#L8)

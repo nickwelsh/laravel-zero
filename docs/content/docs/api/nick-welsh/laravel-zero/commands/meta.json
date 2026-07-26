@@ -1,0 +1,8 @@
+{
+    "title": "Commands",
+    "pages": [
+        "check-command",
+        "clear-registry-command",
+        "generate-command"
+    ]
+}

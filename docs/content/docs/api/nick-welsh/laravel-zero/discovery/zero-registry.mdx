@@ -1,0 +1,77 @@
+---
+title: "ZeroRegistry"
+description: "class NickWelsh\\LaravelZero\\Discovery\\ZeroRegistry"
+---
+
+# ZeroRegistry
+
+`NickWelsh\LaravelZero\Discovery\ZeroRegistry`
+
+```php
+final class ZeroRegistry
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(Illuminate\Filesystem\Filesystem $files, Illuminate\Contracts\Cache\Repository $cache)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$files` | `Illuminate\Filesystem\Filesystem` |  |
+| `$cache` | `Illuminate\Contracts\Cache\Repository` |  |
+
+### queries
+
+```php
+public function queries(): array
+```
+
+**Returns:** `array` — Operation&gt;
+
+### mutations
+
+```php
+public function mutations(): array
+```
+
+**Returns:** `array` — Operation&gt;
+
+### query
+
+```php
+public function query(string $name): NickWelsh\LaravelZero\Discovery\Operation
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$name` | `string` |  |
+
+**Returns:** `NickWelsh\LaravelZero\Discovery\Operation`
+
+### mutation
+
+```php
+public function mutation(string $name): NickWelsh\LaravelZero\Discovery\Operation
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$name` | `string` |  |
+
+**Returns:** `NickWelsh\LaravelZero\Discovery\Operation`
+
+### clear
+
+```php
+public function clear(): void
+```
+
+**Returns:** `void`
+
+## Source
+
+[src/Discovery/ZeroRegistry.php:20](https://github.com/nickwelsh/laravel-zero/blob/main/src/Discovery/ZeroRegistry.php#L20)

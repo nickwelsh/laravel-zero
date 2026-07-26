@@ -1,0 +1,46 @@
+---
+title: "ClearRegistryCommand"
+description: "class NickWelsh\\LaravelZero\\Commands\\ClearRegistryCommand"
+---
+
+# ClearRegistryCommand
+
+`NickWelsh\LaravelZero\Commands\ClearRegistryCommand`
+
+```php
+final class ClearRegistryCommand extends Illuminate\Console\Command
+```
+
+**Extends:** <ApiLink symbol="Illuminate\Console\Command" />
+
+## Properties
+
+### signature
+
+```php
+protected $signature = 'zero:clear';
+```
+
+### description
+
+```php
+protected $description = 'Clear Zero discovery cache';
+```
+
+## Methods
+
+### handle
+
+```php
+public function handle(NickWelsh\LaravelZero\Discovery\ZeroRegistry $registry): int
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$registry` | `NickWelsh\LaravelZero\Discovery\ZeroRegistry` |  |
+
+**Returns:** `int`
+
+## Source
+
+[src/Commands/ClearRegistryCommand.php:8](https://github.com/nickwelsh/laravel-zero/blob/main/src/Commands/ClearRegistryCommand.php#L8)

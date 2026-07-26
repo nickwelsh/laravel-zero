@@ -1,0 +1,25 @@
+{
+    "title": "Laravel Zero",
+    "pages": [
+        "attributes",
+        "commands",
+        "compiler",
+        "context",
+        "contracts",
+        "discovery",
+        "dynamic",
+        "filters",
+        "frontend",
+        "http",
+        "inputs",
+        "installation",
+        "laravel-zero-service-provider",
+        "mutations",
+        "protocol",
+        "queries",
+        "rules",
+        "schema",
+        "support",
+        "validation"
+    ]
+}

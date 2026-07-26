@@ -1,0 +1,53 @@
+---
+title: "ArgumentShape"
+description: "class NickWelsh\\LaravelZero\\Compiler\\Arguments\\ArgumentShape"
+---
+
+# ArgumentShape
+
+`NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape`
+
+```php
+final readonly class ArgumentShape
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(string $kind, array $parameters)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$kind` | `string` |  |
+| `$parameters` | `array` |  |
+
+### from
+
+```php
+public static function from(ReflectionMethod $method): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$method` | `ReflectionMethod` |  |
+
+**Returns:** `self`
+
+### hydrate
+
+```php
+public function hydrate(array $wireArgs): array
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$wireArgs` | `array` |  |
+
+**Returns:** `array`
+
+## Source
+
+[src/Compiler/Arguments/ArgumentShape.php:13](https://github.com/nickwelsh/laravel-zero/blob/main/src/Compiler/Arguments/ArgumentShape.php#L13)

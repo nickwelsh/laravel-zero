@@ -1,0 +1,38 @@
+---
+title: "ZeroSchemaRegistry"
+description: "interface NickWelsh\\LaravelZero\\Contracts\\ZeroSchemaRegistry"
+---
+
+# ZeroSchemaRegistry
+
+`NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry`
+
+```php
+interface ZeroSchemaRegistry
+```
+
+## Methods
+
+### model
+
+```php
+public function model(string $modelClass): NickWelsh\LaravelZero\Schema\ZeroModelSchema
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$modelClass` | `string` |  |
+
+**Returns:** `NickWelsh\LaravelZero\Schema\ZeroModelSchema`
+
+### models
+
+```php
+public function models(): iterable
+```
+
+**Returns:** `iterable` — ZeroModelSchema&gt;
+
+## Source
+
+[src/Contracts/ZeroSchemaRegistry.php:7](https://github.com/nickwelsh/laravel-zero/blob/main/src/Contracts/ZeroSchemaRegistry.php#L7)

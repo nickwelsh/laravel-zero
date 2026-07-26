@@ -1,0 +1,41 @@
+---
+title: "Introduction"
+description: "Laravel-first Zero queries, mutations, and generated TypeScript."
+---
+
+Laravel Zero lets a Laravel application describe its Zero API in PHP. The
+generated TypeScript client knows the available queries, mutations, models,
+inputs, and validation rules, while Laravel remains responsible for identity,
+authorization, and authoritative writes.
+
+## The core idea
+
+Zero can execute queries locally against its replica and reconcile optimistic
+mutations with the server. Laravel Zero gives that client a constrained,
+generated vocabulary:
+
+- **Named queries** are PHP methods marked with
+  <ApiLink symbol="NickWelsh\LaravelZero\Attributes\ZeroQueryCollection" />.
+- **Dynamic model queries** expose only the filters, relationships, and sorts
+  declared by each model.
+- **Named mutations** are PHP methods marked with
+  <ApiLink symbol="NickWelsh\LaravelZero\Attributes\ZeroMutationCollection" />.
+- **Default model mutations** generate common model and relationship operations,
+  guarded by an explicit policy.
+- **Inputs and filters** use Laravel validation on the server and generated Zod
+  schemas where the rule can be represented safely on the client.
+
+## What stays authoritative
+
+The browser never receives arbitrary Eloquent access. Query ASTs are built from
+PHP definitions or reconstructed from server-owned model allowlists. Mutations
+run through Laravel, use the configured database connection, and may require
+Laravel policies. Unsupported compiler constructs fail with coded diagnostics
+instead of becoming weaker client behavior.
+
+## Documentation map
+
+The **Getting Started** section takes a new application from installation to its
+first query. **Core Concepts** covers named and dynamic operations.
+**Advanced Usage** focuses on recursive filters, React integration, and security.
+**Operations** covers generated files, CI, and troubleshooting.

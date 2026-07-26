@@ -1,0 +1,176 @@
+---
+title: "Advanced Filters"
+description: "Build nested, server-owned filter schemas for data grids and other client-composed search interfaces."
+---
+
+Advanced filters let a client compose nested AND/OR groups without gaining
+arbitrary column access. The server defines every field, operator,
+relationship, value type, and structural limit.
+
+## Define a filter schema
+
+Create a <ApiLink symbol="NickWelsh\LaravelZero\Filters\ZeroFilterDefinition" />
+for the root model:
+
+```php
+final class PartyFilters extends ZeroFilterDefinition
+{
+    public function model(): string
+    {
+        return Party::class;
+    }
+
+    public function define(ZeroFilterBuilder $filter): void
+    {
+        $filter->string('name', 'display_name')
+            ->label('Party name')
+            ->operators(
+                ZeroFilterOperator::Equals,
+                ZeroFilterOperator::Contains,
+            );
+
+        $filter->enum('type', PartyType::class, 'party_type')
+            ->label('Party type');
+
+        $filter->relationship(
+            'emails',
+            'emailAddresses',
+            EmailAddressFilters::class,
+        )->label('Email addresses');
+    }
+}
+```
+
+The first argument is the public filter ID. The optional column argument maps it
+to a server column. Labels default to a humanized ID.
+
+Backed-enum fields generate value labels automatically. Other finite fields may
+declare them explicitly:
+
+```php
+$filter->string('status')
+    ->values([
+        'active' => 'Active',
+        'archived' => 'Archived',
+    ]);
+```
+
+## Put the filter in an input
+
+Extend <ApiLink symbol="NickWelsh\LaravelZero\Inputs\ZeroFilterInput" /> and add
+any screen-specific arguments:
+
+```php
+final class PartyGridInput extends ZeroFilterInput
+{
+    public static function filterDefinition(): string
+    {
+        return PartyFilters::class;
+    }
+
+    protected function additionalRules(): array
+    {
+        return [
+            'limit' => ['required', 'integer', 'min:1', 'max:100'],
+        ];
+    }
+}
+```
+
+## Apply immutable constraints first
+
+Apply trusted ownership or tenant constraints before the user-controlled filter:
+
+```php
+public function grid(
+    ZeroContext $context,
+    PartyGridInput $input,
+): ZeroQueryBuilder {
+    return Party::zeroQuery()
+        ->where('user_id', $context->user_id)
+        ->applyFilter($input->filter, PartyFilters::class)
+        ->limit($input->limit);
+}
+```
+
+This ordering ensures a client-created OR group cannot escape the required user
+constraint.
+
+## Wire format
+
+The filter value contains condition, group, and relationship nodes:
+
+```json
+{
+  "type": "group",
+  "combinator": "and",
+  "children": [
+    {
+      "type": "condition",
+      "field": "name",
+      "operator": "contains",
+      "value": "Acme"
+    },
+    {
+      "type": "group",
+      "combinator": "or",
+      "children": [
+        {
+          "type": "condition",
+          "field": "type",
+          "operator": "equals",
+          "value": "person"
+        },
+        {
+          "type": "condition",
+          "field": "type",
+          "operator": "equals",
+          "value": "company"
+        }
+      ]
+    },
+    {
+      "type": "relationship",
+      "relationship": "emails",
+      "quantifier": "some"
+    }
+  ]
+}
+```
+
+## Generated UI metadata
+
+Generation exports the recursive Zod schema, TypeScript node type, ZQL helper,
+and UI metadata:
+
+```ts
+import { partyFilters } from '@/zero';
+
+const root =
+    partyFilters.definitions[partyFilters.rootDefinitionId];
+const fields = root.fields;
+const relationships = root.relationships;
+```
+
+The metadata contains public IDs, labels, server and client columns, kinds,
+operators, finite values, relationships, and limits. It can drive a filter UI
+without duplicating the server contract.
+
+## Structural limits
+
+Laravel and generated Zod both reject unknown fields, relationships, operators,
+and value types. Defaults also limit filters to:
+
+- three group levels
+- three relationship levels
+- 50 total nodes
+- 20 children per group
+- 100 values in an `in` condition
+- 1,000 characters per string
+
+Override a definition's protected limit properties when a screen should be more
+restrictive.
+
+V1 supports the `some` relationship quantifier, compiled to ZQL `EXISTS`.
+Relationship counts are unsupported. `none` is omitted because Zero 1.8 cannot
+reliably evaluate `NOT EXISTS` against an incomplete client replica.

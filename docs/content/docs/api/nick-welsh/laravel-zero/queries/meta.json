@@ -1,0 +1,9 @@
+{
+    "title": "Queries",
+    "pages": [
+        "allowed-filter",
+        "zero-order-direction",
+        "zero-query-builder",
+        "zero-query-column"
+    ]
+}

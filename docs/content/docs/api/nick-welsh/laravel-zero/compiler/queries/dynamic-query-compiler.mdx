@@ -1,0 +1,54 @@
+---
+title: "DynamicQueryCompiler"
+description: "class NickWelsh\\LaravelZero\\Compiler\\Queries\\DynamicQueryCompiler"
+---
+
+# DynamicQueryCompiler
+
+`NickWelsh\LaravelZero\Compiler\Queries\DynamicQueryCompiler`
+
+```php
+final readonly class DynamicQueryCompiler
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(NickWelsh\LaravelZero\Dynamic\DynamicQueryRegistry $queries, NickWelsh\LaravelZero\Dynamic\DynamicMutationRegistry $mutations, NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry $schemas)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$queries` | `NickWelsh\LaravelZero\Dynamic\DynamicQueryRegistry` |  |
+| `$mutations` | `NickWelsh\LaravelZero\Dynamic\DynamicMutationRegistry` |  |
+| `$schemas` | `NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry` |  |
+
+### definitions
+
+```php
+public function definitions(): array
+```
+
+**Returns:** `array` — string&gt;
+
+### schemaImports
+
+```php
+public function schemaImports(): array
+```
+
+**Returns:** `array`
+
+### runtime
+
+```php
+public function runtime(): string
+```
+
+**Returns:** `string`
+
+## Source
+
+[src/Compiler/Queries/DynamicQueryCompiler.php:19](https://github.com/nickwelsh/laravel-zero/blob/main/src/Compiler/Queries/DynamicQueryCompiler.php#L19)

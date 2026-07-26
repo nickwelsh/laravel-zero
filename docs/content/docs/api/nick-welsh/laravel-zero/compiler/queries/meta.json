@@ -1,0 +1,7 @@
+{
+    "title": "Queries",
+    "pages": [
+        "dynamic-query-compiler",
+        "zero-query-compiler"
+    ]
+}

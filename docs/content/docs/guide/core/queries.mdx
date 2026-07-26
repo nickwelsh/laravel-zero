@@ -1,0 +1,125 @@
+---
+title: "Queries"
+description: "Define named, typed Zero queries in PHP and keep client-selected columns within explicit allowlists."
+---
+
+Named queries are public methods on classes implementing
+<ApiLink symbol="NickWelsh\LaravelZero\Contracts\ZeroQueries" /> and marked with
+<ApiLink symbol="NickWelsh\LaravelZero\Attributes\ZeroQueryCollection" />.
+Laravel Zero discovers them, compiles supported builder operations, and emits a
+typed client helper for each method.
+
+## Defining a query collection
+
+```php
+#[ZeroQueryCollection('directory.party')]
+final class PartyQueries implements ZeroQueries
+{
+    public function byId(
+        ZeroContext $context,
+        string $id,
+    ): ZeroQueryBuilder {
+        return Party::zeroQuery()
+            ->where('user_id', $context->user_id)
+            ->where('id', $id)
+            ->one();
+    }
+}
+```
+
+Every method receives the resolved context first. Remaining scalar, enum, and
+input arguments become generated client arguments.
+
+## Builder operations
+
+<ApiLink symbol="NickWelsh\LaravelZero\Queries\ZeroQueryBuilder" /> supports the
+query shapes needed by the generated Zero client, including:
+
+- `where`, `whereIn`, `whereNotIn`, `whereNull`, and `whereNotNull`
+- `whereExists` for relationship constraints
+- `applyFilter` for a server-defined recursive filter schema
+- `related` for included relationship configuration
+- `orderBy` and `limit`
+- `one` for a single-row result
+
+This is intentionally smaller than Eloquent's complete query API. Laravel Zero
+compiles a portable Zero query rather than executing an arbitrary Eloquent
+builder in the browser.
+
+## Dynamic column arguments
+
+Fixed columns may use string literals. A column selected by the client must use a
+string-backed enum implementing
+<ApiLink symbol="NickWelsh\LaravelZero\Queries\ZeroQueryColumn" />:
+
+```php
+enum PartySort: string implements ZeroQueryColumn
+{
+    case DisplayName = 'display_name';
+    case CreatedAt = 'created_at';
+}
+
+enum PartyFilter: string implements ZeroQueryColumn
+{
+    case DisplayName = 'display_name';
+    case Status = 'status';
+}
+
+public function paginated(
+    ZeroContext $context,
+    int $limit,
+    PartySort $orderBy = PartySort::DisplayName,
+    ZeroOrderDirection $direction = ZeroOrderDirection::Asc,
+): ZeroQueryBuilder {
+    return Party::zeroQuery()
+        ->where('user_id', $context->user_id)
+        ->orderBy($orderBy, $direction)
+        ->limit($limit);
+}
+```
+
+Use separate enums when filter and sort permissions differ. Never include a
+tenant key, ownership key, or other protected column merely because it exists in
+the schema. Generation verifies enum cases against the model and hydrates the
+same allowlist on the server.
+
+An unrestricted dynamic string column fails generation with `ZERO-Q104`.
+
+## Relationship constraints
+
+Filter parent rows through a relationship with `whereExists`:
+
+```php
+enum EmailAddressFilter: string implements ZeroQueryColumn
+{
+    case Address = 'address';
+    case IsPrimary = 'is_primary';
+}
+
+return Party::zeroQuery()->whereExists(
+    'emailAddresses',
+    fn (ZeroQueryBuilder $emails) => $emails->where($field, $value),
+);
+```
+
+The callback is scoped to the related model, so the enum values are related
+columns without dot notation. Callbacks may nest another `whereExists`.
+
+## Relationship ordering
+
+ZQL cannot order parent rows by a related row's column. A sort such as
+`company.display_name` is therefore invalid. Denormalize a sortable value onto
+the parent when that ordering is required.
+
+You may order the rows inside an included relationship:
+
+```php
+return Party::zeroQuery()->related(
+    'emailAddresses',
+    fn (ZeroQueryBuilder $emails) => $emails
+        ->orderBy($orderBy, $direction),
+);
+```
+
+This changes the order of each party's email addresses, not the order of the
+parties.

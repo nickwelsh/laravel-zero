@@ -1,0 +1,116 @@
+---
+title: "React Integration"
+description: "Configure the generated provider, query helpers, model helpers, environment variables, and frontend output."
+---
+
+The included React integration generates a provider and optional helpers around
+`@rocicorp/zero/react`. It is generated from application configuration and
+should not be edited directly.
+
+## Provider configuration
+
+The generated provider accepts the authenticated user ID and, when default model
+mutations are enabled, an optional ID factory:
+
+```tsx
+import { AppZeroProvider } from '@/zero/frontend';
+
+export function AuthenticatedApp({ user, children }) {
+    return (
+        <AppZeroProvider
+            userId={String(user.id)}
+            generateId={() => crypto.randomUUID()}
+        >
+            {children}
+        </AppZeroProvider>
+    );
+}
+```
+
+The provider builds the generated `ZeroContext`, registers named mutators and
+default model mutations, and supplies the generated schema to Zero.
+
+## URL globals
+
+With the default configuration, `resources/js/globals.ts` exports:
+
+```ts
+export const ZERO_CACHE_URL = import.meta.env.VITE_ZERO_CACHE_URL;
+export const ZERO_MUTATE_URL = import.meta.env.VITE_ZERO_MUTATE_URL;
+export const ZERO_QUERY_URL = import.meta.env.VITE_ZERO_QUERY_URL;
+```
+
+The scaffolder appends only missing declarations; it does not replace existing
+globals.
+
+Set `frontend.use_globals` to `false` when the provider should read Vite
+environment values directly:
+
+```php
+'frontend' => [
+    'framework' => React::class,
+    'use_globals' => false,
+],
+```
+
+## Import boundaries
+
+The generated public API has two barrels:
+
+```tsx
+import { Party, queries, mutations } from '@/zero';
+import {
+    AppZeroProvider,
+    useDynamicQuery,
+    useModel,
+} from '@/zero/frontend';
+```
+
+The frontend barrel is intentionally not re-exported by
+`resources/js/zero/index.ts`. This keeps React-specific helpers out of
+framework-neutral generated types.
+
+## Query helpers
+
+Use Zero's normal hook for generated named queries:
+
+```tsx
+const [party] = useQuery(queries.directory.party.byId(partyId));
+```
+
+Use the generated helper for dynamic model builders so the row Zod schema is
+applied:
+
+```tsx
+const [parties] = useDynamicQuery(
+    Party
+        .with(['person', 'tags'])
+        .where('type', 'person')
+        .limit(50),
+);
+```
+
+`useQuery` is also exported by the generated frontend barrel as an alias for
+this parsed dynamic-query path.
+
+## Model helpers
+
+`useModel(Party)` accepts explicit IDs, while `useModel(party)` uses the
+generated model metadata attached to a dynamic query result:
+
+```tsx
+const models = useModel(Party);
+await models.update(partyId, { displayName: 'Updated' });
+
+const [party] = useQuery(Party.whereKey(partyId).one());
+const instance = useModel(party);
+await instance.update({ displayName: 'Updated again' });
+```
+
+## Another frontend integration
+
+Set `frontend.framework` to `null` to generate no frontend scaffold. To support
+another framework, provide a container-resolvable class extending
+<ApiLink symbol="NickWelsh\LaravelZero\Frontend\Frontend" />. That class owns its
+generated files and barrel while the core query, mutation, schema, and
+validation output remains framework-neutral.

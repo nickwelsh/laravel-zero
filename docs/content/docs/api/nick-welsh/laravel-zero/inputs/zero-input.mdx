@@ -1,0 +1,76 @@
+---
+title: "ZeroInput"
+description: "class NickWelsh\\LaravelZero\\Inputs\\ZeroInput"
+---
+
+# ZeroInput
+
+`NickWelsh\LaravelZero\Inputs\ZeroInput`
+
+```php
+abstract class ZeroInput
+```
+
+## Methods
+
+### __construct
+
+```php
+public final function __construct(array $raw = [])
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$raw` | `array` |  |
+
+### rules
+
+```php
+public abstract function rules(): array
+```
+
+**Returns:** `array` — mixed&gt;
+
+### messages
+
+```php
+public function messages(): array
+```
+
+**Returns:** `array` — string&gt;
+
+### from
+
+```php
+public static function from(array $raw): static
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$raw` | `array` |  |
+
+**Returns:** `static`
+
+### validated
+
+```php
+public function validated(): array
+```
+
+**Returns:** `array` — mixed&gt;
+
+### __get
+
+```php
+public function __get(string $name): mixed
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$name` | `string` |  |
+
+**Returns:** `mixed`
+
+## Source
+
+[src/Inputs/ZeroInput.php:8](https://github.com/nickwelsh/laravel-zero/blob/main/src/Inputs/ZeroInput.php#L8)

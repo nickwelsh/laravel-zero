@@ -1,0 +1,96 @@
+---
+title: "Security"
+description: "Understand Laravel Zero's trust boundary and the authorization rules every application must preserve."
+---
+
+Laravel Zero generates a typed client, but the client remains untrusted.
+Authentication, context resolution, allowlists, global scopes, validation, and
+policies must all be enforced by Laravel.
+
+## Protect the endpoints
+
+The default routes use `web` and `auth` middleware:
+
+```php
+'routes' => [
+    'enabled' => true,
+    'prefix' => 'zero',
+    'middleware' => ['web', 'auth'],
+    'except_from_csrf' => true,
+],
+```
+
+Keep authentication middleware in place. Add tenant, account-state, or other
+application middleware when it is required for every Zero operation.
+
+The query and mutate paths are excluded from CSRF validation by default because
+they are protocol endpoints. If your deployment can send Laravel CSRF tokens,
+set `except_from_csrf` to `false` and verify both endpoints before shipping.
+
+## Resolve trusted context
+
+The context resolver reads identity from the authenticated request:
+
+```php
+public function resolve(Request $request): object
+{
+    return new ZeroContext(
+        user_id: (string) $request->user()->getAuthIdentifier(),
+        tenant_id: (string) $request->user()->current_tenant_id,
+    );
+}
+```
+
+Do not let a client argument override user or tenant identity. Put immutable
+ownership constraints on the query before applying any client-controlled
+filter.
+
+## Keep model access explicit
+
+For named queries, dynamic column arguments must use narrow
+`ZeroQueryColumn` enums. For dynamic model queries, expose only the necessary
+filters, includes, and sorts. Protected columns should not appear in either
+allowlist.
+
+Laravel Zero rebuilds dynamic queries from these server-owned allowlists. It
+does not execute an arbitrary client AST.
+
+## Treat global-scope failures as security failures
+
+Only portable global-scope constraints can be emitted safely. Unsupported OR
+predicates, joins, raw conditions, grouping, ordering, or subqueries cause
+generation to fail closed.
+
+Do not remove a scope just to make generation pass. Express the invariant in a
+supported server-owned constraint or keep that model out of dynamic queries.
+
+## Require mutation policies
+
+Default model mutations require
+<ApiLink symbol="NickWelsh\LaravelZero\Attributes\ZeroAuthorizeMutations" />.
+Relationship helpers authorize through the parent model's `update` policy.
+Named mutations should perform their normal application authorization before
+writing.
+
+Optimistic effects are a user-experience feature. A server rejection remains
+authoritative and must reconcile through Zero.
+
+## Validate on the server
+
+Generated Zod catches portable input mistakes early, but Laravel validation
+always runs. Database-backed, service-backed, compromised-password, and custom
+rules may be server-only.
+
+Never remove a Laravel rule because it is absent from the generated Zod schema.
+
+## Deployment checklist
+
+Before deploying:
+
+1. Confirm `/zero/query` and `/zero/mutate` require the intended middleware.
+2. Verify context values come from the authenticated request.
+3. Review every dynamic filter, include, sort, and query-column enum.
+4. Confirm each default-mutation model has the correct policy.
+5. Run `php artisan zero:generate` in the target configuration.
+6. Run `php artisan zero:check` in CI or the release job.
+7. Clear the discovery cache after operation classes change.

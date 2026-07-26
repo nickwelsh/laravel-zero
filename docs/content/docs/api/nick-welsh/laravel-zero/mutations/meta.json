@@ -1,0 +1,10 @@
+{
+    "title": "Mutations",
+    "pages": [
+        "authorizes-zero-mutations",
+        "zero-create-mutation",
+        "zero-delete-mutation",
+        "zero-mutation-builder",
+        "zero-update-mutation"
+    ]
+}

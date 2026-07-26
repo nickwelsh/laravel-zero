@@ -1,0 +1,73 @@
+---
+title: "ZeroFilterDomainAdapter"
+description: "Isolates the compiler from the forthcoming Filters domain API."
+---
+
+# ZeroFilterDomainAdapter
+
+`NickWelsh\LaravelZero\Compiler\Filters\ZeroFilterDomainAdapter`
+
+Isolates the compiler from the forthcoming Filters domain API.
+
+The expected API is intentionally accessed only in this class so that naming
+or shape changes in ZeroFilterDefinition/ZeroFilterSchema need one adapter edit.
+
+```php
+final class ZeroFilterDomainAdapter
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry $schemas)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$schemas` | `NickWelsh\LaravelZero\Contracts\ZeroSchemaRegistry` |  |
+
+### definitionId
+
+```php
+public function definitionId(string $definitionClass): string
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$definitionClass` | `string` |  |
+
+**Returns:** `string`
+
+### definition
+
+```php
+public function definition(string $definitionClass): array
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$definitionClass` | `string` |  |
+
+**Returns:** `array`
+
+### verifyRelationshipModel
+
+Verify against the existing Zero schema bridge when it exposes related model metadata. If a future registry does not, this check is skipped.
+
+```php
+public function verifyRelationshipModel(string $sourceModelClass, string $relationship, string $targetModelClass): void
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$sourceModelClass` | `string` |  |
+| `$relationship` | `string` |  |
+| `$targetModelClass` | `string` |  |
+
+**Returns:** `void`
+
+## Source
+
+[src/Compiler/Filters/ZeroFilterDomainAdapter.php:23](https://github.com/nickwelsh/laravel-zero/blob/main/src/Compiler/Filters/ZeroFilterDomainAdapter.php#L23)

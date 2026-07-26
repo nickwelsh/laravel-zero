@@ -1,0 +1,42 @@
+---
+title: "ZeroQueryEndpoint"
+description: "class NickWelsh\\LaravelZero\\Http\\ZeroQueryEndpoint"
+---
+
+# ZeroQueryEndpoint
+
+`NickWelsh\LaravelZero\Http\ZeroQueryEndpoint`
+
+```php
+final readonly class ZeroQueryEndpoint
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(NickWelsh\LaravelZero\Discovery\ZeroRegistry $registry, NickWelsh\LaravelZero\Dynamic\DynamicQueryRegistry $dynamic, NickWelsh\LaravelZero\Context\ZeroContextResolver $contexts)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$registry` | `NickWelsh\LaravelZero\Discovery\ZeroRegistry` |  |
+| `$dynamic` | `NickWelsh\LaravelZero\Dynamic\DynamicQueryRegistry` |  |
+| `$contexts` | `NickWelsh\LaravelZero\Context\ZeroContextResolver` |  |
+
+### __invoke
+
+```php
+public function __invoke(Illuminate\Http\Request $request): Illuminate\Http\JsonResponse
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$request` | `Illuminate\Http\Request` |  |
+
+**Returns:** `Illuminate\Http\JsonResponse`
+
+## Source
+
+[src/Http/ZeroQueryEndpoint.php:20](https://github.com/nickwelsh/laravel-zero/blob/main/src/Http/ZeroQueryEndpoint.php#L20)

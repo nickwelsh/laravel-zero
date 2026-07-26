@@ -1,0 +1,77 @@
+---
+title: "Frontend"
+description: "class NickWelsh\\LaravelZero\\Frontend\\Frontend"
+---
+
+# Frontend
+
+`NickWelsh\LaravelZero\Frontend\Frontend`
+
+```php
+abstract readonly class Frontend
+```
+
+## Constants
+
+### HEADER
+
+```php
+protected const HEADER = "// This file is generated. Do not edit directly.\n\n";
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(Illuminate\Filesystem\Filesystem $files)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$files` | `Illuminate\Filesystem\Filesystem` |  |
+
+### scaffold
+
+```php
+public final function scaffold(): array
+```
+
+**Returns:** `array`
+
+### generatedFiles
+
+```php
+protected abstract function generatedFiles(string $outputPath): array
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$outputPath` | `string` |  |
+
+**Returns:** `array` — string&gt;
+
+### barrel
+
+```php
+protected abstract function barrel(string $barrelPath, string $outputPath): string
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$barrelPath` | `string` |  |
+| `$outputPath` | `string` |  |
+
+**Returns:** `string`
+
+### scaffoldAdditionalFiles
+
+```php
+protected function scaffoldAdditionalFiles(): array
+```
+
+**Returns:** `array`
+
+## Source
+
+[src/Frontend/Frontend.php:8](https://github.com/nickwelsh/laravel-zero/blob/main/src/Frontend/Frontend.php#L8)

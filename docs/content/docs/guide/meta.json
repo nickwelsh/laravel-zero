@@ -1,0 +1,12 @@
+{
+  "title": "Guide",
+  "description": "Install, configure, and use Laravel Zero.",
+  "root": true,
+  "pages": [
+    "index",
+    "getting-started",
+    "core",
+    "advanced",
+    "operations"
+  ]
+}

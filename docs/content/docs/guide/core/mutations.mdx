@@ -1,0 +1,142 @@
+---
+title: "Mutations"
+description: "Define explicit mutation collections or generate policy-guarded model and relationship mutations."
+---
+
+Laravel Zero supports named mutation methods for application-specific workflows
+and default model mutations for common Eloquent operations. In both cases,
+Laravel performs the authoritative write.
+
+## Named mutation collections
+
+Mark a class with
+<ApiLink symbol="NickWelsh\LaravelZero\Attributes\ZeroMutationCollection" /> and
+implement <ApiLink symbol="NickWelsh\LaravelZero\Contracts\ZeroMutations" />:
+
+```php
+#[ZeroMutationCollection('directory.party')]
+final class PartyMutations implements ZeroMutations
+{
+    public function create(
+        ZeroContext $context,
+        CreatePartyInput $input,
+    ): Model {
+        return Party::zeroMutate()
+            ->serverOnly('reference_code')
+            ->ignore('password_confirmation')
+            ->create([
+                ...$input->validated(),
+                'user_id' => $context->user_id,
+                'reference_code' => app(ReferenceCodes::class)->next(),
+            ]);
+    }
+}
+```
+
+The <ApiLink symbol="NickWelsh\LaravelZero\Mutations\ZeroMutationBuilder" />
+supports create, update, upsert, and delete operations.
+
+`serverOnly()` marks values that are calculated or written only by the server.
+`ignore()` removes validated values that should never be persisted, such as a
+confirmation field.
+
+## Default model mutations
+
+Models may opt into generated create, update, and delete helpers:
+
+```php
+#[ZeroDefaultMutations([
+    ZeroCreateMutation::class,
+    ZeroUpdateMutation::class,
+    ZeroDeleteMutation::class,
+])]
+#[ZeroAuthorizeMutations(PartyPolicy::class)]
+final class Party extends Model
+{
+    use HasZero;
+}
+```
+
+A policy is required whenever
+<ApiLink symbol="NickWelsh\LaravelZero\Attributes\ZeroDefaultMutations" /> is
+present. Authorization runs only on the Laravel server.
+
+```php
+final class PartyPolicy
+{
+    public function create(User $user): bool
+    {
+        return true;
+    }
+
+    public function update(User $user, Party $party): bool
+    {
+        return $user->current_tenant_id === $party->tenant_id;
+    }
+
+    public function delete(User $user, Party $party): bool
+    {
+        return $this->update($user, $party);
+    }
+}
+```
+
+## React model helpers
+
+The generated `useModel` helper works with a model builder or a returned model
+instance:
+
+```tsx
+const partyMutations = useModel(Party);
+
+await partyMutations.create({
+    displayName: 'Acme',
+    tenantId: tenant.id,
+});
+await partyMutations.update(partyId, {
+    displayName: 'Acme, Inc.',
+});
+
+const [party] = useQuery(Party.whereKey(partyId).one());
+const instanceMutations = useModel(party);
+
+await instanceMutations.update({ displayName: 'Acme Corp.' });
+await instanceMutations.delete();
+```
+
+Dynamic-query results carry reserved `__zero` metadata with the model name and
+primary key. `useModel(instance)` consumes this metadata and removes it from
+writes.
+
+## Relationship mutations
+
+Generated helpers include `attach`, `detach`, `sync`,
+`syncWithoutDetaching`, `syncWithPivotValues`, `toggle`, and
+`updateExistingPivot`:
+
+```tsx
+await partyMutations.attach(partyId, 'tags', tagId);
+await partyMutations.sync(partyId, 'tags', [firstTagId, secondTagId]);
+await instanceMutations.detach('tags', [tagId]);
+```
+
+Relationship changes use the parent model's `update` policy. They are
+server-authoritative and reconcile through normal Zero synchronization.
+
+## IDs and timestamps
+
+Pass an ID factory to the generated provider when default creates need client
+IDs:
+
+```tsx
+<AppZeroProvider
+    userId={user.id}
+    generateId={() => crypto.randomUUID()}
+>
+    {children}
+</AppZeroProvider>
+```
+
+An explicit ID in the mutation input takes precedence. For timestamped Eloquent
+models, optimistic create and update helpers populate `createdAt` and
+`updatedAt`; Laravel writes the authoritative timestamps.

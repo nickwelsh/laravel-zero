@@ -1,0 +1,65 @@
+---
+title: "ZeroFilterRelationship"
+description: "class NickWelsh\\LaravelZero\\Filters\\ZeroFilterRelationship"
+---
+
+# ZeroFilterRelationship
+
+`NickWelsh\LaravelZero\Filters\ZeroFilterRelationship`
+
+```php
+final class ZeroFilterRelationship
+```
+
+## Properties
+
+### relatedModel
+
+```php
+public ?string $relatedModel = null;
+```
+
+**Returns:** `?string`
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(string $id, string $label, string $relationship, string $definition)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$id` | `string` |  |
+| `$label` | `string` |  |
+| `$relationship` | `string` |  |
+| `$definition` | `string` |  |
+
+### label
+
+```php
+public function label(string $label): self
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$label` | `string` |  |
+
+**Returns:** `self`
+
+### resolveRelatedModel
+
+```php
+public function resolveRelatedModel(string $relatedModel): void
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$relatedModel` | `string` |  |
+
+**Returns:** `void`
+
+## Source
+
+[src/Filters/ZeroFilterRelationship.php:7](https://github.com/nickwelsh/laravel-zero/blob/main/src/Filters/ZeroFilterRelationship.php#L7)

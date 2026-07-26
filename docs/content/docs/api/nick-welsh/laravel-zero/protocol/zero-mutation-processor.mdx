@@ -1,0 +1,46 @@
+---
+title: "ZeroMutationProcessor"
+description: "class NickWelsh\\LaravelZero\\Protocol\\ZeroMutationProcessor"
+---
+
+# ZeroMutationProcessor
+
+`NickWelsh\LaravelZero\Protocol\ZeroMutationProcessor`
+
+```php
+final readonly class ZeroMutationProcessor
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(Illuminate\Database\DatabaseManager $database, NickWelsh\LaravelZero\Discovery\ZeroRegistry $registry, NickWelsh\LaravelZero\Dynamic\DynamicMutationRegistry $dynamic)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$database` | `Illuminate\Database\DatabaseManager` |  |
+| `$registry` | `NickWelsh\LaravelZero\Discovery\ZeroRegistry` |  |
+| `$dynamic` | `NickWelsh\LaravelZero\Dynamic\DynamicMutationRegistry` |  |
+
+### process
+
+```php
+public function process(array $body, object $context, ?object $user, ?string $userID, string $schema): array
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$body` | `array` |  |
+| `$context` | `object` |  |
+| `$user` | `?object` |  |
+| `$userID` | `?string` |  |
+| `$schema` | `string` |  |
+
+**Returns:** `array` — mixed&gt;
+
+## Source
+
+[src/Protocol/ZeroMutationProcessor.php:15](https://github.com/nickwelsh/laravel-zero/blob/main/src/Protocol/ZeroMutationProcessor.php#L15)

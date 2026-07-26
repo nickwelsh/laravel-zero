@@ -1,0 +1,60 @@
+---
+title: "ZeroFilterSchema"
+description: "class NickWelsh\\LaravelZero\\Filters\\ZeroFilterSchema"
+---
+
+# ZeroFilterSchema
+
+`NickWelsh\LaravelZero\Filters\ZeroFilterSchema`
+
+```php
+final readonly class ZeroFilterSchema
+```
+
+## Methods
+
+### __construct
+
+```php
+public function __construct(string $model, array $fields, array $relationships, int $maxDepth, int $maxRelationshipDepth, int $maxNodes, int $maxChildren, int $maxInValues, int $maxStringLength)
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$model` | `string` |  |
+| `$fields` | `array` |  |
+| `$relationships` | `array` |  |
+| `$maxDepth` | `int` |  |
+| `$maxRelationshipDepth` | `int` |  |
+| `$maxNodes` | `int` |  |
+| `$maxChildren` | `int` |  |
+| `$maxInValues` | `int` |  |
+| `$maxStringLength` | `int` |  |
+
+### field
+
+```php
+public function field(string $id): NickWelsh\LaravelZero\Filters\ZeroFilterField
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$id` | `string` |  |
+
+**Returns:** `NickWelsh\LaravelZero\Filters\ZeroFilterField`
+
+### relationship
+
+```php
+public function relationship(string $id): NickWelsh\LaravelZero\Filters\ZeroFilterRelationship
+```
+
+| Parameter | Type | Description |
+| --- | --- | --- |
+| `$id` | `string` |  |
+
+**Returns:** `NickWelsh\LaravelZero\Filters\ZeroFilterRelationship`
+
+## Source
+
+[src/Filters/ZeroFilterSchema.php:7](https://github.com/nickwelsh/laravel-zero/blob/main/src/Filters/ZeroFilterSchema.php#L7)
