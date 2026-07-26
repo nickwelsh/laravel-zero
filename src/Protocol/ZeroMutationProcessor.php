@@ -6,6 +6,7 @@ use Illuminate\Database\ConnectionInterface;
 use Illuminate\Database\DatabaseManager;
 use NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape;
 use NickWelsh\LaravelZero\Discovery\ZeroRegistry;
+use NickWelsh\LaravelZero\Dynamic\DynamicMutationRegistry;
 use Stringable;
 use Throwable;
 use UnexpectedValueException;
@@ -13,13 +14,17 @@ use UnitEnum;
 
 final readonly class ZeroMutationProcessor
 {
-    public function __construct(private DatabaseManager $database, private ZeroRegistry $registry) {}
+    public function __construct(
+        private DatabaseManager $database,
+        private ZeroRegistry $registry,
+        private DynamicMutationRegistry $dynamic,
+    ) {}
 
     /**
      * @param  array<string, mixed>  $body
      * @return array<string, mixed>
      */
-    public function process(array $body, object $context, ?string $userID, string $schema): array
+    public function process(array $body, object $context, ?object $user, ?string $userID, string $schema): array
     {
         $pushVersion = $body['pushVersion'] ?? null;
         if ($pushVersion !== 1) {
@@ -49,7 +54,7 @@ final readonly class ZeroMutationProcessor
                 continue;
             }
             try {
-                $responses[] = $this->run($schema, $body['clientGroupID'], $mutation, $context);
+                $responses[] = $this->run($schema, $body['clientGroupID'], $mutation, $context, $user);
             } catch (OutOfOrderMutation $error) {
                 return $this->failed('oooMutation', $error->getMessage(), array_slice($mutations, $index));
             } catch (DatabaseMutationFailure $error) {
@@ -64,7 +69,7 @@ final readonly class ZeroMutationProcessor
      * @param  array<array-key, mixed>  $mutation
      * @return array<string, mixed>
      */
-    private function run(string $schema, string $clientGroupID, array $mutation, object $context): array
+    private function run(string $schema, string $clientGroupID, array $mutation, object $context, ?object $user): array
     {
         $clientID = $mutation['clientID'] ?? null;
         $id = $mutation['id'] ?? null;
@@ -74,11 +79,28 @@ final readonly class ZeroMutationProcessor
         $identity = ['clientID' => $clientID, 'id' => $id];
 
         try {
-            return $this->connection()->transaction(function (ConnectionInterface $connection) use ($schema, $clientGroupID, $mutation, $context, $identity, $clientID, $id): array {
+            return $this->connection()->transaction(function (ConnectionInterface $connection) use ($schema, $clientGroupID, $mutation, $context, $user, $identity, $clientID, $id): array {
                 $this->advance($connection, $schema, $clientGroupID, $clientID, $id);
-                $operation = $this->registry->mutation($mutation['name']);
-                $arguments = ArgumentShape::from($operation->method)->hydrate($mutation['args']);
-                $operation->method->invokeArgs($operation->instance(), [$context, ...$arguments]);
+                $dynamic = $this->dynamic->findOperation($mutation['name']);
+                if ($dynamic !== null) {
+                    [$model, $operation] = $dynamic;
+                    $args = $mutation['args'];
+                    if (count($args) !== 1 || ! is_array($args[0])) {
+                        throw new \InvalidArgumentException('Default Zero mutations accept exactly one object argument.');
+                    }
+                    $payload = [];
+                    foreach ($args[0] as $key => $value) {
+                        if (! is_string($key)) {
+                            throw new \InvalidArgumentException('Default Zero mutation argument keys must be strings.');
+                        }
+                        $payload[$key] = $value;
+                    }
+                    $model->execute($operation, $payload, $user);
+                } else {
+                    $operation = $this->registry->mutation($mutation['name']);
+                    $arguments = ArgumentShape::from($operation->method)->hydrate($mutation['args']);
+                    $operation->method->invokeArgs($operation->instance(), [$context, ...$arguments]);
+                }
 
                 return ['id' => $identity, 'result' => (object) []];
             });

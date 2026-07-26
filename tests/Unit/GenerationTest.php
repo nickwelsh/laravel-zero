@@ -10,11 +10,13 @@ use NickWelsh\LaravelZero\Compiler\Inputs\ZodRuleCompiler;
 use NickWelsh\LaravelZero\Compiler\TypeScript\ZeroTypeScriptGenerator;
 use NickWelsh\LaravelZero\Contracts\ValidationSchema;
 use NickWelsh\LaravelZero\Discovery\ZeroRegistry;
+use NickWelsh\LaravelZero\Dynamic\DynamicMutationRegistry;
 use NickWelsh\LaravelZero\Dynamic\DynamicQueryRegistry;
 use NickWelsh\LaravelZero\Queries\ZeroOrderDirection;
 use NickWelsh\LaravelZero\Schema\EloquentZeroSchemaRegistry;
 use NickWelsh\LaravelZero\Tests\Fixtures\AllowedQueries;
 use NickWelsh\LaravelZero\Tests\Fixtures\CreatePartyInput;
+use NickWelsh\LaravelZero\Tests\Fixtures\DefaultParty;
 use NickWelsh\LaravelZero\Tests\Fixtures\DynamicParty;
 use NickWelsh\LaravelZero\Tests\Fixtures\FakeValidationSchema;
 use NickWelsh\LaravelZero\Tests\Fixtures\Party;
@@ -267,8 +269,10 @@ it('resolves model metadata through the eloquent-zero bridge', function (): void
 it('generates allowlisted dynamic model queries and typed client builders', function (): void {
     config()->set('laravel-zero.generation.models', [DynamicParty::class]);
     app()->forgetInstance(DynamicQueryRegistry::class);
+    app()->forgetInstance(DynamicMutationRegistry::class);
 
-    $source = app(ZeroTypeScriptGenerator::class)->render()['files']['queries.generated.ts'];
+    $files = app(ZeroTypeScriptGenerator::class)->render()['files'];
+    $source = $files['queries.generated.ts'];
 
     expect($source)
         ->toContain('models: {', 'dynamicParty: defineQuery(')
@@ -277,18 +281,40 @@ it('generates allowlisted dynamic model queries and typed client builders', func
         ->toContain('pivot.where("taggableType", "NickWelsh\\\\LaravelZero\\\\Tests\\\\Fixtures\\\\DynamicParty")')
         ->toContain('export class DynamicQueryBuilder<')
         ->toContain('export const DynamicParty = createDynamicModel<ParsedParty')
-        ->toContain('parser: partySchema.passthrough()');
+        ->toContain('parser: partySchema.passthrough()')
+        ->toContain('readonly __zero: ZeroModelMetadata', 'whereKey(value: unknown)', 'mutations: {')
+        ->and($files['mutations.generated.ts'])
+        ->toContain('dynamicParty: {', 'create: defineMutator(', 'update: defineMutator(', 'delete: defineMutator(', 'relation: defineMutator(')
+        ->and($files['manifest.generated.json'])
+        ->toContain('models.dynamicParty.create', 'models.dynamicParty.relation');
 });
 
 it('can disable dynamic model query generation', function (): void {
     config()->set('laravel-zero.generation.models', [DynamicParty::class]);
     config()->set('laravel-zero.dynamic_queries.enabled', false);
     app()->forgetInstance(DynamicQueryRegistry::class);
+    app()->forgetInstance(DynamicMutationRegistry::class);
 
     $source = app(ZeroTypeScriptGenerator::class)->render()['files']['queries.generated.ts'];
 
     expect($source)
-        ->not->toContain('dynamicParty: defineQuery(', 'export class DynamicQueryBuilder<', 'partySchema');
+        ->not->toContain('dynamicParty: defineQuery(')
+        ->toContain('export class DynamicQueryBuilder<', 'partySchema', 'mutations.models.dynamicParty.create');
+});
+
+it('generates default mutations for a model without a dynamic query', function (): void {
+    config()->set('laravel-zero.generation.models', [DefaultParty::class]);
+    app()->forgetInstance(DynamicQueryRegistry::class);
+    app()->forgetInstance(DynamicMutationRegistry::class);
+
+    $files = app(ZeroTypeScriptGenerator::class)->render()['files'];
+
+    expect($files['queries.generated.ts'])
+        ->toContain('export const DefaultParty = createDynamicModel<ParsedParty')
+        ->toContain('createdAt: "createdAt"', 'updatedAt: "updatedAt"', 'mutations.models.defaultParty.create')
+        ->not->toContain('defaultParty: defineQuery(')
+        ->and($files['mutations.generated.ts'])
+        ->toContain('defaultParty: {', 'create: defineMutator(', 'update: defineMutator(', 'delete: defineMutator(');
 });
 
 it('imports Zod directly for dynamic queries with a custom validation compiler', function (): void {

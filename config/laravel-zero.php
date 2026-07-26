@@ -51,6 +51,9 @@ return [
         'enabled' => true,
         'max_limit' => 100,
     ],
+    'default_mutations' => [
+        'enabled' => true,
+    ],
     'frontend' => [
         'framework' => React::class,
         'output_path' => resource_path('js/zero/generated/frontend'),

@@ -1,8 +1,10 @@
 <?php
 
+use NickWelsh\LaravelZero\Dynamic\DynamicMutationRegistry;
 use NickWelsh\LaravelZero\Dynamic\DynamicQueryRegistry;
 use NickWelsh\LaravelZero\Tests\Fixtures\DynamicParty;
 use NickWelsh\LaravelZero\Tests\Fixtures\Party;
+use NickWelsh\LaravelZero\Tests\Fixtures\TestUser;
 
 it('serves authoritative query AST', function (): void {
     $this->postJson('/zero/query', ['transform', [['id' => 'q1', 'name' => 'directory.party.byId', 'args' => ['party-1']]]])
@@ -95,6 +97,79 @@ it('processes and deduplicates mutations', function (): void {
         ->assertJsonPath('kind', 'MutateResponse')->assertJsonPath('mutations.0.id.id', 1);
     expect(Party::find('p1'))->not->toBeNull()->and(Party::find('p1')->user_id)->toBe('user-1');
     $this->postJson('/zero/mutate?schema=zero_0&appID=zero', $body)->assertJsonPath('mutations.0.result.error', 'alreadyProcessed');
+});
+
+it('runs authorized default model and relationship mutations', function (): void {
+    config()->set('laravel-zero.generation.models', [DynamicParty::class]);
+    app()->forgetInstance(DynamicMutationRegistry::class);
+    $this->actingAs(new TestUser);
+    $this->app['db']->table('tags')->insert([
+        ['id' => 'tag-1', 'name' => 'Important'],
+        ['id' => 'tag-2', 'name' => 'Customer'],
+    ]);
+
+    $body = ['pushVersion' => 1, 'clientGroupID' => 'default-cg', 'timestamp' => 1, 'requestID' => 'default-r', 'mutations' => [[
+        'type' => 'custom', 'id' => 1, 'clientID' => 'default-c', 'name' => 'models.dynamicParty.create',
+        'args' => [[
+            'values' => ['id' => 'default-party', 'userId' => 'tenant-1', 'displayName' => 'Created'],
+            'relations' => [
+                'emailAddresses' => [['id' => 'default-email', 'isPrimary' => true]],
+                'tags' => ['tag-1'],
+            ],
+        ]], 'timestamp' => 1,
+    ], [
+        'type' => 'custom', 'id' => 2, 'clientID' => 'default-c', 'name' => 'models.dynamicParty.update',
+        'args' => [['key' => ['id' => 'default-party'], 'values' => ['displayName' => 'Updated']]], 'timestamp' => 1,
+    ], [
+        'type' => 'custom', 'id' => 3, 'clientID' => 'default-c', 'name' => 'models.dynamicParty.relation',
+        'args' => [['key' => ['id' => 'default-party'], 'relation' => 'tags', 'operation' => 'attach', 'ids' => 'tag-2']], 'timestamp' => 1,
+    ]]];
+
+    $this->postJson('/zero/mutate?schema=zero_0&appID=zero', $body)
+        ->assertOk()
+        ->assertJsonPath('kind', 'MutateResponse')
+        ->assertJsonCount(3, 'mutations');
+    $this->assertDatabaseHas('parties', ['id' => 'default-party', 'display_name' => 'Updated']);
+    $this->assertDatabaseHas('email_addresses', ['id' => 'default-email', 'party_id' => 'default-party', 'is_primary' => true]);
+    $this->assertDatabaseHas('taggables', [
+        'tag_id' => 'tag-1',
+        'taggable_type' => DynamicParty::class,
+        'taggable_id' => 'default-party',
+    ]);
+    $this->assertDatabaseHas('taggables', [
+        'tag_id' => 'tag-2',
+        'taggable_type' => DynamicParty::class,
+        'taggable_id' => 'default-party',
+    ]);
+});
+
+it('rejects unauthenticated and cross-tenant default mutations on the server', function (): void {
+    config()->set('laravel-zero.generation.models', [DynamicParty::class]);
+    app()->forgetInstance(DynamicMutationRegistry::class);
+    $this->app['db']->table('parties')->insert([
+        'id' => 'protected-party',
+        'user_id' => 'tenant-1',
+        'display_name' => 'Protected',
+    ]);
+
+    $mutation = [
+        'type' => 'custom', 'id' => 1, 'clientID' => 'denied-c', 'name' => 'models.dynamicParty.update',
+        'args' => [['key' => ['id' => 'protected-party'], 'values' => ['displayName' => 'Compromised']]], 'timestamp' => 1,
+    ];
+    $body = ['pushVersion' => 1, 'clientGroupID' => 'denied-cg', 'timestamp' => 1, 'requestID' => 'denied-r', 'mutations' => [$mutation]];
+
+    $this->postJson('/zero/mutate?schema=zero_0&appID=zero', $body)
+        ->assertJsonPath('mutations.0.result.error', 'app')
+        ->assertJsonPath('mutations.0.result.message', 'Unauthenticated.');
+
+    app()->forgetInstance(DynamicMutationRegistry::class);
+    $this->actingAs(new TestUser(tenantId: 'another-tenant'));
+    $mutation['clientID'] = 'cross-tenant-c';
+    $body['clientGroupID'] = 'cross-tenant-cg';
+    $body['mutations'] = [$mutation];
+    $this->postJson('/zero/mutate?schema=zero_0&appID=zero', $body)
+        ->assertJsonPath('mutations.0.result.error', 'app');
+    $this->assertDatabaseHas('parties', ['id' => 'protected-party', 'display_name' => 'Protected']);
 });
 
 it('persists application failures and advances mutation id', function (): void {

@@ -168,6 +168,83 @@ Dynamic queries are enabled by default. Their maximum client-selected limit defa
 ],
 ```
 
+### Default model mutations
+
+Models can opt into generated create, update, and delete mutations. A policy is required whenever the default mutation attribute is present; authorization only runs on the Laravel server:
+
+```php
+use NickWelsh\LaravelZero\Attributes\ZeroAuthorizeMutations;
+use NickWelsh\LaravelZero\Attributes\ZeroDefaultMutations;
+use NickWelsh\LaravelZero\Mutations\ZeroCreateMutation;
+use NickWelsh\LaravelZero\Mutations\ZeroDeleteMutation;
+use NickWelsh\LaravelZero\Mutations\ZeroUpdateMutation;
+
+#[ZeroDefaultMutations([
+    ZeroCreateMutation::class,
+    ZeroUpdateMutation::class,
+    ZeroDeleteMutation::class,
+])]
+#[ZeroAuthorizeMutations(PartyPolicy::class)]
+final class Party extends Model
+{
+    public function tags(): MorphToMany
+    {
+        return $this->morphToMany(Tag::class, 'taggable');
+    }
+}
+
+final class PartyPolicy
+{
+    public function create(User $user): bool
+    {
+        return true;
+    }
+
+    public function update(User $user, Party $party): bool
+    {
+        return $user->current_tenant_id === $party->tenant_id;
+    }
+
+    public function delete(User $user, Party $party): bool
+    {
+        return $this->update($user, $party);
+    }
+}
+```
+
+Pass an ID factory to the generated provider. Explicit IDs still win. For timestamped Eloquent models, create/update helpers populate optimistic `createdAt` and `updatedAt` values while Laravel writes the authoritative timestamps:
+
+```tsx
+<AppZeroProvider generateId={() => nanoid()} userId={user.id}>
+    {children}
+</AppZeroProvider>
+```
+
+The generated model and React hook support both class-level and instance-level calls:
+
+```tsx
+const {create, update, delete: destroy, attach, detach, sync} = useModel(Party);
+
+await create({displayName: 'Acme', tenantId: tenant.id});
+await update(partyId, {displayName: 'Acme, Inc.'});
+await attach(partyId, 'tags', tagId);
+
+const [party] = useQuery(Party.whereKey(partyId).one());
+const partyMutations = useModel(party);
+
+await partyMutations.update({displayName: 'Acme Corp.'});
+await partyMutations.detach('tags', [tagId]);
+await partyMutations.delete();
+
+await Party.with(['person', 'tags']).create({
+    displayName: 'New party',
+    person: {id: personId, firstName: 'Taylor'},
+    tags: [tagId],
+});
+```
+
+Dynamic-query results include reserved `__zero` metadata containing the generated model name and primary key. `useModel(instance)` consumes that metadata; it is removed from writes and never treated as a database column. Relationship helpers (`attach`, `detach`, `sync`, `syncWithoutDetaching`, `syncWithPivotValues`, `toggle`, and `updateExistingPivot`) are authorized through the parent model's `update` policy. Their pivot changes are server-authoritative and reconcile through Zero sync.
+
 ### Advanced filter groups
 
 For data-grid filters with nested AND/OR groups, define a server-owned filter schema. Fields and relationships are explicit allowlists; protected columns never become filterable unless they are deliberately registered:

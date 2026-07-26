@@ -35,7 +35,9 @@ final readonly class ZeroMutateEndpoint
             ]);
         }
 
-        return response()->json($this->processor->process($request->json()->all(), $context, $userID, $schema));
+        $user = $request->user();
+
+        return response()->json($this->processor->process($request->json()->all(), $context, $user, $userID, $schema));
     }
 
     private function userID(object $context): ?string

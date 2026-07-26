@@ -24,6 +24,7 @@ final class FakeSchemaRegistry implements ZeroSchemaRegistry
 
         return new ZeroModelSchema($modelClass, 'parties', 'party', [
             'id' => 'id', 'user_id' => 'userId', 'display_name' => 'displayName', 'reference_code' => 'referenceCode',
+            'created_at' => 'createdAt', 'updated_at' => 'updatedAt',
         ], ['id'], [
             'emailAddresses' => new ZeroRelationshipSchema('emailAddresses', EmailAddress::class, ['id'], ['party_id']),
         ]);

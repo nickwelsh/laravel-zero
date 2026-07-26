@@ -204,7 +204,9 @@ it('scaffolds the React dynamic query hook for opted-in models', function (): vo
         app(FrontendScaffolder::class)->scaffold();
 
         expect($files->get($frontend.'/dynamic.ts'))
-            ->toContain('export function useDynamicQuery<TResult>', 'query.parse(value)')
+            ->toContain('export function useDynamicQuery<TResult>', 'export function useModel(', 'query.parse(value)')
+            ->and($files->get($frontend.'/provider.tsx'))
+            ->toContain('generateId?: () => string | number', 'configureDefaultModelMutations', 'zero.mutate(request as never)')
             ->and($files->get($barrel))->toContain("export * from './frontend/dynamic';");
     } finally {
         $files->deleteDirectory($directory);

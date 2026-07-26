@@ -1,21 +1,23 @@
 import { ZeroProvider } from '@rocicorp/zero/react';
 import type { ZeroContext } from '{{ context_import }}';
-import type { ReactNode } from 'react';
-import { useMemo } from 'react';
+import type { ComponentProps, ReactNode } from 'react';
+import { useCallback, useMemo } from 'react';
 import { ZERO_CACHE_URL, ZERO_MUTATE_URL, ZERO_QUERY_URL } from '@/globals';
 import { mutations } from '{{ mutations_import }}';
+{{ default_mutation_import }}
 import { schema } from '{{ schema_import }}';
 
 {{ props_declaration }}
 
-function AppZeroProvider({ children, userId }: AppZeroProviderProps): ReactNode {
+function AppZeroProvider({ children, generateId, userId }: AppZeroProviderProps): ReactNode {
     const cacheURL = ZERO_CACHE_URL;
     const mutateURL = ZERO_MUTATE_URL;
     const queryURL = ZERO_QUERY_URL;
     const context = useMemo<ZeroContext>(() => ({ user_id: userId }), [userId]);
+{{ default_mutation_init }}
 
     return (
-        <ZeroProvider {...{ cacheURL, context, mutateURL, mutators: mutations, queryURL, schema }} userID={userId}>
+        <ZeroProvider {...{ {{ zero_provider_props }} }} userID={userId}>
             {children}
         </ZeroProvider>
     );

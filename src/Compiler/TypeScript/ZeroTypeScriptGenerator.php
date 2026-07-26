@@ -6,6 +6,7 @@ use Illuminate\Filesystem\Filesystem;
 use NickWelsh\LaravelZero\Compiler\Arguments\ArgumentShape;
 use NickWelsh\LaravelZero\Compiler\Context\ContextTypeCompiler;
 use NickWelsh\LaravelZero\Compiler\Filters\ZeroFilterCompiler;
+use NickWelsh\LaravelZero\Compiler\Mutations\DynamicMutationCompiler;
 use NickWelsh\LaravelZero\Compiler\Mutations\ZeroMutationCompiler;
 use NickWelsh\LaravelZero\Compiler\Queries\DynamicQueryCompiler;
 use NickWelsh\LaravelZero\Compiler\Queries\ZeroQueryCompiler;
@@ -39,6 +40,7 @@ final readonly class ZeroTypeScriptGenerator
         private ZeroQueryCompiler $queries,
         private DynamicQueryCompiler $dynamicQueries,
         private ZeroMutationCompiler $mutations,
+        private DynamicMutationCompiler $dynamicMutations,
         private ZeroFilterCompiler $filters,
         private ValidationSchema $validation,
         private Filesystem $files,
@@ -56,6 +58,13 @@ final readonly class ZeroTypeScriptGenerator
             $queryTree = $this->appendToTree($queryTree, explode('.', $name), $source);
         }
         $mutationTree = $this->tree($mutationOperations, fn (Operation $operation): string => $this->mutations->compile($operation));
+        $dynamicMutationDefinitions = $this->dynamicMutations->definitions();
+        foreach ($dynamicMutationDefinitions as $name => $source) {
+            if (isset($mutationOperations[$name])) {
+                throw new UnexpectedValueException("Default Zero mutation [{$name}] conflicts with a discovered mutation.");
+            }
+            $mutationTree = $this->appendToTree($mutationTree, explode('.', $name), $source);
+        }
         $schemaImport = GeneratedPaths::moduleImport(GeneratedPaths::outputDirectory().'/context.generated.ts', GeneratedPaths::schema());
         $contextClass = $this->stringConfig('laravel-zero.context.class');
         if (! class_exists($contextClass)) {
@@ -71,7 +80,7 @@ final readonly class ZeroTypeScriptGenerator
             '_generated' => 'This file is generated. Do not edit directly.',
             'zeroVersion' => config('laravel-zero.zero_version', '1.8.0') ?: '1.8.0',
             'queries' => [...array_keys($queryOperations), ...array_keys($dynamicDefinitions)],
-            'mutations' => array_keys($mutationOperations),
+            'mutations' => [...array_keys($mutationOperations), ...array_keys($dynamicMutationDefinitions)],
             'serverOnlyValidationRules' => $notices,
         ];
 
@@ -81,8 +90,14 @@ final readonly class ZeroTypeScriptGenerator
         if ($inputSource !== '') {
             $files['inputs.generated.ts'] = self::HEADER.$this->validation->import()."\n\n".$inputSource;
         }
-        $files['queries.generated.ts'] = self::HEADER.$this->queriesFile($queryOperations, $queryTree, $schemaImport, $dynamicDefinitions !== []);
-        $files['mutations.generated.ts'] = self::HEADER.$this->mutationsFile($mutationOperations, $mutationTree);
+        $files['queries.generated.ts'] = self::HEADER.$this->queriesFile(
+            $queryOperations,
+            $queryTree,
+            $schemaImport,
+            $dynamicDefinitions !== [],
+            $dynamicMutationDefinitions !== [],
+        );
+        $files['mutations.generated.ts'] = self::HEADER.$this->mutationsFile($mutationOperations, $mutationTree, $dynamicMutationDefinitions !== []);
         $files['manifest.generated.json'] = json_encode($manifest, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES | JSON_THROW_ON_ERROR)."\n";
 
         return [
@@ -95,7 +110,7 @@ final readonly class ZeroTypeScriptGenerator
      * @param  array<string, Operation>  $operations
      * @param  TypeScriptTree  $tree
      */
-    private function queriesFile(array $operations, array $tree, string $schemaImport, bool $hasDynamic): string
+    private function queriesFile(array $operations, array $tree, string $schemaImport, bool $hasDynamic, bool $hasDefaultMutations): string
     {
         $hasOperations = $operations !== [] || $hasDynamic;
         $imports = ['import {defineQueries'.($hasOperations ? ', defineQuery' : '')."} from '@rocicorp/zero';"];
@@ -106,9 +121,14 @@ final readonly class ZeroTypeScriptGenerator
         if ($hasDynamic && ! in_array("import {z} from 'zod';", $imports, true)) {
             $imports[] = "import {z} from 'zod';";
         }
-        if ($hasOperations) {
+        if ($hasOperations || $hasDefaultMutations) {
             $schemaSymbols = ['zql', ...$this->dynamicQueries->schemaImports()];
             $imports[] = 'import {'.implode(', ', array_unique($schemaSymbols))."} from '{$schemaImport}';";
+            if ($hasDefaultMutations) {
+                $imports[] = "import {mutations} from './mutations.generated';";
+            }
+        }
+        if ($hasOperations) {
             if ($inputImport = $this->inputImportLine($operations)) {
                 $imports[] = rtrim($inputImport);
             }
@@ -125,13 +145,16 @@ final readonly class ZeroTypeScriptGenerator
      * @param  array<string, Operation>  $operations
      * @param  TypeScriptTree  $tree
      */
-    private function mutationsFile(array $operations, array $tree): string
+    private function mutationsFile(array $operations, array $tree, bool $hasDynamic): string
     {
-        $hasOperations = $operations !== [];
+        $hasOperations = $operations !== [] || $hasDynamic;
         $imports = ['import {defineMutators'.($hasOperations ? ', defineMutator' : '')."} from '@rocicorp/zero';"];
 
         if ($this->usesValidation($operations)) {
             $imports[] = $this->validation->import();
+        }
+        if ($hasDynamic && ! in_array("import {z} from 'zod';", $imports, true)) {
+            $imports[] = "import {z} from 'zod';";
         }
         if ($hasOperations) {
             if ($inputImport = $this->inputImportLine($operations)) {

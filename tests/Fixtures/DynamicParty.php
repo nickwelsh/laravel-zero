@@ -6,10 +6,17 @@ use Illuminate\Database\Eloquent\Attributes\ScopedBy;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\MorphToMany;
+use NickWelsh\LaravelZero\Attributes\ZeroAuthorizeMutations;
+use NickWelsh\LaravelZero\Attributes\ZeroDefaultMutations;
+use NickWelsh\LaravelZero\Mutations\ZeroCreateMutation;
+use NickWelsh\LaravelZero\Mutations\ZeroDeleteMutation;
+use NickWelsh\LaravelZero\Mutations\ZeroUpdateMutation;
 use NickWelsh\LaravelZero\Queries\AllowedFilter;
 use NickWelsh\LaravelZero\Queries\ZeroQueryBuilder;
 
 #[ScopedBy([PartyTenantScope::class])]
+#[ZeroDefaultMutations([ZeroCreateMutation::class, ZeroUpdateMutation::class, ZeroDeleteMutation::class])]
+#[ZeroAuthorizeMutations(PartyPolicy::class)]
 final class DynamicParty extends Model
 {
     public $incrementing = false;
