@@ -8,6 +8,8 @@ return [
     // Empty discovers explicitly annotated models under app/Models.
     'models' => [],
     'output' => resource_path('js/zero/generated.ts'),
+    // Synchronize after successful, non-pretend PostgreSQL migration batches.
+    'sync_publication_on_migrate' => false,
     'publication' => env('ZERO_PUBLICATION', 'laravel_zero'),
     'app_id' => env('ZERO_APP_ID', 'zero'),
     'upstream_schema' => env('ZERO_UPSTREAM_SCHEMA', 'zero_0'),

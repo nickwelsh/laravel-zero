@@ -86,3 +86,10 @@ test('configured context resolvers must return trusted context', function (): vo
     $this->withHeader('X-Api-Key', 'private-test-secret')
         ->postJson('/zero/query', ['transform', []]);
 })->throws(LogicException::class, 'must return ZeroContext');
+
+test('automatic publication synchronization skips SQLite migrations', function (): void {
+    /** @var HttpTestCase $this */
+    config()->set('zero.sync_publication_on_migrate', true);
+    \Illuminate\Support\Facades\Event::dispatch(new \Illuminate\Database\Events\MigrationsEnded('up'));
+    $this->assertFalse(app()->resolved(\LaravelZero\Metadata\ModelRegistry::class));
+});
