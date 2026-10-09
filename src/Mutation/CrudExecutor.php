@@ -140,6 +140,9 @@ final readonly class CrudExecutor
             }
         }
 
+        // The transport query and uploaded files are not mutation input.
+        $request->query->replace([]);
+        $request->files->replace([]);
         $request->replace($data + ['id' => $id]);
         $request->setUserResolver(fn (): ?\Illuminate\Contracts\Auth\Authenticatable => $user);
 

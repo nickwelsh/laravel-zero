@@ -6,6 +6,7 @@ namespace LaravelZero\Tests\Feature;
 
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
 use LaravelZero\Definition\ZeroDefinition;
@@ -125,4 +126,15 @@ test('standalone rule objects remain server only', function (): void {
     $this->assertSame([], $metadata->validation['create']['list_id']);
     $this->assertCount(1, $metadata->diagnostics);
     $this->assertStringContainsString('server-only validation', $metadata->diagnostics[0]);
+});
+
+test('form requests isolate operation data from transport query parameters', function (): void {
+    /** @var TestCase $this */
+    Gate::define('create', fn (): true => true);
+    app()->instance('request', Request::create('/zero/mutate?schema=todos_0&appID=todos&title=Forged', 'POST', ['mutations' => []]));
+    $user = (new User)->setKeyType('string')->forceFill(['id' => 'alice']);
+    (new CrudExecutor(new ModelRegistry([ValidatedTask::class])))->execute('ValidatedTask.create', [
+        'id' => '019a0000-0000-7000-8000-000000000003', 'data' => ['title' => 'Actual'], 'now' => 1,
+    ], new ZeroContext(['user_id' => 'alice']), $user);
+    $this->assertSame('Actual', Task::firstOrFail()->title);
 });
