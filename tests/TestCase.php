@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace LaravelZero\Tests;
 
 use Illuminate\Database\Schema\Blueprint;
@@ -12,6 +14,21 @@ use Orchestra\Testbench\TestCase as Orchestra;
 
 abstract class TestCase extends Orchestra
 {
+    protected function setUp(): void
+    {
+        parent::setUp();
+        $this->createTables();
+    }
+
+    /**
+     * @param  list<class-string<\Illuminate\Database\Eloquent\Model>>  $classes
+     * @return list<class-string<\Illuminate\Database\Eloquent\Model>>
+     */
+    public function models(array $classes = []): array
+    {
+        return $classes ?: [Task::class, TaskList::class, Tag::class, Comment::class];
+    }
+
     protected function defineEnvironment($app): void
     {
         $app['config']->set('database.default', 'testing');
@@ -20,15 +37,9 @@ abstract class TestCase extends Orchestra
         ]);
     }
 
-    protected function setUp(): void
-    {
-        parent::setUp();
-        $this->createTables();
-    }
-
     protected function createTables(): void
     {
-        Schema::create('tasks', function (Blueprint $table) {
+        Schema::create('tasks', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->string('user_id');
             $table->uuid('list_id')->nullable();
@@ -39,31 +50,26 @@ abstract class TestCase extends Orchestra
             $table->timestamps();
             $table->softDeletes();
         });
-        Schema::create('lists', function (Blueprint $table) {
+        Schema::create('lists', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->string('user_id');
             $table->string('name');
         });
-        Schema::create('tags', function (Blueprint $table) {
+        Schema::create('tags', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->string('user_id');
             $table->string('name');
         });
-        Schema::create('task_tag', function (Blueprint $table) {
+        Schema::create('task_tag', function (Blueprint $table): void {
             $table->uuid('task_id');
             $table->uuid('tag_id');
             $table->primary(['task_id', 'tag_id']);
         });
-        Schema::create('comments', function (Blueprint $table) {
+        Schema::create('comments', function (Blueprint $table): void {
             $table->uuid('id')->primary();
             $table->uuid('task_id');
             $table->string('user_id');
             $table->string('body');
         });
-    }
-
-    public function models(array $classes = []): array
-    {
-        return $classes ?: [Task::class, TaskList::class, Tag::class, Comment::class];
     }
 }

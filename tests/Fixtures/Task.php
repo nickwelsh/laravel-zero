@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace LaravelZero\Tests\Fixtures;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -16,6 +18,14 @@ use LaravelZero\ContextField;
 use LaravelZero\Definition\AllowedFilter;
 use LaravelZero\Definition\ZeroDefinition;
 
+/**
+ * @property string $id
+ * @property string $user_id
+ * @property string $title
+ * @property bool $done
+ * @property \Carbon\CarbonImmutable|null $completed_at
+ * @property \Illuminate\Support\Carbon $created_at
+ */
 #[ZeroQuery(['all', 'one'])]
 #[ZeroMutate('create', 'update', 'destroy', 'restore', 'force_delete')]
 #[ZeroAuthorize('user_id', '=', ContextField::UserId)]
@@ -30,11 +40,6 @@ class Task extends Model
 
     protected $hidden = ['secret'];
 
-    protected function casts(): array
-    {
-        return ['done' => 'boolean', 'completed_at' => 'immutable_datetime'];
-    }
-
     public static function zero(): ZeroDefinition
     {
         return ZeroDefinition::make()
@@ -44,18 +49,32 @@ class Task extends Model
             ->defaultSort('-created_at');
     }
 
+    /**
+     * @return BelongsTo<TaskList, $this>
+     */
     public function list(): BelongsTo
     {
         return $this->belongsTo(TaskList::class, 'list_id');
     }
 
+    /**
+     * @return BelongsToMany<Tag, $this>
+     */
     public function tags(): BelongsToMany
     {
         return $this->belongsToMany(Tag::class, 'task_tag', 'task_id', 'tag_id');
     }
 
+    /**
+     * @return HasMany<Comment, $this>
+     */
     public function comments(): HasMany
     {
         return $this->hasMany(Comment::class, 'task_id');
+    }
+
+    protected function casts(): array
+    {
+        return ['done' => 'boolean', 'completed_at' => 'immutable_datetime'];
     }
 }

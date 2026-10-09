@@ -1,0 +1,28 @@
+{
+    "preset": "laravel",
+    "ignore": {
+        "paths": ["vendor", ".cache"],
+        "words": [
+            "rocicorp",
+            "crud",
+            "pgsql",
+            "json",
+            "uuid",
+            "ulid",
+            "eloquent",
+            "datetime",
+            "nullable",
+            "zql",
+            "zero",
+            "phpstan",
+            "pest",
+            "rector",
+            "larastan",
+            "args",
+            "asc",
+            "desc",
+            "cardinality",
+            "dest"
+        ]
+    }
+}

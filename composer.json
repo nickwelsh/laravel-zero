@@ -38,7 +38,19 @@
         "test": "pest",
         "format": "pint",
         "format:check": "pint --test",
-        "test:coverage": "pest --coverage"
+        "test:coverage": "pest --coverage --coverage-clover=coverage/clover.xml --coverage-html=coverage/html",
+        "analyse": "phpstan analyse --memory-limit=1G",
+        "lint": "@analyse",
+        "rector": "rector process",
+        "rector:check": "rector process --dry-run",
+        "peck": "peck --path=src",
+        "check": [
+            "@format:check",
+            "@analyse",
+            "@rector:check",
+            "@peck",
+            "@test"
+        ]
     },
     "config": {
         "sort-packages": true,

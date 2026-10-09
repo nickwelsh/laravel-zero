@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace LaravelZero\Tests\Feature;
 
 use Illuminate\Database\Eloquent\Model;
@@ -21,67 +23,64 @@ use LogicException;
 uses(TestCase::class);
 
 test('model identity must match the database primary key', function (): void {
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('primary key');
-        new ModelRegistry([WrongKeyTask::class]);
-    });
+    new ModelRegistry([WrongKeyTask::class]);
+})->throws(LogicException::class, 'primary key');
 
 test('date columns follow zeros numeric wire representation', function (): void {
-        Schema::create('calendars', function (Blueprint $table) {
-            $table->uuid('id')->primary();
-            $table->date('day');
-        });
-        $column = (new ModelRegistry([Calendar::class]))->get('Calendar')->columns['day'];
-        $this->assertSame('number', $column['type']);
-        $this->assertTrue($column['date']);
+    /** @var TestCase $this */
+    Schema::create('calendars', function (Blueprint $table): void {
+        $table->uuid('id')->primary();
+        $table->date('day');
     });
+    $column = (new ModelRegistry([Calendar::class]))->get('Calendar')->columns['day'];
+    $this->assertSame('number', $column['type']);
+    $this->assertTrue($column['date']);
+});
 
 test('json filters fail during generation', function (): void {
-        DB::statement('ALTER TABLE tasks ADD COLUMN payload JSON');
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('JSON');
-        new ModelRegistry([JsonFilteredTask::class]);
-    });
+    DB::statement('ALTER TABLE tasks ADD COLUMN payload JSON');
+    new ModelRegistry([JsonFilteredTask::class]);
+})->throws(LogicException::class, 'JSON');
 
 test('resolves one column plan and separate public mutation inputs', function (): void {
-        $registry = new ModelRegistry($this->models());
-        $task = $registry->get('Task');
-        $this->assertArrayNotHasKey('secret', $task->columns);
-        $this->assertSame('uuid', $task->idGenerator);
-        $this->assertTrue($task->columns['completed_at']['date']);
-        $this->assertSame('boolean', $task->columns['done']['type']);
-        $this->assertSame(false, $task->columns['done']['default']);
-        $this->assertSame(['list_id', 'title', 'done', 'completed_at'], $task->writable);
-        $this->assertSame(['user_id' => 'user_id'], $task->serverFill);
-        $this->assertSame('TaskList', $task->relations['list']['model']);
-        $this->assertSame('one', $task->relations['list']['cardinality']);
-    });
+    /** @var TestCase $this */
+    $registry = new ModelRegistry($this->models());
+    $task = $registry->get('Task');
+    $this->assertArrayNotHasKey('secret', $task->columns);
+    $this->assertSame('uuid', $task->idGenerator);
+    $this->assertTrue($task->columns['completed_at']['date']);
+    $this->assertSame('boolean', $task->columns['done']['type']);
+    $this->assertSame(false, $task->columns['done']['default']);
+    $this->assertSame(['list_id', 'title', 'done', 'completed_at'], $task->writable);
+    $this->assertSame(['user_id' => 'user_id'], $task->serverFill);
+    $this->assertSame('TaskList', $task->relations['list']['model']);
+    $this->assertSame('one', $task->relations['list']['cardinality']);
+});
 
 test('reads fail closed without an explicit visibility declaration', function (): void {
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('visibility');
-        new ModelRegistry([UnprotectedTask::class]);
-    });
+    new ModelRegistry([UnprotectedTask::class]);
+})->throws(LogicException::class, 'visibility');
 
 test('hidden relation keys are not silently republished', function (): void {
-        $this->expectException(LogicException::class);
-        $this->expectExceptionMessage('list_id');
-        new ModelRegistry([HiddenRelationTask::class, TaskList::class, Tag::class, Comment::class]);
-    });
+    new ModelRegistry([HiddenRelationTask::class, TaskList::class, Tag::class, Comment::class]);
+})->throws(LogicException::class, 'list_id');
 
 test('exclusions are additive to eloquent hidden columns', function (): void {
-        $task = (new ModelRegistry([ExcludedTask::class]))->get('ExcludedTask');
-        $this->assertArrayNotHasKey('secret', $task->columns);
-        $this->assertArrayNotHasKey('completed_at', $task->columns);
-    });
-
+    /** @var TestCase $this */
+    $task = (new ModelRegistry([ExcludedTask::class]))->get('ExcludedTask');
+    $this->assertArrayNotHasKey('secret', $task->columns);
+    $this->assertArrayNotHasKey('completed_at', $task->columns);
+});
 
 #[ZeroPublic]
 class Calendar extends Model
 {
     public $timestamps = false;
 
-    protected $casts = ['day' => 'immutable_date'];
+    protected function casts(): array
+    {
+        return ['day' => 'immutable_date'];
+    }
 }
 
 class JsonFilteredTask extends Task

@@ -1,11 +1,16 @@
 <?php
 
+declare(strict_types=1);
+
 namespace LaravelZero;
 
 use Illuminate\Auth\Access\AuthorizationException;
 
 final readonly class ZeroContext
 {
+    /**
+     * @param  array<string, mixed>  $values
+     */
     public function __construct(public array $values) {}
 
     public function get(string $field): string|int|float|bool

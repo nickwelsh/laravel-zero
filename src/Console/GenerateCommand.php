@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace LaravelZero\Console;
 
 use Illuminate\Console\Command;
@@ -22,16 +24,19 @@ final class GenerateCommand extends Command
                 $this->warn($diagnostic);
             }
         }
+
         if ($this->option('check')) {
             if (! $files->exists($path) || $files->get($path) !== $source) {
                 $this->error('Zero contracts are out of date. Run zero:generate.');
 
                 return self::FAILURE;
             }
+
             $this->info('Zero contracts are current.');
 
             return self::SUCCESS;
         }
+
         $files->ensureDirectoryExists(dirname($path));
         $files->replace($path, $source);
         $this->info("Generated {$path}.");

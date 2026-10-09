@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace LaravelZero\Generation;
 
 use Illuminate\Foundation\Http\FormRequest;
@@ -7,10 +9,18 @@ use LogicException;
 use ReflectionMethod;
 use Throwable;
 
+/** @phpstan-import-type Column from \LaravelZero\Metadata\ModelMetadata */
 final class RuleExtractor
 {
-    private const PORTABLE = ['required', 'nullable', 'sometimes', 'string', 'boolean', 'integer', 'numeric', 'min', 'max', 'in', 'date', 'uuid', 'ulid'];
+    private const array PORTABLE = ['required', 'nullable', 'sometimes', 'string', 'boolean', 'integer', 'numeric', 'min', 'max', 'in', 'date', 'uuid', 'ulid'];
 
+    /**
+     * @param  array<string, class-string<FormRequest>>  $requests
+     * @param  list<string>  $writable
+     * @param  array<string, Column>  $columns
+     * @param  list<string>  $operations
+     * @return array{array<string, array<string, list<string>>>, list<string>}
+     */
     public function extract(array $requests, array $writable, array $columns, array $operations): array
     {
         $validation = [];
@@ -19,6 +29,7 @@ final class RuleExtractor
             if (! in_array($operation, $operations, true) || ! is_subclass_of($class, FormRequest::class)) {
                 throw new LogicException("{$class}: mutationRequests must map enabled operations to FormRequest classes.");
             }
+
             $request = new $class;
             $request->setContainer(app());
             try {
@@ -26,13 +37,16 @@ final class RuleExtractor
             } catch (Throwable $error) {
                 throw new LogicException("{$class}: cannot extract rules without runtime request data. Use declarative rules for automatic CRUD.", previous: $error);
             }
+
             if (! is_array($rules)) {
                 throw new LogicException("{$class}: rules() must return an array.");
             }
+
             foreach ($rules as $field => $ruleset) {
                 if (! in_array($field, [...$writable, 'id'], true)) {
                     throw new LogicException("{$class}: {$field} is not an allowed automatic mutation input.");
                 }
+
                 $ruleset = is_string($ruleset) ? explode('|', $ruleset) : $ruleset;
                 $portable = [];
                 foreach ($ruleset as $rule) {
@@ -43,8 +57,10 @@ final class RuleExtractor
                         $diagnostics[] = "{$class}.{$field}: {$name} is server-only validation.";
                     }
                 }
+
                 $validation[$operation][$field] = $portable;
             }
+
             foreach (['prepareForValidation', 'passedValidation', 'withValidator', 'after'] as $hook) {
                 if (method_exists($class, $hook) && (new ReflectionMethod($class, $hook))->getDeclaringClass()->getName() !== FormRequest::class) {
                     $diagnostics[] = "{$class}: {$hook} runs on the server; optimistic values may be reconciled.";

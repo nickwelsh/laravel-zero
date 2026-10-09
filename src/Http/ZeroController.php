@@ -1,5 +1,7 @@
 <?php
 
+declare(strict_types=1);
+
 namespace LaravelZero\Http;
 
 use Illuminate\Http\JsonResponse;
@@ -32,6 +34,6 @@ final class ZeroController
 
     private function context(Request $request): ZeroContext
     {
-        return app(config('zero.context_resolver'))($request);
+        return resolve(config('zero.context_resolver'))($request);
     }
 }
