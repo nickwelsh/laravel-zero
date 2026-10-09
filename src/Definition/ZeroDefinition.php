@@ -81,7 +81,7 @@ final class ZeroDefinition
 
     public function defaultSort(string ...$sorts): self
     {
-        $this->defaultOrder = array_map(fn (string $sort): array => [ltrim($sort, '-'), str_starts_with($sort, '-') ? 'desc' : 'asc'], $sorts);
+        $this->defaultOrder = array_map(fn (string $sort): array => [ltrim($sort, '-'), str_starts_with($sort, '-') ? 'desc' : 'asc'], array_values($sorts));
 
         return $this;
     }

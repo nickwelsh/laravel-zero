@@ -119,3 +119,35 @@ class ExcludedTask extends Model
 
     protected $hidden = ['secret'];
 }
+
+#[ZeroPublic]
+class InvalidDefinitionTask extends Model
+{
+    protected $table = 'tasks';
+
+    public static function zero(): string
+    {
+        return 'invalid';
+    }
+}
+
+class InvalidRelationTask extends Task
+{
+    public static function zero(): ZeroDefinition
+    {
+        return ZeroDefinition::make()->allowedIncludes(['invalidRelation']);
+    }
+
+    public function invalidRelation(): string
+    {
+        return 'invalid';
+    }
+}
+
+test('model definitions must return ZeroDefinition', function (): void {
+    new ModelRegistry([InvalidDefinitionTask::class]);
+})->throws(LogicException::class, 'zero() must return ZeroDefinition');
+
+test('included methods must return an Eloquent relation', function (): void {
+    new ModelRegistry([InvalidRelationTask::class]);
+})->throws(LogicException::class, 'method must return an Eloquent relation');

@@ -9,6 +9,7 @@ use LaravelZero\Attributes;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionClass;
+use SplFileInfo;
 
 final class ModelDiscovery
 {
@@ -23,7 +24,7 @@ final class ModelDiscovery
 
         $classes = [];
         foreach (new RecursiveIteratorIterator(new RecursiveDirectoryIterator($directory)) as $file) {
-            if (! $file->isFile() || $file->getExtension() !== 'php') {
+            if (! $file instanceof SplFileInfo || ! $file->isFile() || $file->getExtension() !== 'php') {
                 continue;
             }
 

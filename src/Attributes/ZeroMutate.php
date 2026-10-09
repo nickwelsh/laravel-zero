@@ -16,6 +16,6 @@ final readonly class ZeroMutate
 
     public function __construct(string ...$operations)
     {
-        $this->operations = $operations;
+        $this->operations = array_values($operations);
     }
 }

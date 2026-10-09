@@ -152,7 +152,7 @@ final class ModelRegistry
         }
 
         $connection = $model->getConnection()->getName();
-        if ($model->getConnection()->getTablePrefix() !== '' || ($this->connectionName === null && $model->getConnection()->getDriverName() === 'pgsql' && $model->getConnection()->selectOne('SELECT current_schema() AS name')->name !== 'public')) {
+        if ($model->getConnection()->getTablePrefix() !== '' || ($this->connectionName === null && $model->getConnection()->getDriverName() === 'pgsql' && $model->getConnection()->scalar('SELECT current_schema()') !== 'public')) {
             throw new LogicException('Zero models require unprefixed tables in the public PostgreSQL schema.');
         }
 
@@ -162,6 +162,10 @@ final class ModelRegistry
 
         $this->connectionName = $connection;
         $definition = method_exists($class, 'zero') ? $class::zero() : ZeroDefinition::make();
+        if (! $definition instanceof ZeroDefinition) {
+            throw new LogicException("{$name}: zero() must return ZeroDefinition.");
+        }
+
         $queries = ($this->attributes($class, Attributes\ZeroQuery::class)[0] ?? null)->queries ?? [];
         $mutations = ($this->attributes($class, Attributes\ZeroMutate::class)[0] ?? null)->operations ?? [];
         if (array_diff($queries, ['all', 'one']) || array_diff($mutations, ['create', 'update', 'destroy', 'restore', 'force_delete'])) {
@@ -187,6 +191,10 @@ final class ModelRegistry
 
         $traits = class_uses_recursive($class);
         $deleted = in_array(SoftDeletes::class, $traits) && method_exists($model, 'getDeletedAtColumn') ? $model->getDeletedAtColumn() : null;
+        if ($deleted !== null && ! is_string($deleted)) {
+            throw new LogicException("{$name}: deleted-at column must be a string.");
+        }
+
         if ($deleted === null && array_intersect($mutations, ['restore', 'force_delete'])) {
             throw new LogicException("{$name}: restore and force_delete require SoftDeletes.");
         }
@@ -259,7 +267,7 @@ final class ModelRegistry
 
             $owner = (new ReflectionMethod($class, 'newUniqueId'))->getDeclaringClass()->getName();
             $source = (new ReflectionMethod($class, 'newUniqueId'))->getFileName();
-            if (! str_contains(str_replace('\\', '/', $source), '/Illuminate/Database/Eloquent/Concerns/')) {
+            if (! str_contains(str_replace('\\', '/', $source ?: ''), '/Illuminate/Database/Eloquent/Concerns/')) {
                 throw new LogicException("{$owner}: custom newUniqueId needs a matching client generator; automatic generation is unsupported.");
             }
 
@@ -268,7 +276,7 @@ final class ModelRegistry
             }
         }
 
-        $writable = array_values(array_intersect(array_diff($model->getFillable(), array_filter(array_merge([$model->getKeyName(), $created, $updated, $deleted], array_keys($fills)))), array_keys($columns)));
+        $writable = array_values(array_intersect(array_diff($this->fillable($model), array_filter(array_merge([$model->getKeyName(), $created, $updated, $deleted], array_keys($fills)))), array_keys($columns)));
         foreach ($definition->filters as $filter) {
             if (in_array($filter['kind'], ['exact', 'partial'], true)) {
                 $this->requireColumn($columns, $name, $filter['field']);
@@ -298,6 +306,21 @@ final class ModelRegistry
         return new ModelMetadata($class, $name, $model->getTable(), $model->getKeyName(), $columns, $queries, $mutations, $authorization, $fills, $writable, $generator, $created, $updated, $deleted, $definition, $validation, $diagnostics);
     }
 
+    /** @return list<string> */
+    private function fillable(Model $model): array
+    {
+        $fields = [];
+        foreach ($model->getFillable() as $field) {
+            if (! is_string($field)) {
+                throw new LogicException('Fillable columns must be strings.');
+            }
+
+            $fields[] = $field;
+        }
+
+        return $fields;
+    }
+
     private function describeRelations(ModelMetadata $metadata): void
     {
         $model = new $metadata->class;
@@ -308,6 +331,10 @@ final class ModelRegistry
             }
 
             $relation = Relation::noConstraints(fn () => $model->$name());
+            if (! $relation instanceof Relation) {
+                throw new LogicException("{$metadata->name}.{$name}: method must return an Eloquent relation.");
+            }
+
             $targetName = (new ReflectionClass($relation->getRelated()))->getShortName();
             $target = $this->get($targetName);
             if ($target->class !== $relation->getRelated()::class) {
@@ -318,7 +345,8 @@ final class ModelRegistry
             $query = $relation->getQuery();
             $base = $query->getQuery();
             $joins = $base->joins ?? [];
-            $standardJoin = $relation instanceof BelongsToMany && count($joins) === 1 && $joins[0]->table === $relation->getTable() && $joins[0]->type === 'inner' && count($joins[0]->wheres) === 1 && $joins[0]->wheres[0] === ['type' => 'Column', 'first' => $relation->getQualifiedRelatedKeyName(), 'operator' => '=', 'second' => $relation->getQualifiedRelatedPivotKeyName(), 'boolean' => 'and'];
+            $join = $joins[0] ?? null;
+            $standardJoin = $relation instanceof BelongsToMany && count($joins) === 1 && $join instanceof \Illuminate\Database\Query\JoinClause && is_array($join->wheres) && $join->table === $relation->getTable() && $join->type === 'inner' && count($join->wheres) === 1 && $join->wheres[0] === ['type' => 'Column', 'first' => $relation->getQualifiedRelatedKeyName(), 'operator' => '=', 'second' => $relation->getQualifiedRelatedPivotKeyName(), 'boolean' => 'and'];
             if ($base->wheres || $base->orders || $base->limit || $base->offset || $base->groups || $base->havings || $base->unions || $base->distinct || ($base->columns !== null && $base->columns !== ['*']) || ($joins !== [] && ! $standardJoin)) {
                 throw new LogicException("{$metadata->name}.{$name}: constrained Eloquent relations require a custom query, which is not supported yet.");
             }
@@ -410,7 +438,11 @@ final class ModelRegistry
             return ['known' => true, 'value' => null];
         }
 
-        $default = preg_replace('/::[a-zA-Z_ ]+$/', '', (string) $default);
+        if (! is_scalar($default)) {
+            return ['known' => false, 'value' => null];
+        }
+
+        $default = preg_replace('/::[a-zA-Z_ ]+$/', '', (string) $default) ?? '';
         if (preg_match("/^'((?:[^']|'')*)'$/s", $default, $match)) {
             if ($type === 'boolean' && in_array(strtolower($match[1]), ['0', '1', 'true', 'false'], true)) {
                 return ['known' => true, 'value' => in_array(strtolower($match[1]), ['1', 'true'], true)];
