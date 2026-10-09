@@ -31,33 +31,33 @@ test('root and related authorization cannot be overridden by filters', function 
     /** @var TestCase $this */
     $ast = queryCompiler($this)->compile('Task.all', ['include' => ['list' => []], 'filters' => ['done' => false]], new ZeroContext(['user_id' => 'alice']));
     $this->assertSame('tasks', $ast['table']);
-    $this->assertSame(50, $ast['limit']);
-    $this->assertSame([['created_at', 'desc'], ['id', 'asc']], $ast['orderBy']);
-    $this->assertSame('alice', $ast['where']['conditions'][0]['right']['value']);
-    $this->assertSame(false, $ast['where']['conditions'][2]['right']['value']);
-    $this->assertSame('alice', $ast['related'][0]['subquery']['where']['right']['value']);
+    $this->assertSame(50, data_get($ast, 'limit'));
+    $this->assertSame([['created_at', 'desc'], ['id', 'asc']], data_get($ast, 'orderBy'));
+    $this->assertSame('alice', data_get($ast, 'where.conditions.0.right.value'));
+    $this->assertSame(false, data_get($ast, 'where.conditions.2.right.value'));
+    $this->assertSame('alice', data_get($ast, 'related.0.subquery.where.right.value'));
 });
 
 test('one supports includes and null filter is distinct from unset', function (): void {
     /** @var TestCase $this */
     $ast = queryCompiler($this)->compile('Task.one', ['id' => 'a', 'include' => ['list' => []]], new ZeroContext(['user_id' => 'alice']));
-    $this->assertSame(1, $ast['limit']);
+    $this->assertSame(1, data_get($ast, 'limit'));
     $ast = queryCompiler($this)->compile('Task.all', ['filters' => ['completed_at' => null]], new ZeroContext(['user_id' => 'alice']));
-    $this->assertSame('IS', $ast['where']['conditions'][2]['op']);
+    $this->assertSame('IS', data_get($ast, 'where.conditions.2.op'));
 });
 
 test('relationship filters use target visibility', function (): void {
     /** @var TestCase $this */
     $ast = queryCompiler($this)->compile('Task.all', ['filters' => ['list' => 'list-a']], new ZeroContext(['user_id' => 'alice']));
-    $predicate = $ast['where']['conditions'][2];
-    $this->assertSame('correlatedSubquery', $predicate['type']);
-    $this->assertSame('alice', $predicate['related']['subquery']['where']['conditions'][0]['right']['value']);
+    $predicate = data_get($ast, 'where.conditions.2');
+    $this->assertSame('correlatedSubquery', data_get($predicate, 'type'));
+    $this->assertSame('alice', data_get($predicate, 'related.subquery.where.conditions.0.right.value'));
 });
 
 test('partial filter escapes sql wildcards', function (): void {
     /** @var TestCase $this */
     $ast = queryCompiler($this)->compile('Task.all', ['filters' => ['title' => 'a%_\\b']], new ZeroContext(['user_id' => 'alice']));
-    $this->assertSame('%a\\%\\_\\\\b%', $ast['where']['conditions'][2]['right']['value']);
+    $this->assertSame('%a\\%\\_\\\\b%', data_get($ast, 'where.conditions.2.right.value'));
 });
 
 /** @param array<string, mixed> $arguments */
@@ -85,8 +85,10 @@ test('protocol keeps per query errors separate from authentication', function ()
         ['id' => 'q2', 'name' => 'Task.all', 'args' => [['ast' => ['table' => 'users']]]],
     ]], new ZeroContext(['user_id' => 'alice']));
     $this->assertSame('QueryResponse', $result['kind']);
-    $this->assertArrayHasKey('ast', $result['queries'][0]);
-    $this->assertSame('parse', $result['queries'][1]['error']);
+    $query = data_get($result, 'queries.0');
+    $this->assertIsArray($query);
+    $this->assertArrayHasKey('ast', $query);
+    $this->assertSame('parse', data_get($result, 'queries.1.error'));
     $this->assertSame('alice', $result['userID']);
 });
 

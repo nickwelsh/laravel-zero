@@ -49,7 +49,9 @@ test('publication matches the generated column plan and sync is idempotent', fun
         $manager->sync('laravel_zero_test_publication');
         $tables = DB::select("SELECT tablename, attnames FROM pg_publication_tables WHERE pubname = 'laravel_zero_test_publication' ORDER BY tablename");
         $this->assertSame(['comments', 'lists', 'tags', 'task_tag', 'tasks'], array_column($tables, 'tablename'));
-        $this->assertStringNotContainsString('secret', $tables[4]->attnames);
+        $columns = DB::scalar("SELECT attnames::text FROM pg_publication_tables WHERE pubname = 'laravel_zero_test_publication' AND tablename = 'tasks'");
+        $this->assertIsString($columns);
+        $this->assertStringNotContainsString('secret', $columns);
     } finally {
         DB::statement('DROP PUBLICATION IF EXISTS laravel_zero_test_publication');
     }

@@ -12,8 +12,10 @@ use Illuminate\Validation\ValidationException;
 use LaravelZero\Metadata\ModelRegistry;
 use LaravelZero\Support\Input;
 use LaravelZero\ZeroContext;
+use LogicException;
 use Throwable;
 
+/** @phpstan-type Mutation array{clientID: non-empty-string, name: non-empty-string, type: 'custom', id: int, timestamp: numeric-string|int|float, args: list<mixed>} */
 final readonly class MutationProcessor
 {
     public function __construct(private ModelRegistry $registry, private CrudExecutor $executor, private string $appId, private string $upstreamSchema) {}
@@ -83,7 +85,7 @@ final readonly class MutationProcessor
     }
 
     /**
-     * @param  array<string, mixed>  $mutation
+     * @param  Mutation  $mutation
      * @return array<string, mixed>
      */
     private function apply(string $group, array $mutation, ZeroContext $context, ?Authenticatable $user): array
@@ -133,14 +135,18 @@ final readonly class MutationProcessor
     }
 
     /**
-     * @param  array<string, mixed>  $mutation
+     * @param  Mutation  $mutation
      */
     private function advance(string $group, array $mutation): void
     {
         $connection = $this->registry->connection();
         $schema = $connection->getQueryGrammar()->wrap($this->upstreamSchema);
-        $row = $connection->selectOne('INSERT INTO '.$schema.'.clients AS current ("clientGroupID", "clientID", "lastMutationID") VALUES (?, ?, 1) ON CONFLICT ("clientGroupID", "clientID") DO UPDATE SET "lastMutationID" = current."lastMutationID" + 1 RETURNING "lastMutationID"', [$group, $mutation['clientID']]);
-        $expected = (int) $row->lastMutationID;
+        $progress = $connection->scalar('INSERT INTO '.$schema.'.clients AS current ("clientGroupID", "clientID", "lastMutationID") VALUES (?, ?, 1) ON CONFLICT ("clientGroupID", "clientID") DO UPDATE SET "lastMutationID" = current."lastMutationID" + 1 RETURNING "lastMutationID"', [$group, $mutation['clientID']]);
+        if (! is_int($progress) && (! is_string($progress) || ! ctype_digit($progress))) {
+            throw new LogicException('Mutation progress must be an integer.');
+        }
+
+        $expected = (int) $progress;
         if ($mutation['id'] < $expected) {
             throw new AlreadyProcessed;
         }
@@ -151,7 +157,7 @@ final readonly class MutationProcessor
     }
 
     /**
-     * @param  array<string, mixed>  $mutation
+     * @param  Mutation  $mutation
      */
     private function cleanup(string $group, array $mutation): void
     {
@@ -192,6 +198,7 @@ final readonly class MutationProcessor
         }
     }
 
+    /** @phpstan-assert non-empty-string $value */
     private function identifier(mixed $value, string $path): void
     {
         if (! is_string($value) || $value === '' || strlen($value) > 256) {
@@ -200,7 +207,7 @@ final readonly class MutationProcessor
     }
 
     /**
-     * @param  list<array<string, mixed>>  $mutations
+     * @param  list<Mutation>  $mutations
      * @return array<string, mixed>
      */
     private function failure(string $reason, array $mutations, string $message): array

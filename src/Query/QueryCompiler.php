@@ -10,12 +10,20 @@ use LaravelZero\Support\Input;
 use LaravelZero\ZeroContext;
 use LogicException;
 
+/**
+ * @phpstan-type Simple array{type: 'simple', op: string, left: array{type: 'column', name: string}, right: array{type: 'literal', value: mixed}}
+ * @phpstan-type Correlated array{type: 'correlatedSubquery', related: array<string, mixed>, op: 'EXISTS'}
+ * @phpstan-type Atom Simple|Correlated
+ * @phpstan-type Condition Atom|array{type: 'and', conditions: list<Atom>}
+ * @phpstan-type Ast array{table: string, where?: Condition, orderBy?: list<array{string, 'asc'|'desc'}>, limit?: int, alias?: string, related?: list<array<string, mixed>>}
+ * @phpstan-type Related array{correlation: array{parentField: list<string>, childField: list<string>}, subquery: Ast, system: 'client', hidden?: true}
+ */
 final readonly class QueryCompiler
 {
     public function __construct(private ModelRegistry $registry) {}
 
     /**
-     * @return array<string, mixed>
+     * @return Ast
      */
     public function compile(string $name, mixed $arguments, ZeroContext $context): array
     {
@@ -50,7 +58,7 @@ final readonly class QueryCompiler
 
     /**
      * @param  array<string, mixed>  $args
-     * @return array<string, mixed>
+     * @return Ast
      */
     private function build(ModelMetadata $model, array $args, ZeroContext $context, string $operation, int $depth): array
     {
@@ -130,7 +138,7 @@ final readonly class QueryCompiler
 
     /**
      * @param  array<string, mixed>  $args
-     * @return array<string, mixed>
+     * @return Related
      */
     private function related(ModelMetadata $model, string $name, array $args, ZeroContext $context, int $depth, bool $predicate = false): array
     {
@@ -164,7 +172,7 @@ final readonly class QueryCompiler
     }
 
     /**
-     * @return list<array<string, mixed>>
+     * @return list<Simple>
      */
     private function visibility(ModelMetadata $model, ZeroContext $context): array
     {
@@ -172,7 +180,7 @@ final readonly class QueryCompiler
     }
 
     /**
-     * @return array<string, mixed>
+     * @return Simple
      */
     private function comparison(string $field, string $operator, mixed $value): array
     {
@@ -180,8 +188,8 @@ final readonly class QueryCompiler
     }
 
     /**
-     * @param  list<array<string, mixed>>  $conditions
-     * @return array<string, mixed>
+     * @param  list<Condition>  $conditions
+     * @return Condition
      */
     private function conjunction(array $conditions): array
     {

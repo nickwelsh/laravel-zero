@@ -17,7 +17,8 @@ final readonly class PublicationManager
     public function plan(string $name): array
     {
         $connection = $this->registry->connection();
-        if ($connection->getDriverName() !== 'pgsql' || (int) $connection->selectOne('SHOW server_version_num')->server_version_num < 150000) {
+        $version = $connection->getDriverName() === 'pgsql' ? $connection->scalar('SHOW server_version_num') : null;
+        if ((! is_int($version) && (! is_string($version) || ! ctype_digit($version))) || (int) $version < 150000) {
             throw new LogicException('Zero publications require PostgreSQL 15 or later.');
         }
 
@@ -25,9 +26,9 @@ final readonly class PublicationManager
             throw new LogicException('Invalid publication identifier; underscore prefixes are reserved by Zero.');
         }
 
-        $existing = $connection->selectOne('SELECT puballtables FROM pg_publication WHERE pubname = ?', [$name]);
+        $existing = $connection->scalar('SELECT puballtables FROM pg_publication WHERE pubname = ?', [$name]);
         $schemaWide = $existing !== null && $connection->selectOne('SELECT 1 FROM pg_publication_namespace n JOIN pg_publication p ON p.oid = n.pnpubid WHERE p.pubname = ?', [$name]) !== null;
-        if ($existing?->puballtables || $schemaWide) {
+        if ($existing || $schemaWide) {
             throw new LogicException('Cannot restrict a publication that publishes all tables or an entire schema. Choose a dedicated Zero publication.');
         }
 

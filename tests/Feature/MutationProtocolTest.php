@@ -21,9 +21,9 @@ test('cancelled eloquent events are durable rejections', function (): void {
     Task::saving(fn (): false => false);
     try {
         $result = mutationProtocolProcess($this, [mutationProtocolMutation(1)]);
-        $this->assertSame('app', $result['mutations'][0]['result']['error']);
+        $this->assertSame('app', data_get($result, 'mutations.0.result.error'));
         $this->assertSame(0, Task::count());
-        $this->assertSame(1, (int) DB::table('zero_test_0.clients')->value('lastMutationID'));
+        $this->assertEquals(1, DB::table('zero_test_0.clients')->value('lastMutationID'));
         $this->assertSame(1, DB::table('zero_test_0.mutations')->count());
     } finally {
         Task::flushEventListeners();
@@ -63,22 +63,24 @@ test('duplicates do not execute again and gaps do not advance progress', functio
     /** @var PostgresTestCase $this */
     $result = mutationProtocolProcess($this, [mutationProtocolMutation(1)]);
     $this->assertSame('MutateResponse', $result['kind']);
-    $this->assertEquals((object) [], $result['mutations'][0]['result']);
+    $this->assertEquals((object) [], data_get($result, 'mutations.0.result'));
     $result = mutationProtocolProcess($this, [mutationProtocolMutation(1)]);
-    $this->assertSame('alreadyProcessed', $result['mutations'][0]['result']['error']);
+    $this->assertSame('alreadyProcessed', data_get($result, 'mutations.0.result.error'));
     $result = mutationProtocolProcess($this, [mutationProtocolMutation(3)]);
     $this->assertSame('oooMutation', $result['reason']);
     $this->assertSame(1, Task::count());
-    $this->assertSame(1, (int) DB::table('zero_test_0.clients')->value('lastMutationID'));
+    $this->assertEquals(1, DB::table('zero_test_0.clients')->value('lastMutationID'));
 });
 
 test('validation rejection is durable and does not block later mutations', function (): void {
     /** @var PostgresTestCase $this */
     $result = mutationProtocolProcess($this, [mutationProtocolMutation(1, ['user_id' => 'bob']), mutationProtocolMutation(2)]);
-    $this->assertSame('app', $result['mutations'][0]['result']['error']);
-    $this->assertArrayHasKey('data.user_id', $result['mutations'][0]['result']['details']['fields']);
+    $this->assertSame('app', data_get($result, 'mutations.0.result.error'));
+    $fields = data_get($result, 'mutations.0.result.details.fields');
+    $this->assertIsArray($fields);
+    $this->assertArrayHasKey('data.user_id', $fields);
     $this->assertSame(1, Task::count());
-    $this->assertSame(2, (int) DB::table('zero_test_0.clients')->value('lastMutationID'));
+    $this->assertEquals(2, DB::table('zero_test_0.clients')->value('lastMutationID'));
     $this->assertSame(1, DB::table('zero_test_0.mutations')->count());
 });
 
@@ -110,5 +112,5 @@ test('result cleanup is scoped to the current group', function (): void {
         'args' => [['clientGroupID' => 'group-a', 'clientID' => 'client-a', 'upToMutationID' => 1]]];
     $this->assertSame('MutateResponse', mutationProtocolProcess($this, [$cleanup])['kind']);
     $this->assertSame(0, DB::table('zero_test_0.mutations')->count());
-    $this->assertSame(1, (int) DB::table('zero_test_0.clients')->value('lastMutationID'));
+    $this->assertEquals(1, DB::table('zero_test_0.clients')->value('lastMutationID'));
 });

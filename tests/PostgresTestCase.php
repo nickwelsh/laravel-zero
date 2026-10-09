@@ -40,12 +40,12 @@ abstract class PostgresTestCase extends TestCase
 
     protected function createTables(): void
     {
-        $name = DB::selectOne('SELECT current_database() AS name')->name;
-        if (! preg_match('/^laravel_zero_test(?:_[a-z0-9_]+)?$/D', $name)) {
+        $name = DB::scalar('SELECT current_database()');
+        if (! is_string($name) || ! preg_match('/^laravel_zero_test(?:_[a-z0-9_]+)?$/D', $name)) {
             throw new LogicException('PostgreSQL tests require a disposable database named laravel_zero_test (or laravel_zero_test_*).');
         }
 
-        if (DB::selectOne("SELECT to_regnamespace('zero_test_0') AS name")->name !== null ||
+        if (DB::scalar("SELECT to_regnamespace('zero_test_0')") !== null ||
             DB::select("SELECT tablename FROM pg_tables WHERE schemaname = 'public'") !== [] ||
             DB::select("SELECT pubname FROM pg_publication WHERE pubname = 'laravel_zero_test_publication'") !== []) {
             throw new LogicException('Refusing to use a PostgreSQL test database containing existing application tables, test bookkeeping, or a test publication.');

@@ -9,12 +9,19 @@ use Illuminate\Validation\ValidationException;
 use LaravelZero\Support\Input;
 use LaravelZero\ZeroContext;
 
+/**
+ * @phpstan-import-type Ast from QueryCompiler
+ *
+ * @phpstan-type QueryResult array{id: string, name: string, ast?: Ast, error?: 'parse'|'app', message?: string, details?: array{fields: array<array-key, mixed>}}
+ * @phpstan-type TransformFailed array{kind: 'TransformFailed', origin: 'server', reason: 'parse', message: string, queryIDs: list<string>}
+ * @phpstan-type QueryResponse array{kind: 'QueryResponse', queries: list<QueryResult>, userID: string|null}
+ */
 final readonly class QueryProcessor
 {
     public function __construct(private QueryCompiler $compiler) {}
 
     /**
-     * @return array<string, mixed>
+     * @return TransformFailed|QueryResponse
      */
     public function process(mixed $body, ZeroContext $context): array
     {
