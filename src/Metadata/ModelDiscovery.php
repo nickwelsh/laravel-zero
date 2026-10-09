@@ -35,7 +35,7 @@ final class ModelDiscovery
             }
 
             for ($reflection = new ReflectionClass($class); $reflection; $reflection = $reflection->getParentClass()) {
-                foreach ([Attributes\ZeroQuery::class, Attributes\ZeroMutate::class, Attributes\ZeroAuthorize::class, Attributes\ZeroPublic::class] as $attribute) {
+                foreach ([Attributes\ZeroQuery::class, Attributes\ZeroMutate::class, Attributes\ZeroAuthorize::class, Attributes\ZeroAuthorizeRelation::class, Attributes\ZeroPublic::class] as $attribute) {
                     if ($reflection->getAttributes($attribute) !== []) {
                         $classes[] = $class;
 

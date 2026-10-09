@@ -26,6 +26,7 @@ final class ModelMetadata
      * @param  array<string, string>  $serverFill
      * @param  list<string>  $writable
      * @param  array<string, array<string, list<string>>>  $validation
+     * @param  list<string>  $authorizationRelations
      * @param  list<string>  $diagnostics
      */
     public function __construct(
@@ -46,6 +47,7 @@ final class ModelMetadata
         public readonly ZeroDefinition $definition,
         public readonly array $validation = [],
         public readonly array $diagnostics = [],
+        public readonly array $authorizationRelations = [],
     ) {}
 
     /**
@@ -57,6 +59,7 @@ final class ModelMetadata
             'name' => $this->name, 'table' => $this->table, 'key' => $this->key,
             'columns' => $this->columns, 'queries' => $this->queries,
             'mutations' => $this->mutations, 'authorization' => $this->authorization,
+            ...($this->authorizationRelations === [] ? [] : ['authorizationRelations' => $this->authorizationRelations]),
             'validation' => (object) array_map(fn (array $rules): stdClass => (object) $rules, $this->validation),
             'serverFill' => (object) $this->serverFill, 'writable' => $this->writable,
             'idGenerator' => $this->idGenerator,

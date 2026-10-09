@@ -68,7 +68,7 @@ final readonly class QueryCompiler
 
         $filters = Input::object($args['filters'] ?? [], 'filters');
         Input::keys($filters, array_keys($model->definition->filters), 'filters');
-        $conditions = $this->visibility($model, $context);
+        $conditions = $this->visibility($model, $context, $depth);
         $trashed = $filters['trashed'] ?? 'without';
         if (! in_array($trashed, ['without', 'with', 'only'], true)) {
             Input::fail('filters.trashed', 'Expected without, with, or only.');
@@ -172,11 +172,16 @@ final readonly class QueryCompiler
     }
 
     /**
-     * @return list<Simple>
+     * @return list<Atom>
      */
-    private function visibility(ModelMetadata $model, ZeroContext $context): array
+    private function visibility(ModelMetadata $model, ZeroContext $context, int $depth): array
     {
-        return array_map(fn (array $rule): array => $this->comparison($rule['field'], $rule['op'], array_key_exists('context', $rule['value']) ? $context->get($rule['value']['context']) : $rule['value']['literal']), $model->authorization);
+        $conditions = array_map(fn (array $rule): array => $this->comparison($rule['field'], $rule['op'], array_key_exists('context', $rule['value']) ? $context->get($rule['value']['context']) : $rule['value']['literal']), $model->authorization);
+        foreach ($model->authorizationRelations as $relation) {
+            $conditions[] = ['type' => 'correlatedSubquery', 'related' => $this->related($model, $relation, [], $context, $depth + 1, true), 'op' => 'EXISTS'];
+        }
+
+        return $conditions;
     }
 
     /**

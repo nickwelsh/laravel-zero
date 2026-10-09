@@ -69,6 +69,10 @@ final class ModelRegistry
         foreach ($this->models as $metadata) {
             $this->describeRelations($metadata);
         }
+
+        foreach ($this->models as $metadata) {
+            $this->validateAuthorizationPath($metadata, []);
+        }
     }
 
     public function get(string $name): ModelMetadata
@@ -115,6 +119,22 @@ final class ModelRegistry
         }
 
         return (new (reset($this->models)->class))->getConnection();
+    }
+
+    /** @param list<string> $ancestors */
+    private function validateAuthorizationPath(ModelMetadata $model, array $ancestors): void
+    {
+        if (in_array($model->name, $ancestors, true)) {
+            throw new LogicException("{$model->name}: Cyclic authorization relations are unsupported.");
+        }
+
+        if (count($ancestors) > 8) {
+            throw new LogicException('Authorization relations exceed the maximum depth.');
+        }
+
+        foreach ($model->authorizationRelations as $relation) {
+            $this->validateAuthorizationPath($this->get($model->relations[$relation]['model']), [...$ancestors, $model->name]);
+        }
     }
 
     /**
@@ -176,8 +196,9 @@ final class ModelRegistry
             'field' => $a->field, 'op' => $a->operator,
             'value' => $a->value instanceof ContextField ? ['context' => $a->value->value] : ['literal' => $a->value],
         ], $this->attributes($class, Attributes\ZeroAuthorize::class));
-        if ($authorization === [] && $this->attributes($class, Attributes\ZeroPublic::class) === []) {
-            throw new LogicException("{$name}: declare ZeroPublic or ZeroAuthorize visibility.");
+        $authorizationRelations = array_values(array_unique(array_map(fn (Attributes\ZeroAuthorizeRelation $attribute): string => $attribute->relation, $this->attributes($class, Attributes\ZeroAuthorizeRelation::class))));
+        if ($authorization === [] && $authorizationRelations === [] && $this->attributes($class, Attributes\ZeroPublic::class) === []) {
+            throw new LogicException("{$name}: declare ZeroPublic, ZeroAuthorize, or ZeroAuthorizeRelation visibility.");
         }
 
         $fills = [];
@@ -303,7 +324,7 @@ final class ModelRegistry
 
         [$validation, $diagnostics] = (new RuleExtractor)->extract($definition->requests, $writable, $columns, $mutations);
 
-        return new ModelMetadata($class, $name, $model->getTable(), $model->getKeyName(), $columns, $queries, $mutations, $authorization, $fills, $writable, $generator, $created, $updated, $deleted, $definition, $validation, $diagnostics);
+        return new ModelMetadata($class, $name, $model->getTable(), $model->getKeyName(), $columns, $queries, $mutations, $authorization, $fills, $writable, $generator, $created, $updated, $deleted, $definition, $validation, $diagnostics, $authorizationRelations);
     }
 
     /** @return list<string> */
@@ -325,7 +346,7 @@ final class ModelRegistry
     {
         $model = new $metadata->class;
         $filters = array_filter($metadata->definition->filters, fn (array $f): bool => $f['kind'] === 'belongsTo');
-        foreach (array_unique(array_merge($metadata->definition->includes, array_column($filters, 'field'))) as $name) {
+        foreach (array_unique(array_merge($metadata->definition->includes, $metadata->authorizationRelations, array_column($filters, 'field'))) as $name) {
             if (! method_exists($model, $name)) {
                 throw new LogicException("{$metadata->name}: unknown relation {$name}.");
             }
