@@ -33,7 +33,12 @@ final class RuleExtractor
             $request = new $class;
             $request->setContainer(app());
             try {
-                $rules = app()->call([$request, 'rules']);
+                $callback = [$request, 'rules'];
+                if (! is_callable($callback)) {
+                    throw new LogicException('FormRequest must define a public rules method.');
+                }
+
+                $rules = app()->call($callback);
             } catch (Throwable $error) {
                 throw new LogicException("{$class}: cannot extract rules without runtime request data. Use declarative rules for automatic CRUD.", previous: $error);
             }
@@ -48,10 +53,14 @@ final class RuleExtractor
                 }
 
                 $ruleset = is_string($ruleset) ? explode('|', $ruleset) : $ruleset;
+                if (! is_array($ruleset)) {
+                    $ruleset = [$ruleset];
+                }
+
                 $portable = [];
                 foreach ($ruleset as $rule) {
                     $name = is_string($rule) ? explode(':', $rule, 2)[0] : get_debug_type($rule);
-                    if (in_array($name, self::PORTABLE, true) && ($name !== 'date' || ($columns[$field]['date'] ?? false))) {
+                    if (is_string($rule) && in_array($name, self::PORTABLE, true) && ($name !== 'date' || ($columns[$field]['date'] ?? false))) {
                         $portable[] = $rule;
                     } else {
                         $diagnostics[] = "{$class}.{$field}: {$name} is server-only validation.";

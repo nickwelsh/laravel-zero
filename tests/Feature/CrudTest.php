@@ -49,6 +49,7 @@ test('updates are patches and dates round trip through eloquent', function (): v
     $task->refresh();
     $this->assertSame('Original', $task->title);
     $this->assertTrue($task->done);
+    $this->assertNotNull($task->completed_at);
     $this->assertSame(1700000000000, $task->completed_at->getTimestampMs());
 });
 
@@ -70,9 +71,9 @@ test('soft delete restore and force delete use eloquent lifecycle', function ():
     $args = ['id' => $task->id, 'data' => (object) [], 'now' => 1];
     $context = new ZeroContext(['user_id' => 'alice']);
     $executor->execute('Task.destroy', $args, $context, crudUser());
-    $this->assertTrue($task->fresh()->trashed());
+    $this->assertTrue(Task::withTrashed()->findOrFail($task->id)->trashed());
     $executor->execute('Task.restore', $args, $context, crudUser());
-    $this->assertFalse($task->fresh()->trashed());
+    $this->assertFalse(Task::withTrashed()->findOrFail($task->id)->trashed());
     $executor->execute('Task.force_delete', $args, $context, crudUser());
     $this->assertNull(Task::withTrashed()->find($task->id));
 });

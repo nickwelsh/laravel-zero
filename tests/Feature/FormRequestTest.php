@@ -36,7 +36,9 @@ test('each form request sees its own data user and date values', function (): vo
     $executor = new CrudExecutor(new ModelRegistry([ValidatedTask::class]));
     $executor->execute('ValidatedTask.create', ['id' => '019a0000-0000-7000-8000-000000000001', 'data' => ['title' => '  Trim me  ', 'completed_at' => 1700000000000], 'now' => 1], new ZeroContext(['user_id' => 'alice']), $user);
     $this->assertSame('Trim me', Task::firstOrFail()->title);
-    $this->assertSame(1700000000000, Task::firstOrFail()->completed_at->getTimestampMs());
+    $completed = Task::firstOrFail()->completed_at;
+    $this->assertNotNull($completed);
+    $this->assertSame(1700000000000, $completed->getTimestampMs());
 });
 
 test('form request validation rejects invalid operation fields', function (): void {
@@ -69,6 +71,58 @@ class StoreTask extends FormRequest
 
     protected function prepareForValidation(): void
     {
-        $this->merge(['title' => trim($this->input('title', ''))]);
+        $title = $this->input('title', '');
+        if (is_string($title)) {
+            $this->merge(['title' => trim($title)]);
+        }
     }
 }
+
+class InvalidDateTask extends Task
+{
+    public static function zero(): ZeroDefinition
+    {
+        return ZeroDefinition::make()->mutationRequests(['create' => InvalidDateRequest::class]);
+    }
+}
+
+class InvalidDateRequest extends StoreTask
+{
+    protected function passedValidation(): void
+    {
+        $this->merge(['completed_at' => []]);
+    }
+}
+
+test('invalid normalized date values return validation errors', function (): void {
+    Gate::define('create', fn (): true => true);
+    $user = (new User)->setKeyType('string')->forceFill(['id' => 'alice']);
+    (new CrudExecutor(new ModelRegistry([InvalidDateTask::class])))->execute('InvalidDateTask.create', [
+        'id' => '019a0000-0000-7000-8000-000000000002', 'data' => ['title' => 'Hello'], 'now' => 1,
+    ], new ZeroContext(['user_id' => 'alice']), $user);
+})->throws(ValidationException::class, 'Invalid normalized date.');
+
+class ServerRuleTask extends Task
+{
+    public static function zero(): ZeroDefinition
+    {
+        return ZeroDefinition::make()->mutationRequests(['create' => ServerRuleRequest::class]);
+    }
+}
+
+class ServerRuleRequest extends FormRequest
+{
+    /** @return array<string, \Illuminate\Validation\Rules\Exists> */
+    public function rules(): array
+    {
+        return ['list_id' => \Illuminate\Validation\Rule::exists('lists', 'id')];
+    }
+}
+
+test('standalone rule objects remain server only', function (): void {
+    /** @var TestCase $this */
+    $metadata = (new ModelRegistry([ServerRuleTask::class]))->get('ServerRuleTask');
+    $this->assertSame([], $metadata->validation['create']['list_id']);
+    $this->assertCount(1, $metadata->diagnostics);
+    $this->assertStringContainsString('server-only validation', $metadata->diagnostics[0]);
+});

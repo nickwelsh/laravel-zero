@@ -17,14 +17,23 @@ final class Input
     public static function object(mixed $value, string $path): array
     {
         if ($value instanceof stdClass) {
-            return (array) $value;
+            $value = (array) $value;
         }
 
         if (! is_array($value) || ($value !== [] && array_is_list($value))) {
             self::fail($path, 'Must be an object.');
         }
 
-        return $value;
+        $object = [];
+        foreach ($value as $key => $item) {
+            if (! is_string($key)) {
+                self::fail($path, 'Must use string field names.');
+            }
+
+            $object[$key] = $item;
+        }
+
+        return $object;
     }
 
     /**
@@ -57,7 +66,16 @@ final class Input
             self::fail($path, 'Invalid field value.');
         }
 
-        if ($column['date'] && (abs($value) > 8640000000000000 || floor($value) !== (float) $value)) {
+        if ($column['date']) {
+            self::timestamp($value, $path);
+        }
+
+        return $value;
+    }
+
+    public static function timestamp(mixed $value, string $path): int|float
+    {
+        if ((! is_int($value) && ! is_float($value)) || ! is_finite((float) $value) || abs($value) > 8640000000000000 || floor($value) !== (float) $value) {
             self::fail($path, 'Must be a valid epoch millisecond timestamp.');
         }
 

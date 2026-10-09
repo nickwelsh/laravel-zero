@@ -25,6 +25,6 @@ final readonly class ZeroContext
 
     public function userId(): ?string
     {
-        return isset($this->values['user_id']) ? (string) $this->values['user_id'] : null;
+        return isset($this->values['user_id']) ? (string) $this->get('user_id') : null;
     }
 }

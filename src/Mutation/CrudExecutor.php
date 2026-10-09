@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LaravelZero\Mutation;
 
+use DateTimeInterface;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletingScope;
@@ -77,7 +78,7 @@ final readonly class CrudExecutor
 
         foreach ($data as $field => $value) {
             if ($metadata->columns[$field]['date'] && $value !== null) {
-                $data[$field] = \Illuminate\Support\Facades\Date::createFromTimestampMs($value, 'UTC');
+                $data[$field] = \Illuminate\Support\Facades\Date::createFromTimestampMs(Input::timestamp($value, $field), 'UTC');
             }
         }
 
@@ -135,7 +136,7 @@ final readonly class CrudExecutor
         $request->setContainer(app())->setRedirector(resolve('redirect'));
         foreach ($data as $field => $value) {
             if ($metadata->columns[$field]['date'] && $value !== null) {
-                $data[$field] = \Illuminate\Support\Facades\Date::createFromTimestampMs($value, 'UTC')->toISOString();
+                $data[$field] = \Illuminate\Support\Facades\Date::createFromTimestampMs(Input::timestamp($value, $field), 'UTC')->toISOString();
             }
         }
 
@@ -150,7 +151,7 @@ final readonly class CrudExecutor
         }
 
         $request->validateResolved();
-        $data = $request->all();
+        $data = Input::object($request->all(), 'data');
         if (($data['id'] ?? $id) !== $id) {
             Input::fail('id', 'The mutation identity cannot be normalized.');
         }
@@ -158,6 +159,10 @@ final readonly class CrudExecutor
         unset($data['id']);
         foreach ($data as $field => $value) {
             if (($metadata->columns[$field]['date'] ?? false) && $value !== null) {
+                if (! is_string($value) && ! is_int($value) && ! is_float($value) && ! $value instanceof DateTimeInterface) {
+                    Input::fail($field, 'Invalid normalized date.');
+                }
+
                 try {
                     $data[$field] = \Illuminate\Support\Facades\Date::parse($value, 'UTC')->getTimestampMs();
                 } catch (InvalidArgumentException) {
