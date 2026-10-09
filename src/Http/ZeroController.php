@@ -10,6 +10,7 @@ use JsonException;
 use LaravelZero\Mutation\MutationProcessor;
 use LaravelZero\Query\QueryProcessor;
 use LaravelZero\ZeroContext;
+use LogicException;
 
 final class ZeroController
 {
@@ -20,7 +21,7 @@ final class ZeroController
 
     public function mutate(Request $request, MutationProcessor $processor): JsonResponse
     {
-        return response()->json($processor->process($this->body($request), $request->query(), $this->context($request), $request->user()));
+        return response()->json($processor->process($this->body($request), ['appID' => $request->query('appID'), 'schema' => $request->query('schema')], $this->context($request), $request->user()));
     }
 
     private function body(Request $request): mixed
@@ -34,6 +35,16 @@ final class ZeroController
 
     private function context(Request $request): ZeroContext
     {
-        return resolve(config('zero.context_resolver'))($request);
+        $resolver = resolve(config()->string('zero.context_resolver'));
+        if (! is_callable($resolver)) {
+            throw new LogicException('Zero context resolver must be callable.');
+        }
+
+        $context = $resolver($request);
+        if (! $context instanceof ZeroContext) {
+            throw new LogicException('Zero context resolver must return ZeroContext.');
+        }
+
+        return $context;
     }
 }

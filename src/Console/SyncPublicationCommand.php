@@ -15,7 +15,13 @@ final class SyncPublicationCommand extends Command
 
     public function handle(PublicationManager $manager): int
     {
-        $name = $this->option('name') ?: config('zero.publication');
+        $name = $this->option('name') ?: config()->string('zero.publication');
+        if (! is_string($name)) {
+            $this->error('Expected a string name.');
+
+            return self::FAILURE;
+        }
+
         if ($this->option('dry-run')) {
             foreach ($manager->plan($name) as $statement) {
                 $this->line($statement.';');

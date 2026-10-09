@@ -15,6 +15,7 @@ use LaravelZero\Metadata\ModelDiscovery;
 use LaravelZero\Metadata\ModelRegistry;
 use LaravelZero\Mutation\CrudExecutor;
 use LaravelZero\Mutation\MutationProcessor;
+use LogicException;
 
 final class ZeroServiceProvider extends ServiceProvider
 {
@@ -22,16 +23,29 @@ final class ZeroServiceProvider extends ServiceProvider
     {
         $this->mergeConfigFrom(__DIR__.'/../config/zero.php', 'zero');
         $this->app->singleton(function (Application $app): ModelRegistry {
-            $models = $app['config']->get('zero.models');
-            if ($models === []) {
-                $models = (new ModelDiscovery)->discover(app_path('Models'), $app->getNamespace().'Models');
+            $models = config()->array('zero.models');
+            if (! array_is_list($models)) {
+                throw new LogicException('Zero models must be a list of Eloquent model classes.');
             }
 
-            return new ModelRegistry($models);
+            $classes = [];
+            foreach ($models as $model) {
+                if (! is_string($model) || ! is_subclass_of($model, \Illuminate\Database\Eloquent\Model::class)) {
+                    throw new LogicException('Zero models must be a list of Eloquent model classes.');
+                }
+
+                $classes[] = $model;
+            }
+
+            if ($models === []) {
+                $classes = (new ModelDiscovery)->discover(app_path('Models'), $app->getNamespace().'Models');
+            }
+
+            return new ModelRegistry($classes);
         });
-        $this->app->singleton(MutationProcessor::class, fn ($app): MutationProcessor => new MutationProcessor(
+        $this->app->singleton(MutationProcessor::class, fn (Application $app): MutationProcessor => new MutationProcessor(
             $app->make(ModelRegistry::class), $app->make(CrudExecutor::class),
-            $app['config']->get('zero.app_id'), $app['config']->get('zero.upstream_schema'),
+            config()->string('zero.app_id'), config()->string('zero.upstream_schema'),
         ));
     }
 
@@ -43,7 +57,17 @@ final class ZeroServiceProvider extends ServiceProvider
         }
 
         if (! $this->app->routesAreCached()) {
-            Route::prefix(config('zero.route_prefix'))->middleware(array_merge([AuthenticateZeroCache::class], config('zero.middleware')))->group(function (): void {
+            $middleware = config()->array('zero.middleware');
+            $names = [];
+            foreach ($middleware as $name) {
+                if (! is_string($name)) {
+                    throw new LogicException('Zero middleware must contain middleware names.');
+                }
+
+                $names[] = $name;
+            }
+
+            Route::prefix(config()->string('zero.route_prefix'))->middleware(array_merge([AuthenticateZeroCache::class], $names))->group(function (): void {
                 Route::post('query', [ZeroController::class, 'query'])->name('zero.query');
                 Route::post('mutate', [ZeroController::class, 'mutate'])->name('zero.mutate');
             });

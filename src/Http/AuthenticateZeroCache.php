@@ -10,6 +10,7 @@ use Symfony\Component\HttpFoundation\Response;
 
 final class AuthenticateZeroCache
 {
+    /** @param Closure(Request): Response $next */
     public function handle(Request $request, Closure $next): Response
     {
         $key = config('zero.api_key');

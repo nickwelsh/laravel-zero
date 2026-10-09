@@ -17,7 +17,13 @@ final class GenerateCommand extends Command
 
     public function handle(ModelRegistry $registry, TypeScriptGenerator $generator, Filesystem $files): int
     {
-        $path = $this->option('output') ?: config('zero.output');
+        $path = $this->option('output') ?: config()->string('zero.output');
+        if (! is_string($path)) {
+            $this->error('Expected a string output.');
+
+            return self::FAILURE;
+        }
+
         $source = $generator->generate($registry);
         foreach ($registry->all() as $model) {
             foreach ($model->diagnostics as $diagnostic) {

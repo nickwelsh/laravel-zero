@@ -8,6 +8,7 @@ use Illuminate\Foundation\Auth\User;
 use Illuminate\Http\Request;
 use LaravelZero\Http\ContextResolver;
 use LaravelZero\Tests\HttpTestCase;
+use LogicException;
 
 uses(HttpTestCase::class);
 
@@ -46,12 +47,42 @@ test('generation command writes verified contracts and can detect drift', functi
     /** @var HttpTestCase $this */
     $path = sys_get_temp_dir().'/laravel-zero-'.uniqid().'.ts';
     try {
-        $this->artisan('zero:generate', ['--output' => $path])->assertSuccessful();
-        $this->assertStringContainsString('export const Task =', file_get_contents($path));
-        $this->artisan('zero:generate', ['--output' => $path, '--check' => true])->assertSuccessful();
+        $command = $this->artisan('zero:generate', ['--output' => $path]);
+        $this->assertInstanceOf(\Illuminate\Testing\PendingCommand::class, $command);
+        $command->assertSuccessful()->run();
+        $source = file_get_contents($path);
+        $this->assertIsString($source);
+        $this->assertStringContainsString('export const Task =', $source);
+        $command = $this->artisan('zero:generate', ['--output' => $path, '--check' => true]);
+        $this->assertInstanceOf(\Illuminate\Testing\PendingCommand::class, $command);
+        $command->assertSuccessful()->run();
         file_put_contents($path, '// out of date');
-        $this->artisan('zero:generate', ['--output' => $path, '--check' => true])->assertFailed();
+        $command = $this->artisan('zero:generate', ['--output' => $path, '--check' => true]);
+        $this->assertInstanceOf(\Illuminate\Testing\PendingCommand::class, $command);
+        $command->assertFailed()->run();
     } finally {
         @unlink($path);
     }
 });
+
+test('configured models must be Eloquent model classes', function (): void {
+    config()->set('zero.models', ['invalid']);
+    app()->forgetInstance(\LaravelZero\Metadata\ModelRegistry::class);
+    app()->make(\LaravelZero\Metadata\ModelRegistry::class);
+})->throws(LogicException::class, 'Eloquent model classes');
+
+class InvalidContextResolver
+{
+    public function __invoke(Request $request): string
+    {
+        return 'invalid';
+    }
+}
+
+test('configured context resolvers must return trusted context', function (): void {
+    /** @var HttpTestCase $this */
+    config()->set('zero.context_resolver', InvalidContextResolver::class);
+    \Pest\Laravel\withoutExceptionHandling();
+    $this->withHeader('X-Api-Key', 'private-test-secret')
+        ->postJson('/zero/query', ['transform', []]);
+})->throws(LogicException::class, 'must return ZeroContext');
