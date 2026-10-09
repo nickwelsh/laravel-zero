@@ -62,7 +62,7 @@ abstract class TestCase extends Orchestra
         });
     }
 
-    protected function models(array $classes = []): array
+    public function models(array $classes = []): array
     {
         return $classes ?: [Task::class, TaskList::class, Tag::class, Comment::class];
     }

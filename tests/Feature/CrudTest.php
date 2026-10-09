@@ -12,17 +12,15 @@ use LaravelZero\Tests\Fixtures\Task;
 use LaravelZero\Tests\TestCase;
 use LaravelZero\ZeroContext;
 
-class CrudTest extends TestCase
-{
-    private function executor(): CrudExecutor
-    {
+uses(TestCase::class);
+
+function crudExecutor(TestCase $test): CrudExecutor {
         Gate::policy(Task::class, TaskPolicy::class);
 
-        return new CrudExecutor(new ModelRegistry($this->models()));
+        return new CrudExecutor(new ModelRegistry($test->models()));
     }
 
-    private function user(string $id = 'alice'): User
-    {
+function crudUser(TestCase $test, string $id = 'alice'): User {
         $user = new User;
         $user->setKeyType('string');
         $user->forceFill(['id' => $id]);
@@ -30,60 +28,54 @@ class CrudTest extends TestCase
         return $user;
     }
 
-    public function test_create_fills_ownership_defaults_and_authoritative_timestamps(): void
-    {
-        $this->executor()->execute('Task.create', ['id' => '019a0000-0000-7000-8000-000000000001', 'data' => ['title' => 'Hello'], 'now' => 1], new ZeroContext(['user_id' => 'alice']), $this->user());
+test('create fills ownership defaults and authoritative timestamps', function (): void {
+        crudExecutor($this)->execute('Task.create', ['id' => '019a0000-0000-7000-8000-000000000001', 'data' => ['title' => 'Hello'], 'now' => 1], new ZeroContext(['user_id' => 'alice']), crudUser($this));
         $task = Task::firstOrFail();
-        self::assertSame('alice', $task->user_id);
-        self::assertSame('Hello', $task->title);
-        self::assertFalse($task->done);
-        self::assertGreaterThan(1, $task->created_at->getTimestampMs());
-    }
+        $this->assertSame('alice', $task->user_id);
+        $this->assertSame('Hello', $task->title);
+        $this->assertFalse($task->done);
+        $this->assertGreaterThan(1, $task->created_at->getTimestampMs());
+    });
 
-    public function test_updates_are_patches_and_dates_round_trip_through_eloquent(): void
-    {
+test('updates are patches and dates round trip through eloquent', function (): void {
         $task = Task::create(['user_id' => 'alice', 'title' => 'Original', 'done' => true]);
-        $this->executor()->execute('Task.update', ['id' => $task->id, 'data' => ['completed_at' => 1700000000123], 'now' => 1], new ZeroContext(['user_id' => 'alice']), $this->user());
+        crudExecutor($this)->execute('Task.update', ['id' => $task->id, 'data' => ['completed_at' => 1700000000123], 'now' => 1], new ZeroContext(['user_id' => 'alice']), crudUser($this));
         $task->refresh();
-        self::assertSame('Original', $task->title);
-        self::assertTrue($task->done);
-        self::assertSame(1700000000000, $task->completed_at->getTimestampMs());
-    }
+        $this->assertSame('Original', $task->title);
+        $this->assertTrue($task->done);
+        $this->assertSame(1700000000000, $task->completed_at->getTimestampMs());
+    });
 
-    public function test_authorizes_existing_owner_before_applying_an_update(): void
-    {
+test('authorizes existing owner before applying an update', function (): void {
         $task = Task::create(['user_id' => 'bob', 'title' => 'Private']);
         $this->expectException(AuthorizationException::class);
-        $this->executor()->execute('Task.update', ['id' => $task->id, 'data' => ['title' => 'Claimed'], 'now' => 1], new ZeroContext(['user_id' => 'alice']), $this->user());
-    }
+        crudExecutor($this)->execute('Task.update', ['id' => $task->id, 'data' => ['title' => 'Claimed'], 'now' => 1], new ZeroContext(['user_id' => 'alice']), crudUser($this));
+    });
 
-    public function test_server_fills_and_timestamps_are_not_public_inputs(): void
-    {
+test('server fills and timestamps are not public inputs', function (): void {
         $this->expectException(ValidationException::class);
-        $this->executor()->execute('Task.create', ['id' => '019a0000-0000-7000-8000-000000000001', 'data' => ['title' => 'Hello', 'user_id' => 'bob'], 'now' => 1], new ZeroContext(['user_id' => 'alice']), $this->user());
-    }
+        crudExecutor($this)->execute('Task.create', ['id' => '019a0000-0000-7000-8000-000000000001', 'data' => ['title' => 'Hello', 'user_id' => 'bob'], 'now' => 1], new ZeroContext(['user_id' => 'alice']), crudUser($this));
+    });
 
-    public function test_soft_delete_restore_and_force_delete_use_eloquent_lifecycle(): void
-    {
+test('soft delete restore and force delete use eloquent lifecycle', function (): void {
         $task = Task::create(['user_id' => 'alice', 'title' => 'Hello']);
-        $executor = $this->executor();
+        $executor = crudExecutor($this);
         $args = ['id' => $task->id, 'data' => (object) [], 'now' => 1];
         $context = new ZeroContext(['user_id' => 'alice']);
-        $executor->execute('Task.destroy', $args, $context, $this->user());
-        self::assertTrue($task->fresh()->trashed());
-        $executor->execute('Task.restore', $args, $context, $this->user());
-        self::assertFalse($task->fresh()->trashed());
-        $executor->execute('Task.force_delete', $args, $context, $this->user());
-        self::assertNull(Task::withTrashed()->find($task->id));
-    }
+        $executor->execute('Task.destroy', $args, $context, crudUser($this));
+        $this->assertTrue($task->fresh()->trashed());
+        $executor->execute('Task.restore', $args, $context, crudUser($this));
+        $this->assertFalse($task->fresh()->trashed());
+        $executor->execute('Task.force_delete', $args, $context, crudUser($this));
+        $this->assertNull(Task::withTrashed()->find($task->id));
+    });
 
-    public function test_mutations_fail_closed_without_an_allowing_policy(): void
-    {
+test('mutations fail closed without an allowing policy', function (): void {
         $executor = new CrudExecutor(new ModelRegistry($this->models()));
         $this->expectException(AuthorizationException::class);
-        $executor->execute('Task.create', ['id' => '019a0000-0000-7000-8000-000000000001', 'data' => ['title' => 'Hello'], 'now' => 1], new ZeroContext(['user_id' => 'alice']), $this->user());
-    }
-}
+        $executor->execute('Task.create', ['id' => '019a0000-0000-7000-8000-000000000001', 'data' => ['title' => 'Hello'], 'now' => 1], new ZeroContext(['user_id' => 'alice']), crudUser($this));
+    });
+
 
 class TaskPolicy
 {

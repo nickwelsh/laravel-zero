@@ -12,90 +12,76 @@ use LaravelZero\Query\QueryProcessor;
 use LaravelZero\Tests\Fixtures\Task;
 use LaravelZero\Tests\TestCase;
 use LaravelZero\ZeroContext;
-use PHPUnit\Framework\Attributes\DataProvider;
 
-class QueryTest extends TestCase
-{
-    public function test_nullable_substring_filters_reject_null(): void
-    {
+uses(TestCase::class);
+
+test('nullable substring filters reject null', function (): void {
         $compiler = new QueryCompiler(new ModelRegistry([NullablePartialTask::class]));
         $this->expectException(ValidationException::class);
         $compiler->compile('NullablePartialTask.all', ['filters' => ['list_id' => null]], new ZeroContext(['user_id' => 'alice']));
+    });
+
+function queryCompiler(TestCase $test): QueryCompiler {
+        return new QueryCompiler(new ModelRegistry($test->models()));
     }
 
-    private function compiler(): QueryCompiler
-    {
-        return new QueryCompiler(new ModelRegistry($this->models()));
-    }
+test('root and related authorization cannot be overridden by filters', function (): void {
+        $ast = queryCompiler($this)->compile('Task.all', ['include' => ['list' => []], 'filters' => ['done' => false]], new ZeroContext(['user_id' => 'alice']));
+        $this->assertSame('tasks', $ast['table']);
+        $this->assertSame(50, $ast['limit']);
+        $this->assertSame([['created_at', 'desc'], ['id', 'asc']], $ast['orderBy']);
+        $this->assertSame('alice', $ast['where']['conditions'][0]['right']['value']);
+        $this->assertSame(false, $ast['where']['conditions'][2]['right']['value']);
+        $this->assertSame('alice', $ast['related'][0]['subquery']['where']['right']['value']);
+    });
 
-    public function test_root_and_related_authorization_cannot_be_overridden_by_filters(): void
-    {
-        $ast = $this->compiler()->compile('Task.all', ['include' => ['list' => []], 'filters' => ['done' => false]], new ZeroContext(['user_id' => 'alice']));
-        self::assertSame('tasks', $ast['table']);
-        self::assertSame(50, $ast['limit']);
-        self::assertSame([['created_at', 'desc'], ['id', 'asc']], $ast['orderBy']);
-        self::assertSame('alice', $ast['where']['conditions'][0]['right']['value']);
-        self::assertSame(false, $ast['where']['conditions'][2]['right']['value']);
-        self::assertSame('alice', $ast['related'][0]['subquery']['where']['right']['value']);
-    }
+test('one supports includes and null filter is distinct from unset', function (): void {
+        $ast = queryCompiler($this)->compile('Task.one', ['id' => 'a', 'include' => ['list' => []]], new ZeroContext(['user_id' => 'alice']));
+        $this->assertSame(1, $ast['limit']);
+        $ast = queryCompiler($this)->compile('Task.all', ['filters' => ['completed_at' => null]], new ZeroContext(['user_id' => 'alice']));
+        $this->assertSame('IS', $ast['where']['conditions'][2]['op']);
+    });
 
-    public function test_one_supports_includes_and_null_filter_is_distinct_from_unset(): void
-    {
-        $ast = $this->compiler()->compile('Task.one', ['id' => 'a', 'include' => ['list' => []]], new ZeroContext(['user_id' => 'alice']));
-        self::assertSame(1, $ast['limit']);
-        $ast = $this->compiler()->compile('Task.all', ['filters' => ['completed_at' => null]], new ZeroContext(['user_id' => 'alice']));
-        self::assertSame('IS', $ast['where']['conditions'][2]['op']);
-    }
-
-    public function test_relationship_filters_use_target_visibility(): void
-    {
-        $ast = $this->compiler()->compile('Task.all', ['filters' => ['list' => 'list-a']], new ZeroContext(['user_id' => 'alice']));
+test('relationship filters use target visibility', function (): void {
+        $ast = queryCompiler($this)->compile('Task.all', ['filters' => ['list' => 'list-a']], new ZeroContext(['user_id' => 'alice']));
         $predicate = $ast['where']['conditions'][2];
-        self::assertSame('correlatedSubquery', $predicate['type']);
-        self::assertSame('alice', $predicate['related']['subquery']['where']['conditions'][0]['right']['value']);
-    }
+        $this->assertSame('correlatedSubquery', $predicate['type']);
+        $this->assertSame('alice', $predicate['related']['subquery']['where']['conditions'][0]['right']['value']);
+    });
 
-    public function test_partial_filter_escapes_sql_wildcards(): void
-    {
-        $ast = $this->compiler()->compile('Task.all', ['filters' => ['title' => 'a%_\\b']], new ZeroContext(['user_id' => 'alice']));
-        self::assertSame('%a\\%\\_\\\\b%', $ast['where']['conditions'][2]['right']['value']);
-    }
+test('partial filter escapes sql wildcards', function (): void {
+        $ast = queryCompiler($this)->compile('Task.all', ['filters' => ['title' => 'a%_\\b']], new ZeroContext(['user_id' => 'alice']));
+        $this->assertSame('%a\\%\\_\\\\b%', $ast['where']['conditions'][2]['right']['value']);
+    });
 
-    #[DataProvider('invalidArguments')]
-    public function test_rejects_invalid_or_unapproved_arguments(array $arguments): void
-    {
+test('rejects invalid or unapproved arguments', function (array $arguments): void {
         $this->expectException(ValidationException::class);
-        $this->compiler()->compile('Task.all', $arguments, new ZeroContext(['user_id' => 'alice']));
-    }
+        queryCompiler($this)->compile('Task.all', $arguments, new ZeroContext(['user_id' => 'alice']));
+    })->with('invalid query arguments');
 
-    public static function invalidArguments(): array
-    {
-        return [
+dataset('invalid query arguments', [
             [['filters' => ['secret' => 'x']]], [['filters' => ['done' => 'false']]],
             [['user_id' => 'bob']], [['limit' => 1001]], [['limit' => 1.5]],
             [['order' => [['secret', 'asc']]]], [['include' => ['user' => []]]],
             [['include' => ['list' => ['limit' => 2]]]], [['filters' => ['trashed' => 'unknown']]],
-        ];
-    }
+        ]);
 
-    public function test_missing_context_fails_closed(): void
-    {
+test('missing context fails closed', function (): void {
         $this->expectException(AuthorizationException::class);
-        $this->compiler()->compile('Task.all', [], new ZeroContext([]));
-    }
+        queryCompiler($this)->compile('Task.all', [], new ZeroContext([]));
+    });
 
-    public function test_protocol_keeps_per_query_errors_separate_from_authentication(): void
-    {
-        $result = (new QueryProcessor($this->compiler()))->process(['transform', [
+test('protocol keeps per query errors separate from authentication', function (): void {
+        $result = (new QueryProcessor(queryCompiler($this)))->process(['transform', [
             ['id' => 'q1', 'name' => 'Task.all', 'args' => [(object) []]],
             ['id' => 'q2', 'name' => 'Task.all', 'args' => [['ast' => ['table' => 'users']]]],
         ]], new ZeroContext(['user_id' => 'alice']));
-        self::assertSame('QueryResponse', $result['kind']);
-        self::assertArrayHasKey('ast', $result['queries'][0]);
-        self::assertSame('parse', $result['queries'][1]['error']);
-        self::assertSame('alice', $result['userID']);
-    }
-}
+        $this->assertSame('QueryResponse', $result['kind']);
+        $this->assertArrayHasKey('ast', $result['queries'][0]);
+        $this->assertSame('parse', $result['queries'][1]['error']);
+        $this->assertSame('alice', $result['userID']);
+    });
+
 
 class NullablePartialTask extends Task
 {
