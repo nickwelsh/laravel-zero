@@ -1,0 +1,17 @@
+<?php
+
+use LaravelZero\Http\ContextResolver;
+
+return [
+    // Empty discovers explicitly annotated models under app/Models.
+    'models' => [],
+    'output' => resource_path('js/zero/generated.ts'),
+    'publication' => env('ZERO_PUBLICATION', 'laravel_zero'),
+    'app_id' => env('ZERO_APP_ID', 'zero'),
+    'upstream_schema' => env('ZERO_UPSTREAM_SCHEMA', 'zero_0'),
+    'api_key' => env('ZERO_API_KEY'),
+    'route_prefix' => 'zero',
+    'middleware' => ['api', 'auth'],
+    // Bind this class (or replace it) to add trusted tenant context.
+    'context_resolver' => ContextResolver::class,
+];
