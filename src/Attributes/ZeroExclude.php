@@ -6,6 +6,12 @@ namespace LaravelZero\Attributes;
 
 use Attribute;
 
+/**
+ * Exclude database columns in addition to Eloquent's $hidden.
+ *
+ * Applies within the $visible or ZeroColumns allowlist. ZeroIncludeColumns
+ * can explicitly opt an excluded column back in.
+ */
 #[Attribute(Attribute::TARGET_CLASS)]
 final readonly class ZeroExclude
 {

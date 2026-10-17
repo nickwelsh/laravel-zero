@@ -254,6 +254,7 @@ final class ModelRegistry
 
         $overrides = ($this->attributes($class, Attributes\ZeroIncludeColumns::class)[0] ?? null)->columns ?? [];
         $only = ($this->attributes($class, Attributes\ZeroColumns::class)[0] ?? null)?->columns;
+        $visible = $only === null ? $model->getVisible() : [];
         $columns = [];
         $casts = $model->getCasts();
         $dbColumns = $model->getConnection()->getSchemaBuilder()->getColumns($model->getTable());
@@ -266,7 +267,11 @@ final class ModelRegistry
 
         foreach ($dbColumns as $column) {
             $field = $column['name'];
-            if (($only !== null && ! in_array($field, $only, true)) || (in_array($field, $excluded, true) && ! in_array($field, $overrides, true))) {
+            if ($only !== null && ! in_array($field, $only, true)) {
+                continue;
+            }
+
+            if (! in_array($field, $overrides, true) && (($visible !== [] && ! in_array($field, $visible, true)) || in_array($field, $excluded, true))) {
                 continue;
             }
 
