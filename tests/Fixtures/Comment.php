@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Tests\Fixtures;
+namespace ZeroForLaravel\Tests\Fixtures;
 
 use Illuminate\Database\Eloquent\Model;
-use LaravelZero\Attributes\ZeroAuthorize;
-use LaravelZero\ContextField;
+use ZeroForLaravel\Attributes\ZeroAuthorize;
+use ZeroForLaravel\ContextField;
 
 #[ZeroAuthorize('user_id', '=', ContextField::UserId)]
 class Comment extends Model

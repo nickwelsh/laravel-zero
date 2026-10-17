@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Mutation;
+namespace ZeroForLaravel\Mutation;
 
 use DateTimeInterface;
 use Illuminate\Contracts\Auth\Authenticatable;
@@ -14,12 +14,12 @@ use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Str;
 use Illuminate\Validation\ValidationException;
 use InvalidArgumentException;
-use LaravelZero\Definition\NestedMutation;
-use LaravelZero\Metadata\ModelMetadata;
-use LaravelZero\Metadata\ModelRegistry;
-use LaravelZero\Support\Input;
-use LaravelZero\ZeroContext;
 use LogicException;
+use ZeroForLaravel\Definition\NestedMutation;
+use ZeroForLaravel\Metadata\ModelMetadata;
+use ZeroForLaravel\Metadata\ModelRegistry;
+use ZeroForLaravel\Support\Input;
+use ZeroForLaravel\ZeroContext;
 
 final readonly class CrudExecutor
 {

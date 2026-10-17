@@ -2,17 +2,17 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Tests\Feature;
+namespace ZeroForLaravel\Tests\Feature;
 
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Gate;
-use LaravelZero\Metadata\ModelRegistry;
-use LaravelZero\Mutation\CrudExecutor;
-use LaravelZero\Mutation\MutationProcessor;
-use LaravelZero\Tests\Fixtures\Task;
-use LaravelZero\Tests\PostgresTestCase;
-use LaravelZero\ZeroContext;
+use ZeroForLaravel\Metadata\ModelRegistry;
+use ZeroForLaravel\Mutation\CrudExecutor;
+use ZeroForLaravel\Mutation\MutationProcessor;
+use ZeroForLaravel\Tests\Fixtures\Task;
+use ZeroForLaravel\Tests\PostgresTestCase;
+use ZeroForLaravel\ZeroContext;
 
 uses(PostgresTestCase::class);
 

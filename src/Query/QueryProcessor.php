@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Query;
+namespace ZeroForLaravel\Query;
 
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Validation\ValidationException;
-use LaravelZero\Support\Input;
-use LaravelZero\ZeroContext;
+use ZeroForLaravel\Support\Input;
+use ZeroForLaravel\ZeroContext;
 
 /**
  * @phpstan-import-type Ast from QueryCompiler

@@ -2,24 +2,24 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Tests\Feature;
+namespace ZeroForLaravel\Tests\Feature;
 
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Validation\ValidationException;
-use LaravelZero\Attributes\ZeroQuery;
-use LaravelZero\ContextField;
-use LaravelZero\Definition\AllowedFilter;
-use LaravelZero\Definition\ZeroDefinition;
-use LaravelZero\Generation\TypeScriptGenerator;
-use LaravelZero\Metadata\ModelRegistry;
-use LaravelZero\Query\QueryCompiler;
-use LaravelZero\Query\ZeroOperator;
-use LaravelZero\Query\ZQLBuilder;
-use LaravelZero\Tests\TestCase;
-use LaravelZero\ZeroContext;
 use LogicException;
+use ZeroForLaravel\Attributes\ZeroQuery;
+use ZeroForLaravel\ContextField;
+use ZeroForLaravel\Definition\AllowedFilter;
+use ZeroForLaravel\Definition\ZeroDefinition;
+use ZeroForLaravel\Generation\TypeScriptGenerator;
+use ZeroForLaravel\Metadata\ModelRegistry;
+use ZeroForLaravel\Query\QueryCompiler;
+use ZeroForLaravel\Query\ZeroOperator;
+use ZeroForLaravel\Query\ZQLBuilder;
+use ZeroForLaravel\Tests\TestCase;
+use ZeroForLaravel\ZeroContext;
 
 uses(TestCase::class);
 

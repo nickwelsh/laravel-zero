@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Definition;
+namespace ZeroForLaravel\Definition;
 
 use InvalidArgumentException;
 

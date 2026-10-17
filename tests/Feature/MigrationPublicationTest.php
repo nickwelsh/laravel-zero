@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Tests\Feature;
+namespace ZeroForLaravel\Tests\Feature;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Events\MigrationsEnded;
@@ -11,11 +11,11 @@ use Illuminate\Support\Facades\Artisan;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Schema;
-use LaravelZero\Attributes\ZeroPublic;
-use LaravelZero\Metadata\ModelRegistry;
-use LaravelZero\Publication\PublicationManager;
-use LaravelZero\Tests\PostgresTestCase;
-use LaravelZero\ZeroServiceProvider;
+use ZeroForLaravel\Attributes\ZeroPublic;
+use ZeroForLaravel\Metadata\ModelRegistry;
+use ZeroForLaravel\Publication\PublicationManager;
+use ZeroForLaravel\Tests\PostgresTestCase;
+use ZeroForLaravel\ZeroServiceProvider;
 
 #[ZeroPublic]
 class MigrationRecord extends Model

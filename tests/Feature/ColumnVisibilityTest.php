@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Tests\Feature;
+namespace ZeroForLaravel\Tests\Feature;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use LaravelZero\Attributes\ZeroAuthorize;
-use LaravelZero\Attributes\ZeroColumns;
-use LaravelZero\Attributes\ZeroExclude;
-use LaravelZero\Attributes\ZeroIncludeColumns;
-use LaravelZero\Attributes\ZeroServerFill;
-use LaravelZero\ContextField;
-use LaravelZero\Definition\ZeroDefinition;
-use LaravelZero\Generation\TypeScriptGenerator;
-use LaravelZero\Metadata\ModelRegistry;
-use LaravelZero\Tests\Fixtures\VisibleTask;
-use LaravelZero\Tests\TestCase;
 use LogicException;
+use ZeroForLaravel\Attributes\ZeroAuthorize;
+use ZeroForLaravel\Attributes\ZeroColumns;
+use ZeroForLaravel\Attributes\ZeroExclude;
+use ZeroForLaravel\Attributes\ZeroIncludeColumns;
+use ZeroForLaravel\Attributes\ZeroServerFill;
+use ZeroForLaravel\ContextField;
+use ZeroForLaravel\Definition\ZeroDefinition;
+use ZeroForLaravel\Generation\TypeScriptGenerator;
+use ZeroForLaravel\Metadata\ModelRegistry;
+use ZeroForLaravel\Tests\Fixtures\VisibleTask;
+use ZeroForLaravel\Tests\TestCase;
 
 uses(TestCase::class);
 

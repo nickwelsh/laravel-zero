@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Metadata;
+namespace ZeroForLaravel\Metadata;
 
 use BackedEnum;
 use Illuminate\Database\Connection;
@@ -15,15 +15,15 @@ use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\Relation;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use LaravelZero\Attributes;
-use LaravelZero\ContextField;
-use LaravelZero\Definition\ZeroDefinition;
-use LaravelZero\Generation\RuleExtractor;
 use LogicException;
 use ReflectionClass;
 use ReflectionMethod;
+use ZeroForLaravel\Attributes;
+use ZeroForLaravel\ContextField;
+use ZeroForLaravel\Definition\ZeroDefinition;
+use ZeroForLaravel\Generation\RuleExtractor;
 
-/** @phpstan-import-type Column from \LaravelZero\Metadata\ModelMetadata */
+/** @phpstan-import-type Column from \ZeroForLaravel\Metadata\ModelMetadata */
 final class ModelRegistry
 {
     /** @var array<string, ModelMetadata> */
@@ -376,8 +376,8 @@ final class ModelRegistry
         $metadata = new ModelMetadata($class, $name, $model->getTable(), $model->getKeyName(), $columns, $queries, $mutations, $authorization, $fills, $writable, $generator, $created, $updated, $deleted, $definition, authorizationRelations: $authorizationRelations);
         foreach ($definition->filters as $filterName => $filter) {
             if (isset($filter['callback'])) {
-                $query = new \LaravelZero\Query\ZQLBuilder(new \LaravelZero\Query\ZeroOperator($metadata, fn () => throw new LogicException('Callback relationship predicates belong in an explicit server scope.')));
-                ($filter['callback'])($query, new \LaravelZero\Query\FilterParameter());
+                $query = new \ZeroForLaravel\Query\ZQLBuilder(new \ZeroForLaravel\Query\ZeroOperator($metadata, fn () => throw new LogicException('Callback relationship predicates belong in an explicit server scope.')));
+                ($filter['callback'])($query, new \ZeroForLaravel\Query\FilterParameter());
                 unset($definition->filters[$filterName]['callback']);
                 $definition->filters[$filterName]['expression'] = $query->condition();
             }

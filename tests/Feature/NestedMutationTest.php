@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Tests\Feature;
+namespace ZeroForLaravel\Tests\Feature;
 
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
@@ -16,17 +16,17 @@ use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Support\Facades\Schema;
 use Illuminate\Validation\ValidationException;
-use LaravelZero\Attributes\ZeroMutate;
-use LaravelZero\ContextField;
-use LaravelZero\Definition\NestedMutation;
-use LaravelZero\Definition\ZeroDefinition;
-use LaravelZero\Generation\TypeScriptGenerator;
-use LaravelZero\Metadata\ModelRegistry;
-use LaravelZero\Mutation\CrudExecutor;
-use LaravelZero\Mutation\MutationContext;
-use LaravelZero\Tests\TestCase;
-use LaravelZero\ZeroContext;
 use RuntimeException;
+use ZeroForLaravel\Attributes\ZeroMutate;
+use ZeroForLaravel\ContextField;
+use ZeroForLaravel\Definition\NestedMutation;
+use ZeroForLaravel\Definition\ZeroDefinition;
+use ZeroForLaravel\Generation\TypeScriptGenerator;
+use ZeroForLaravel\Metadata\ModelRegistry;
+use ZeroForLaravel\Mutation\CrudExecutor;
+use ZeroForLaravel\Mutation\MutationContext;
+use ZeroForLaravel\Tests\TestCase;
+use ZeroForLaravel\ZeroContext;
 
 uses(TestCase::class);
 

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Publication;
+namespace ZeroForLaravel\Publication;
 
-use LaravelZero\Metadata\ModelRegistry;
 use LogicException;
+use ZeroForLaravel\Metadata\ModelRegistry;
 
 final readonly class PublicationManager
 {

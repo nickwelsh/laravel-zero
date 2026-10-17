@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Tests\Feature;
+namespace ZeroForLaravel\Tests\Feature;
 
 use Illuminate\Support\Facades\DB;
-use LaravelZero\Metadata\ModelRegistry;
-use LaravelZero\Publication\PublicationManager;
-use LaravelZero\Tests\Fixtures\VisibleTask;
-use LaravelZero\Tests\PostgresTestCase;
 use LogicException;
+use ZeroForLaravel\Metadata\ModelRegistry;
+use ZeroForLaravel\Publication\PublicationManager;
+use ZeroForLaravel\Tests\Fixtures\VisibleTask;
+use ZeroForLaravel\Tests\PostgresTestCase;
 
 uses(PostgresTestCase::class);
 

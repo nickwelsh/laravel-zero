@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Query;
+namespace ZeroForLaravel\Query;
 
 use Closure;
-use LaravelZero\Metadata\ModelMetadata;
-use LaravelZero\Support\Input;
 use LogicException;
+use ZeroForLaravel\Metadata\ModelMetadata;
+use ZeroForLaravel\Support\Input;
 
 final readonly class ZeroOperator
 {

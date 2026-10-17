@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Tests\Feature;
+namespace ZeroForLaravel\Tests\Feature;
 
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Http\Request;
-use LaravelZero\Http\ContextResolver;
-use LaravelZero\Tests\HttpTestCase;
 use LogicException;
+use ZeroForLaravel\Http\ContextResolver;
+use ZeroForLaravel\Tests\HttpTestCase;
 
 uses(HttpTestCase::class);
 
@@ -45,7 +45,7 @@ test('bad json returns protocol error without leaking exceptions', function (): 
 
 test('generation command writes verified contracts and can detect drift', function (): void {
     /** @var HttpTestCase $this */
-    $path = sys_get_temp_dir().'/laravel-zero-'.uniqid().'.ts';
+    $path = sys_get_temp_dir().'/zero-for-laravel-'.uniqid().'.ts';
     try {
         $command = $this->artisan('zero:generate', ['--output' => $path]);
         $this->assertInstanceOf(\Illuminate\Testing\PendingCommand::class, $command);
@@ -67,8 +67,8 @@ test('generation command writes verified contracts and can detect drift', functi
 
 test('configured models must be Eloquent model classes', function (): void {
     config()->set('zero.models', ['invalid']);
-    app()->forgetInstance(\LaravelZero\Metadata\ModelRegistry::class);
-    app()->make(\LaravelZero\Metadata\ModelRegistry::class);
+    app()->forgetInstance(\ZeroForLaravel\Metadata\ModelRegistry::class);
+    app()->make(\ZeroForLaravel\Metadata\ModelRegistry::class);
 })->throws(LogicException::class, 'Eloquent model classes');
 
 class InvalidContextResolver
@@ -91,12 +91,12 @@ test('automatic publication synchronization skips SQLite migrations', function (
     /** @var HttpTestCase $this */
     config()->set('zero.sync_publication_on_migrate', true);
     \Illuminate\Support\Facades\Event::dispatch(new \Illuminate\Database\Events\MigrationsEnded('up'));
-    $this->assertFalse(app()->resolved(\LaravelZero\Metadata\ModelRegistry::class));
+    $this->assertFalse(app()->resolved(\ZeroForLaravel\Metadata\ModelRegistry::class));
 });
 
 test('react generation binds the contracts and preserves editable connection configuration', function (): void {
     /** @var HttpTestCase $this */
-    $directory = sys_get_temp_dir().'/laravel-zero-react-'.uniqid();
+    $directory = sys_get_temp_dir().'/zero-for-laravel-react-'.uniqid();
     $path = $directory.'/generated.ts';
     try {
         $command = $this->artisan('zero:generate', ['--output' => $path, '--react' => true]);

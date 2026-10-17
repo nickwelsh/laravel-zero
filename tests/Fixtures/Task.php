@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Tests\Fixtures;
+namespace ZeroForLaravel\Tests\Fixtures;
 
 use Illuminate\Database\Eloquent\Concerns\HasUuids;
 use Illuminate\Database\Eloquent\Model;
@@ -10,15 +10,15 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\BelongsToMany;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
-use LaravelZero\Attributes\ZeroAuthorize;
-use LaravelZero\Attributes\ZeroMutate;
-use LaravelZero\Attributes\ZeroQuery;
-use LaravelZero\Attributes\ZeroServerFill;
-use LaravelZero\ContextField;
-use LaravelZero\Definition\AllowedFilter;
-use LaravelZero\Definition\ZeroDefinition;
-use LaravelZero\Enums\FilterOperator;
-use LaravelZero\Query\ZQLBuilder;
+use ZeroForLaravel\Attributes\ZeroAuthorize;
+use ZeroForLaravel\Attributes\ZeroMutate;
+use ZeroForLaravel\Attributes\ZeroQuery;
+use ZeroForLaravel\Attributes\ZeroServerFill;
+use ZeroForLaravel\ContextField;
+use ZeroForLaravel\Definition\AllowedFilter;
+use ZeroForLaravel\Definition\ZeroDefinition;
+use ZeroForLaravel\Enums\FilterOperator;
+use ZeroForLaravel\Query\ZQLBuilder;
 
 /**
  * @property string $id

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Attributes;
+namespace ZeroForLaravel\Attributes;
 
 use Attribute;
-use LaravelZero\ContextField;
+use ZeroForLaravel\ContextField;
 
 #[Attribute(Attribute::TARGET_CLASS | Attribute::IS_REPEATABLE)]
 final readonly class ZeroAuthorize

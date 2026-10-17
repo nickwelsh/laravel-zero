@@ -2,12 +2,12 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Console;
+namespace ZeroForLaravel\Console;
 
 use Illuminate\Console\Command;
 use Illuminate\Filesystem\Filesystem;
-use LaravelZero\Generation\TypeScriptGenerator;
-use LaravelZero\Metadata\ModelRegistry;
+use ZeroForLaravel\Generation\TypeScriptGenerator;
+use ZeroForLaravel\Metadata\ModelRegistry;
 
 final class GenerateCommand extends Command
 {
@@ -68,7 +68,7 @@ final class GenerateCommand extends Command
         }
 
         if ($react && ! $files->exists($config)) {
-            $files->replace($config, "import type {ProviderOptions} from '@nickwelsh/laravel-zero/react';\n\n// Public connection options only; never put the cache API key here.\nexport const options = {cacheURL: 'http://localhost:4848'} satisfies ProviderOptions;\n");
+            $files->replace($config, "import type {ProviderOptions} from '@nickwelsh/zero-for-laravel/react';\n\n// Public connection options only; never put the cache API key here.\nexport const options = {cacheURL: 'http://localhost:4848'} satisfies ProviderOptions;\n");
             $this->info("Created {$config}. Configure your public cache URL here; this file will not be overwritten.");
         }
 

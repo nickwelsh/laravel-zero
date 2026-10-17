@@ -2,23 +2,23 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Tests\Feature;
+namespace ZeroForLaravel\Tests\Feature;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Schema;
-use LaravelZero\Attributes\ZeroExclude;
-use LaravelZero\Attributes\ZeroPublic;
-use LaravelZero\Definition\AllowedFilter;
-use LaravelZero\Definition\ZeroDefinition;
-use LaravelZero\Metadata\ModelRegistry;
-use LaravelZero\Tests\Fixtures\Comment;
-use LaravelZero\Tests\Fixtures\Tag;
-use LaravelZero\Tests\Fixtures\Task;
-use LaravelZero\Tests\Fixtures\TaskList;
-use LaravelZero\Tests\TestCase;
 use LogicException;
+use ZeroForLaravel\Attributes\ZeroExclude;
+use ZeroForLaravel\Attributes\ZeroPublic;
+use ZeroForLaravel\Definition\AllowedFilter;
+use ZeroForLaravel\Definition\ZeroDefinition;
+use ZeroForLaravel\Metadata\ModelRegistry;
+use ZeroForLaravel\Tests\Fixtures\Comment;
+use ZeroForLaravel\Tests\Fixtures\Tag;
+use ZeroForLaravel\Tests\Fixtures\Task;
+use ZeroForLaravel\Tests\Fixtures\TaskList;
+use ZeroForLaravel\Tests\TestCase;
 
 uses(TestCase::class);
 

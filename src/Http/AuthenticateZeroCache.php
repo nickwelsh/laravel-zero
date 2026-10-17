@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Http;
+namespace ZeroForLaravel\Http;
 
 use Closure;
 use Illuminate\Http\Request;

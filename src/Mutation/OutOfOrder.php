@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Mutation;
+namespace ZeroForLaravel\Mutation;
 
 use RuntimeException;
 

@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Tests\Feature;
+namespace ZeroForLaravel\Tests\Feature;
 
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Gate;
 use Illuminate\Validation\ValidationException;
-use LaravelZero\Definition\ZeroDefinition;
-use LaravelZero\Generation\TypeScriptGenerator;
-use LaravelZero\Metadata\ModelRegistry;
-use LaravelZero\Mutation\CrudExecutor;
-use LaravelZero\Tests\Fixtures\Task;
-use LaravelZero\Tests\TestCase;
-use LaravelZero\ZeroContext;
+use ZeroForLaravel\Definition\ZeroDefinition;
+use ZeroForLaravel\Generation\TypeScriptGenerator;
+use ZeroForLaravel\Metadata\ModelRegistry;
+use ZeroForLaravel\Mutation\CrudExecutor;
+use ZeroForLaravel\Tests\Fixtures\Task;
+use ZeroForLaravel\Tests\TestCase;
+use ZeroForLaravel\ZeroContext;
 
 uses(TestCase::class);
 

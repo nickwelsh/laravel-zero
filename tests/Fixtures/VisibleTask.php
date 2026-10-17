@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Tests\Fixtures;
+namespace ZeroForLaravel\Tests\Fixtures;
 
 use Illuminate\Database\Eloquent\Model;
-use LaravelZero\Attributes\ZeroPublic;
-use LaravelZero\Attributes\ZeroQuery;
+use ZeroForLaravel\Attributes\ZeroPublic;
+use ZeroForLaravel\Attributes\ZeroQuery;
 
 #[ZeroPublic]
 #[ZeroQuery(['all', 'one'])]

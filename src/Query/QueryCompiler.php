@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Query;
+namespace ZeroForLaravel\Query;
 
 use Closure;
-use LaravelZero\Metadata\ModelMetadata;
-use LaravelZero\Metadata\ModelRegistry;
-use LaravelZero\Support\Input;
-use LaravelZero\ZeroContext;
 use LogicException;
+use ZeroForLaravel\Metadata\ModelMetadata;
+use ZeroForLaravel\Metadata\ModelRegistry;
+use ZeroForLaravel\Support\Input;
+use ZeroForLaravel\ZeroContext;
 
 /**
  * @phpstan-type Simple array{type: 'simple', op: string, left: array{type: 'column', name: string}, right: array{type: 'literal', value: mixed}}

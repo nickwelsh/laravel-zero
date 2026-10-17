@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Query;
+namespace ZeroForLaravel\Query;
 
 use Closure;
 use LogicException;

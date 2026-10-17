@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-use LaravelZero\Http\ContextResolver;
+use ZeroForLaravel\Http\ContextResolver;
 
 return [
     // Empty discovers models with Zero attributes or a zero() definition under app/Models.

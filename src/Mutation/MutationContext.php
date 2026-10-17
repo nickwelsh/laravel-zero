@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Mutation;
+namespace ZeroForLaravel\Mutation;
 
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Http\Request;

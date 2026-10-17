@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Tests;
+namespace ZeroForLaravel\Tests;
 
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
-use LaravelZero\Tests\Fixtures\Comment;
-use LaravelZero\Tests\Fixtures\Tag;
-use LaravelZero\Tests\Fixtures\Task;
-use LaravelZero\Tests\Fixtures\TaskList;
 use Orchestra\Testbench\TestCase as Orchestra;
+use ZeroForLaravel\Tests\Fixtures\Comment;
+use ZeroForLaravel\Tests\Fixtures\Tag;
+use ZeroForLaravel\Tests\Fixtures\Task;
+use ZeroForLaravel\Tests\Fixtures\TaskList;
 
 abstract class TestCase extends Orchestra
 {

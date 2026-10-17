@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Definition;
+namespace ZeroForLaravel\Definition;
 
 use Closure;
-use LaravelZero\ContextField;
-use LaravelZero\Query\ZQLBuilder;
-use LaravelZero\ZeroContext;
 use LogicException;
+use ZeroForLaravel\ContextField;
+use ZeroForLaravel\Query\ZQLBuilder;
+use ZeroForLaravel\ZeroContext;
 
 final class ZeroDefinition
 {

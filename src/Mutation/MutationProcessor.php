@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Mutation;
+namespace ZeroForLaravel\Mutation;
 
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Auth\Authenticatable;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Validation\ValidationException;
-use LaravelZero\Metadata\ModelRegistry;
-use LaravelZero\Support\Input;
-use LaravelZero\ZeroContext;
 use LogicException;
 use Throwable;
+use ZeroForLaravel\Metadata\ModelRegistry;
+use ZeroForLaravel\Support\Input;
+use ZeroForLaravel\ZeroContext;
 
 /** @phpstan-type Mutation array{clientID: non-empty-string, name: non-empty-string, type: 'custom', id: int, timestamp: numeric-string|int|float, args: list<mixed>} */
 final readonly class MutationProcessor

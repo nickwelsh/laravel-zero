@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero;
+namespace ZeroForLaravel;
 
 use Illuminate\Auth\Access\AuthorizationException;
 

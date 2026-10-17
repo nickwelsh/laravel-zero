@@ -2,20 +2,20 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Tests\Feature;
+namespace ZeroForLaravel\Tests\Feature;
 
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Validation\ValidationException;
-use LaravelZero\Attributes\ZeroAuthorizeRelation;
-use LaravelZero\Attributes\ZeroQuery;
-use LaravelZero\Metadata\ModelRegistry;
-use LaravelZero\Query\QueryCompiler;
-use LaravelZero\Tests\Fixtures\Tag;
-use LaravelZero\Tests\TestCase;
-use LaravelZero\ZeroContext;
 use LogicException;
+use ZeroForLaravel\Attributes\ZeroAuthorizeRelation;
+use ZeroForLaravel\Attributes\ZeroQuery;
+use ZeroForLaravel\Metadata\ModelRegistry;
+use ZeroForLaravel\Query\QueryCompiler;
+use ZeroForLaravel\Tests\Fixtures\Tag;
+use ZeroForLaravel\Tests\TestCase;
+use ZeroForLaravel\ZeroContext;
 
 uses(TestCase::class);
 

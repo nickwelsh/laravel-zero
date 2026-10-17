@@ -2,18 +2,18 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Tests\Feature;
+namespace ZeroForLaravel\Tests\Feature;
 
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Validation\ValidationException;
-use LaravelZero\Definition\AllowedFilter;
-use LaravelZero\Definition\ZeroDefinition;
-use LaravelZero\Metadata\ModelRegistry;
-use LaravelZero\Query\QueryCompiler;
-use LaravelZero\Query\QueryProcessor;
-use LaravelZero\Tests\Fixtures\Task;
-use LaravelZero\Tests\TestCase;
-use LaravelZero\ZeroContext;
+use ZeroForLaravel\Definition\AllowedFilter;
+use ZeroForLaravel\Definition\ZeroDefinition;
+use ZeroForLaravel\Metadata\ModelRegistry;
+use ZeroForLaravel\Query\QueryCompiler;
+use ZeroForLaravel\Query\QueryProcessor;
+use ZeroForLaravel\Tests\Fixtures\Task;
+use ZeroForLaravel\Tests\TestCase;
+use ZeroForLaravel\ZeroContext;
 
 uses(TestCase::class);
 

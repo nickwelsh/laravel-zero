@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Definition;
+namespace ZeroForLaravel\Definition;
 
 use Closure;
-use LaravelZero\Enums\FilterOperator;
 use LogicException;
+use ZeroForLaravel\Enums\FilterOperator;
 
 final readonly class AllowedFilter
 {

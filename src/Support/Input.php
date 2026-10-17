@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Support;
+namespace ZeroForLaravel\Support;
 
 use Illuminate\Validation\ValidationException;
 use JsonException;
 use stdClass;
 
-/** @phpstan-import-type Column from \LaravelZero\Metadata\ModelMetadata */
+/** @phpstan-import-type Column from \ZeroForLaravel\Metadata\ModelMetadata */
 final class Input
 {
     /**

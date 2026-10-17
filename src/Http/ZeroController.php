@@ -2,15 +2,15 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Http;
+namespace ZeroForLaravel\Http;
 
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use JsonException;
-use LaravelZero\Mutation\MutationProcessor;
-use LaravelZero\Query\QueryProcessor;
-use LaravelZero\ZeroContext;
 use LogicException;
+use ZeroForLaravel\Mutation\MutationProcessor;
+use ZeroForLaravel\Query\QueryProcessor;
+use ZeroForLaravel\ZeroContext;
 
 final class ZeroController
 {

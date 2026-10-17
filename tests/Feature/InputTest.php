@@ -2,13 +2,13 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Tests\Feature;
+namespace ZeroForLaravel\Tests\Feature;
 
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Validation\ValidationException;
-use LaravelZero\Support\Input;
-use LaravelZero\Tests\TestCase;
-use LaravelZero\ZeroContext;
+use ZeroForLaravel\Support\Input;
+use ZeroForLaravel\Tests\TestCase;
+use ZeroForLaravel\ZeroContext;
 
 uses(TestCase::class);
 

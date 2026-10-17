@@ -1,5 +1,5 @@
 {
-    "name": "nickwelsh/laravel-zero",
+    "name": "nickwelsh/zero-for-laravel",
     "description": "Laravel-owned model contracts, queries and CRUD for Rocicorp Zero.",
     "type": "library",
     "license": "MIT",
@@ -19,18 +19,18 @@
     },
     "autoload": {
         "psr-4": {
-            "LaravelZero\\": "src/"
+            "ZeroForLaravel\\": "src/"
         }
     },
     "autoload-dev": {
         "psr-4": {
-            "LaravelZero\\Tests\\": "tests/"
+            "ZeroForLaravel\\Tests\\": "tests/"
         }
     },
     "extra": {
         "laravel": {
             "providers": [
-                "LaravelZero\\ZeroServiceProvider"
+                "ZeroForLaravel\\ZeroServiceProvider"
             ]
         }
     },

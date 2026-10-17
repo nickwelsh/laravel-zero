@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero;
+namespace ZeroForLaravel;
 
 use Illuminate\Database\Events\MigrationsEnded;
 use Illuminate\Database\Migrations\Migrator;
@@ -10,16 +10,16 @@ use Illuminate\Foundation\Application;
 use Illuminate\Support\Facades\Event;
 use Illuminate\Support\Facades\Route;
 use Illuminate\Support\ServiceProvider;
-use LaravelZero\Console\GenerateCommand;
-use LaravelZero\Console\SyncPublicationCommand;
-use LaravelZero\Http\AuthenticateZeroCache;
-use LaravelZero\Http\ZeroController;
-use LaravelZero\Metadata\ModelDiscovery;
-use LaravelZero\Metadata\ModelRegistry;
-use LaravelZero\Mutation\CrudExecutor;
-use LaravelZero\Mutation\MutationProcessor;
-use LaravelZero\Publication\PublicationManager;
 use LogicException;
+use ZeroForLaravel\Console\GenerateCommand;
+use ZeroForLaravel\Console\SyncPublicationCommand;
+use ZeroForLaravel\Http\AuthenticateZeroCache;
+use ZeroForLaravel\Http\ZeroController;
+use ZeroForLaravel\Metadata\ModelDiscovery;
+use ZeroForLaravel\Metadata\ModelRegistry;
+use ZeroForLaravel\Mutation\CrudExecutor;
+use ZeroForLaravel\Mutation\MutationProcessor;
+use ZeroForLaravel\Publication\PublicationManager;
 
 final class ZeroServiceProvider extends ServiceProvider
 {

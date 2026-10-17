@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Metadata;
+namespace ZeroForLaravel\Metadata;
 
-use LaravelZero\Definition\ZeroDefinition;
 use stdClass;
+use ZeroForLaravel\Definition\ZeroDefinition;
 
 /**
  * @phpstan-type Column array{type: 'string'|'number'|'boolean'|'json', nullable: bool, date: bool, enum: list<string|int>|null, hasDefault: bool, default: mixed, cast?: 'boolean'|'integer'|'float'|'string'|'array'|'object'}

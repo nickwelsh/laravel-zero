@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Generation;
+namespace ZeroForLaravel\Generation;
 
 use Illuminate\Foundation\Http\FormRequest;
 use LogicException;
 use ReflectionMethod;
 use Throwable;
 
-/** @phpstan-import-type Column from \LaravelZero\Metadata\ModelMetadata */
+/** @phpstan-import-type Column from \ZeroForLaravel\Metadata\ModelMetadata */
 final class RuleExtractor
 {
     private const array PORTABLE = ['required', 'nullable', 'sometimes', 'string', 'boolean', 'integer', 'numeric', 'min', 'max', 'in', 'date', 'uuid', 'ulid'];

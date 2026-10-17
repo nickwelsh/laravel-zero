@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Console;
+namespace ZeroForLaravel\Console;
 
 use Illuminate\Console\Command;
-use LaravelZero\Publication\PublicationManager;
+use ZeroForLaravel\Publication\PublicationManager;
 
 final class SyncPublicationCommand extends Command
 {

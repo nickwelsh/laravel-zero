@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Enums;
+namespace ZeroForLaravel\Enums;
 
 enum FilterOperator: string
 {

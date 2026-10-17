@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero;
+namespace ZeroForLaravel;
 
 enum ContextField: string
 {

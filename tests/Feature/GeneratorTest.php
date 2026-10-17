@@ -2,11 +2,11 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Tests\Feature;
+namespace ZeroForLaravel\Tests\Feature;
 
-use LaravelZero\Generation\TypeScriptGenerator;
-use LaravelZero\Metadata\ModelRegistry;
-use LaravelZero\Tests\TestCase;
+use ZeroForLaravel\Generation\TypeScriptGenerator;
+use ZeroForLaravel\Metadata\ModelRegistry;
+use ZeroForLaravel\Tests\TestCase;
 
 uses(TestCase::class);
 
@@ -16,7 +16,7 @@ test('generates native schema and runtime models from the same column plan', fun
     $this->assertStringContainsString('enableLegacyQueries: false', $output);
     $this->assertStringContainsString('enableLegacyMutators: false', $output);
     $this->assertStringContainsString('export const Task = models.Task', $output);
-    $this->assertStringContainsString('createLaravelZero(schema, definitions)', $output);
+    $this->assertStringContainsString('createZeroForLaravel(schema, definitions)', $output);
     $this->assertStringNotContainsString('secret', $output);
     $this->assertSame($output, (new TypeScriptGenerator)->generate(new ModelRegistry(array_reverse($this->models()))));
 });

@@ -2,14 +2,14 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Metadata;
+namespace ZeroForLaravel\Metadata;
 
 use Illuminate\Database\Eloquent\Model;
-use LaravelZero\Attributes;
 use RecursiveDirectoryIterator;
 use RecursiveIteratorIterator;
 use ReflectionClass;
 use SplFileInfo;
+use ZeroForLaravel\Attributes;
 
 final class ModelDiscovery
 {

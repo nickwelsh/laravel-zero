@@ -2,9 +2,9 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Tests;
+namespace ZeroForLaravel\Tests;
 
-use LaravelZero\ZeroServiceProvider;
+use ZeroForLaravel\ZeroServiceProvider;
 
 abstract class HttpTestCase extends TestCase
 {

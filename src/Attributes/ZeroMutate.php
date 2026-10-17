@@ -2,7 +2,7 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Attributes;
+namespace ZeroForLaravel\Attributes;
 
 use Attribute;
 

@@ -2,10 +2,10 @@
 
 declare(strict_types=1);
 
-namespace LaravelZero\Http;
+namespace ZeroForLaravel\Http;
 
 use Illuminate\Http\Request;
-use LaravelZero\ZeroContext;
+use ZeroForLaravel\ZeroContext;
 
 class ContextResolver
 {
