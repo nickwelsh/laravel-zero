@@ -10,6 +10,8 @@
             "uuid",
             "ulid",
             "eloquent",
+            "eloquent's",
+            "allowlist",
             "datetime",
             "nullable",
             "zql",
