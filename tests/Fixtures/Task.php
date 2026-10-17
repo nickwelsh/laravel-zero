@@ -17,6 +17,8 @@ use LaravelZero\Attributes\ZeroServerFill;
 use LaravelZero\ContextField;
 use LaravelZero\Definition\AllowedFilter;
 use LaravelZero\Definition\ZeroDefinition;
+use LaravelZero\Enums\FilterOperator;
+use LaravelZero\Query\ZQLBuilder;
 
 /**
  * @property string $id
@@ -43,7 +45,7 @@ class Task extends Model
     public static function zero(): ZeroDefinition
     {
         return ZeroDefinition::make()
-            ->allowedFilters([AllowedFilter::partial('title'), AllowedFilter::exact('done'), AllowedFilter::exact('completed_at'), AllowedFilter::belongsTo('list'), AllowedFilter::trashed()])
+            ->allowedFilters([AllowedFilter::partial('title'), AllowedFilter::exact('done'), AllowedFilter::exact('completed_at'), AllowedFilter::belongsTo('list'), AllowedFilter::trashed(), AllowedFilter::operator('completed_after', FilterOperator::GREATER_THAN, 'completed_at'), AllowedFilter::operator('title_operator', FilterOperator::DYNAMIC, 'title'), AllowedFilter::beginsWithStrict('title_start', 'title'), AllowedFilter::groupOr('search', [AllowedFilter::partial('title'), AllowedFilter::exact('id')]), AllowedFilter::callback('is_completed', fn (ZQLBuilder $query): ZQLBuilder => $query->where('completed_at', 'IS NOT', null)), AllowedFilter::callback('title_is', fn (ZQLBuilder $query, mixed $value): ZQLBuilder => $query->where('title', $value), 'title')])
             ->allowedIncludes(['list', 'tags', 'comments'])
             ->allowedSorts(['title', 'created_at'])
             ->defaultSort('-created_at');

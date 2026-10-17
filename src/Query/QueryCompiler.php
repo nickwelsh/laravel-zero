@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace LaravelZero\Query;
 
+use Closure;
 use LaravelZero\Metadata\ModelMetadata;
 use LaravelZero\Metadata\ModelRegistry;
 use LaravelZero\Support\Input;
@@ -14,7 +15,7 @@ use LogicException;
  * @phpstan-type Simple array{type: 'simple', op: string, left: array{type: 'column', name: string}, right: array{type: 'literal', value: mixed}}
  * @phpstan-type Correlated array{type: 'correlatedSubquery', related: array<string, mixed>, op: 'EXISTS'}
  * @phpstan-type Atom Simple|Correlated
- * @phpstan-type Condition Atom|array{type: 'and', conditions: list<Atom>}
+ * @phpstan-type Condition array<string, mixed>
  * @phpstan-type Ast array{table: string, where?: Condition, orderBy?: list<array{string, 'asc'|'desc'}>, limit?: int, alias?: string, related?: list<array<string, mixed>>}
  * @phpstan-type Related array{correlation: array{parentField: list<string>, childField: list<string>}, subquery: Ast, system: 'client', hidden?: true}
  */
@@ -100,16 +101,7 @@ final readonly class QueryCompiler
                 ));
                 $conditions[] = ['type' => 'correlatedSubquery', 'related' => $subquery, 'op' => 'EXISTS'];
             } else {
-                Input::value($value, $model->columns[$field], "filters.{$name}");
-                if ($filter['kind'] === 'partial') {
-                    if (! is_string($value)) {
-                        Input::fail("filters.{$name}", 'Expected a string.');
-                    }
-
-                    $value = '%'.strtr($value, ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']).'%';
-                }
-
-                $conditions[] = $this->comparison($field, $filter['kind'] === 'partial' ? 'ILIKE' : ($value === null ? 'IS' : '='), $value);
+                $conditions[] = $this->filterCondition($model, $filter, $value, "filters.{$name}");
             }
         }
 
@@ -136,11 +128,115 @@ final readonly class QueryCompiler
         return $ast;
     }
 
+    /** @param array<string, mixed> $filter
+     * @return Condition
+     */
+    private function filterCondition(ModelMetadata $model, array $filter, mixed $value, string $name): array
+    {
+        if ($filter['kind'] === 'group') {
+            $members = $filter['members'];
+            if (! is_array($members)) {
+                throw new LogicException('Invalid filter group.');
+            }
+
+            $conditions = [];
+            foreach ($members as $member) {
+                $conditions[] = $this->filterCondition($model, Input::object($member, $name), $value, $name);
+            }
+
+            return ['type' => $filter['operator'], 'conditions' => $conditions];
+        }
+
+        if ($filter['kind'] === 'callback') {
+            if ($filter['field'] === '') {
+                if (! is_bool($value)) {
+                    Input::fail($name, 'Expected a boolean.');
+                }
+            } else {
+                $field = $filter['field'];
+                if (! is_string($field)) {
+                    throw new LogicException('Invalid callback field.');
+                }
+
+                Input::value($value, $model->columns[$field], $name);
+            }
+
+            return $this->callbackCondition($model, Input::object($filter['expression'], $name), $value);
+        }
+
+        $field = $filter['field'];
+        $operator = $filter['operator'] ?? '=';
+        if (! is_string($field) || ! is_string($operator)) {
+            throw new LogicException('Invalid scalar filter.');
+        }
+
+        if ($operator === 'dynamic') {
+            $input = Input::object($value, $name);
+            Input::keys($input, ['operator', 'value'], $name);
+            $operator = $input['operator'] ?? null;
+            if (! is_string($operator) || ! in_array($operator, ['=', '!=', '<', '<=', '>', '>='], true) || ! array_key_exists('value', $input)) {
+                Input::fail($name, 'Expected an allowed operator and value.');
+            }
+
+            $value = $input['value'];
+        }
+
+        Input::value($value, $model->columns[$field], $name);
+        if (in_array($filter['kind'], ['partial', 'beginsWith', 'endsWith'], true)) {
+            if (! is_string($value)) {
+                Input::fail($name, 'Expected a string.');
+            }
+
+            $value = ($filter['kind'] === 'beginsWith' ? '' : '%').strtr($value, ['\\' => '\\\\', '%' => '\\%', '_' => '\\_']).($filter['kind'] === 'endsWith' ? '' : '%');
+            $operator = 'ILIKE';
+        } elseif ($value === null) {
+            if (! in_array($operator, ['=', '!='], true)) {
+                Input::fail($name, 'Null only supports equality operators.');
+            }
+
+            $operator = $operator === '!=' ? 'IS NOT' : 'IS';
+        }
+
+        return $this->comparison($field, $operator, $value);
+    }
+
+    /** @param array<string, mixed> $expression
+     * @return Condition
+     */
+    private function callbackCondition(ModelMetadata $model, array $expression, mixed $value): array
+    {
+        if (($expression['type'] ?? null) === 'simple') {
+            $left = Input::object($expression['left'], 'callback');
+            $right = Input::object($expression['right'], 'callback');
+            $field = $left['name'];
+            $op = $expression['op'];
+            if (! is_string($field) || ! is_string($op)) {
+                throw new LogicException('Invalid callback expression.');
+            }
+
+            $operand = $right['type'] === 'filterValue' ? $value : ($right['value'] ?? null);
+
+            return (new ZeroOperator($model, fn () => throw new LogicException('Unsupported callback relation.')))->cmp($field, $operand === null && $op === '=' ? 'IS' : $op, $operand);
+        }
+
+        $conditions = $expression['conditions'] ?? null;
+        if (! is_array($conditions)) {
+            throw new LogicException('Invalid callback group.');
+        }
+
+        $children = [];
+        foreach ($conditions as $condition) {
+            $children[] = $this->callbackCondition($model, Input::object($condition, 'callback'), $value);
+        }
+
+        return ['type' => $expression['type'], 'conditions' => $children];
+    }
+
     /**
      * @param  array<string, mixed>  $args
      * @return Related
      */
-    private function related(ModelMetadata $model, string $name, array $args, ZeroContext $context, int $depth, bool $predicate = false): array
+    private function related(ModelMetadata $model, string $name, array $args, ZeroContext $context, int $depth, bool $predicate = false, ?Closure $refine = null): array
     {
         Input::keys($args, ['include', 'order', 'limit'], "include.{$name}");
         $relation = $model->relations[$name];
@@ -155,6 +251,12 @@ final readonly class QueryCompiler
         }
 
         $ast = $this->build($target, $args, $context, 'related', $depth);
+        if ($refine instanceof Closure) {
+            $query = $this->scopeBuilder($target, $context, $depth);
+            $refine($query);
+            $ast['where'] = $this->conjunction([...isset($ast['where']) ? [$ast['where']] : [], $query->condition()]);
+        }
+
         $ast['alias'] = $predicate ? 'zsubq_'.$name : $name;
         if (count($path) > 1) {
             // Zero cannot apply an explicit ordering through a junction include.
@@ -172,7 +274,7 @@ final readonly class QueryCompiler
     }
 
     /**
-     * @return list<Atom>
+     * @return list<Condition>
      */
     private function visibility(ModelMetadata $model, ZeroContext $context, int $depth): array
     {
@@ -181,7 +283,24 @@ final readonly class QueryCompiler
             $conditions[] = ['type' => 'correlatedSubquery', 'related' => $this->related($model, $relation, [], $context, $depth + 1, true), 'op' => 'EXISTS'];
         }
 
+        foreach ($model->definition->serverScopes as $scope) {
+            $query = $this->scopeBuilder($model, $context, $depth);
+            $scope($query, $context);
+            $conditions[] = $query->condition();
+        }
+
         return $conditions;
+    }
+
+    private function scopeBuilder(ModelMetadata $model, ZeroContext $context, int $depth): ZQLBuilder
+    {
+        return new ZQLBuilder(new ZeroOperator($model, function (string $name, ?Closure $refine) use ($model, $context, $depth): array {
+            if (! isset($model->relations[$name])) {
+                throw new LogicException("Register scope relation {$model->name}.{$name} using enforceServerScope relations.");
+            }
+
+            return $this->related($model, $name, [], $context, $depth + 1, true, $refine);
+        }));
     }
 
     /**
@@ -198,12 +317,7 @@ final readonly class QueryCompiler
      */
     private function conjunction(array $conditions): array
     {
-        $flat = [];
-        foreach ($conditions as $condition) {
-            array_push($flat, ...($condition['type'] === 'and' ? $condition['conditions'] : [$condition]));
-        }
-
-        return count($flat) === 1 ? $flat[0] : ['type' => 'and', 'conditions' => $flat];
+        return count($conditions) === 1 ? $conditions[0] : ['type' => 'and', 'conditions' => $conditions];
     }
 
     /**

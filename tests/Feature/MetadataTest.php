@@ -151,3 +151,39 @@ test('model definitions must return ZeroDefinition', function (): void {
 test('included methods must return an Eloquent relation', function (): void {
     new ModelRegistry([InvalidRelationTask::class]);
 })->throws(LogicException::class, 'method must return an Eloquent relation');
+
+enum CastStatus: string
+{
+    case Draft = 'draft';
+    case Published = 'published';
+}
+
+class CastTask extends Task
+{
+    protected $fillable = ['title', 'options', 'status'];
+
+    public static function zero(): ZeroDefinition
+    {
+        return ZeroDefinition::make();
+    }
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return ['done' => 'boolean', 'completed_at' => 'immutable_datetime', 'options' => 'array', 'status' => CastStatus::class];
+    }
+}
+
+test('exports native cast metadata including implicit timestamps and backed enum values', function (): void {
+    Schema::table('tasks', function (Blueprint $table): void {
+        $table->text('options')->nullable();
+        $table->string('status')->default('draft');
+    });
+    $model = (new ModelRegistry([CastTask::class]))->get('CastTask');
+    expect($model->columns['created_at']['date'])->toBeTrue();
+    expect($model->columns['updated_at']['date'])->toBeTrue();
+    expect($model->columns['deleted_at']['date'])->toBeTrue();
+    expect($model->columns['options']['cast'] ?? null)->toBe('array');
+    expect($model->columns['status']['enum'])->toBe(['draft', 'published']);
+    expect($model->columns['done']['cast'] ?? null)->toBe('boolean');
+});

@@ -48,6 +48,13 @@ final class RuleExtractor
             }
 
             foreach ($rules as $field => $ruleset) {
+                $root = explode('.', $field)[0];
+                if ($root !== $field && in_array($root, $writable, true) && (($columns[$root]['type'] ?? null) === 'json' || in_array($columns[$root]['cast'] ?? null, ['array', 'object'], true))) {
+                    $diagnostics[] = "{$class}.{$field}: nested JSON validation runs on the server.";
+
+                    continue;
+                }
+
                 if (! in_array($field, [...$writable, 'id'], true)) {
                     throw new LogicException("{$class}: {$field} is not an allowed automatic mutation input.");
                 }

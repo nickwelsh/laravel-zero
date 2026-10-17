@@ -196,12 +196,14 @@ final class ModelRegistry
             'field' => $a->field, 'op' => $a->operator,
             'value' => $a->value instanceof ContextField ? ['context' => $a->value->value] : ['literal' => $a->value],
         ], $this->attributes($class, Attributes\ZeroAuthorize::class));
-        $authorizationRelations = array_values(array_unique(array_map(fn (Attributes\ZeroAuthorizeRelation $attribute): string => $attribute->relation, $this->attributes($class, Attributes\ZeroAuthorizeRelation::class))));
-        if ($authorization === [] && $authorizationRelations === [] && $this->attributes($class, Attributes\ZeroPublic::class) === []) {
-            throw new LogicException("{$name}: declare ZeroPublic, ZeroAuthorize, or ZeroAuthorizeRelation visibility.");
+        $authorization = [...$authorization, ...$definition->authorization];
+
+        $authorizationRelations = array_values(array_unique([...$definition->authorizationRelations, ...array_map(fn (Attributes\ZeroAuthorizeRelation $attribute): string => $attribute->relation, $this->attributes($class, Attributes\ZeroAuthorizeRelation::class))]));
+        if ($authorization === [] && $authorizationRelations === [] && $this->attributes($class, Attributes\ZeroPublic::class) === [] && ! $definition->public && $definition->serverScopes === []) {
+            throw new LogicException("{$name}: declare publicReads, authorize, authorizeRelation, or enforceServerScope visibility (or a legacy ZeroPublic/ZeroAuthorize attribute).");
         }
 
-        $fills = [];
+        $fills = $definition->serverFill;
         foreach ($this->attributes($class, Attributes\ZeroServerFill::class) as $fill) {
             if (isset($fills[$fill->field])) {
                 throw new LogicException("{$name}: conflicting server fill for {$fill->field}.");
@@ -252,6 +254,11 @@ final class ModelRegistry
                 $zeroType = 'boolean';
             }
 
+            $castType = match (explode(':', $cast)[0]) {
+                'bool', 'boolean' => 'boolean', 'int', 'integer', 'timestamp' => 'integer',
+                'real', 'double', 'float' => 'float', 'string' => 'string',
+                'array', 'json' => 'array', 'object' => 'object', default => null,
+            };
             $date = in_array($type, ['date', 'datetime', 'timestamp', 'timestamptz'], true) || in_array(explode(':', $cast)[0], ['date', 'datetime', 'immutable_date', 'immutable_datetime'], true);
             if ($date && ! preg_match('/^(date|datetime|timestamp|timestamptz)$/D', $type)) {
                 throw new LogicException("{$name}.{$field}: Date casts require a date or timestamp column (Zero epoch milliseconds).");
@@ -260,7 +267,8 @@ final class ModelRegistry
             $enum = enum_exists($cast) && is_subclass_of($cast, BackedEnum::class) ? array_map(fn (BackedEnum $case): int|string => $case->value, $cast::cases()) : null;
             $default = $this->literalDefault($column['default'], $zeroType);
             $columns[$field] = ['type' => $zeroType, 'nullable' => $column['nullable'], 'date' => $date, 'enum' => $enum,
-                'hasDefault' => $column['default'] !== null && $default['known'], 'default' => $default['value']];
+                'hasDefault' => $column['default'] !== null && $default['known'], 'default' => $default['value'],
+                ...($castType !== null && ! $date && $enum === null ? ['cast' => $castType] : [])];
         }
 
         $required = array_filter(array_merge([$model->getKeyName(), $created, $updated, $deleted], array_keys($fills), array_column($authorization, 'field')));
@@ -298,14 +306,29 @@ final class ModelRegistry
         }
 
         $writable = array_values(array_intersect(array_diff($this->fillable($model), array_filter(array_merge([$model->getKeyName(), $created, $updated, $deleted], array_keys($fills)))), array_keys($columns)));
+        $filterDefinitions = array_values($definition->filters);
         foreach ($definition->filters as $filter) {
-            if (in_array($filter['kind'], ['exact', 'partial'], true)) {
+            foreach ($filter['members'] ?? [] as $member) {
+                $filterDefinitions[] = $member;
+            }
+
+            if ($filter['kind'] === 'callback' && $filter['field'] !== '') {
+                $this->requireColumn($columns, $name, $filter['field']);
+            }
+        }
+
+        foreach ($filterDefinitions as $filter) {
+            if (! is_string($filter['kind']) || ! is_string($filter['field'])) {
+                throw new LogicException('Invalid filter definition.');
+            }
+
+            if (in_array($filter['kind'], ['exact', 'partial', 'beginsWith', 'endsWith', 'operator'], true)) {
                 $this->requireColumn($columns, $name, $filter['field']);
                 if ($columns[$filter['field']]['type'] === 'json') {
                     throw new LogicException("{$name}: JSON filters are not supported by Zero.");
                 }
 
-                if ($filter['kind'] === 'partial' && $columns[$filter['field']]['type'] !== 'string') {
+                if (in_array($filter['kind'], ['partial', 'beginsWith', 'endsWith'], true) && $columns[$filter['field']]['type'] !== 'string') {
                     throw new LogicException("{$name}: partial filters require a string field.");
                 }
             }
@@ -324,7 +347,17 @@ final class ModelRegistry
 
         [$validation, $diagnostics] = (new RuleExtractor)->extract($definition->requests, $writable, $columns, $mutations);
 
-        return new ModelMetadata($class, $name, $model->getTable(), $model->getKeyName(), $columns, $queries, $mutations, $authorization, $fills, $writable, $generator, $created, $updated, $deleted, $definition, $validation, $diagnostics, $authorizationRelations);
+        $metadata = new ModelMetadata($class, $name, $model->getTable(), $model->getKeyName(), $columns, $queries, $mutations, $authorization, $fills, $writable, $generator, $created, $updated, $deleted, $definition, $validation, $diagnostics, $authorizationRelations);
+        foreach ($definition->filters as $filterName => $filter) {
+            if (isset($filter['callback'])) {
+                $query = new \LaravelZero\Query\ZQLBuilder(new \LaravelZero\Query\ZeroOperator($metadata, fn () => throw new LogicException('Callback relationship predicates belong in an explicit server scope.')));
+                ($filter['callback'])($query, new \LaravelZero\Query\FilterParameter());
+                unset($definition->filters[$filterName]['callback']);
+                $definition->filters[$filterName]['expression'] = $query->condition();
+            }
+        }
+
+        return $metadata;
     }
 
     /** @return list<string> */
@@ -346,7 +379,11 @@ final class ModelRegistry
     {
         $model = new $metadata->class;
         $filters = array_filter($metadata->definition->filters, fn (array $f): bool => $f['kind'] === 'belongsTo');
-        foreach (array_unique(array_merge($metadata->definition->includes, $metadata->authorizationRelations, array_column($filters, 'field'))) as $name) {
+        foreach (array_unique(array_merge($metadata->definition->includes, $metadata->authorizationRelations, $metadata->definition->scopeRelations, array_column($filters, 'field'))) as $name) {
+            if (isset($metadata->columns[$name]) || $name === 'data' || in_array($name, array_diff($metadata->mutations, ['create']), true)) {
+                throw new LogicException("{$metadata->name}.{$name}: relation name conflicts with a model column or instance API.");
+            }
+
             if (! method_exists($model, $name)) {
                 throw new LogicException("{$metadata->name}: unknown relation {$name}.");
             }

@@ -77,6 +77,7 @@ final readonly class CrudExecutor
         }
 
         foreach ($data as $field => $value) {
+            $data[$field] = Input::eloquentValue($value, $metadata->columns[$field], $field);
             if ($metadata->columns[$field]['date'] && $value !== null) {
                 $data[$field] = \Illuminate\Support\Facades\Date::createFromTimestampMs(Input::timestamp($value, $field), 'UTC');
             }
@@ -135,6 +136,7 @@ final readonly class CrudExecutor
         $request = FormRequest::createFrom(resolve('request'), new $class);
         $request->setContainer(app())->setRedirector(resolve('redirect'));
         foreach ($data as $field => $value) {
+            $data[$field] = Input::eloquentValue($value, $metadata->columns[$field], $field);
             if ($metadata->columns[$field]['date'] && $value !== null) {
                 $data[$field] = \Illuminate\Support\Facades\Date::createFromTimestampMs(Input::timestamp($value, $field), 'UTC')->toISOString();
             }
@@ -161,6 +163,10 @@ final readonly class CrudExecutor
 
         unset($data['id']);
         foreach ($data as $field => $value) {
+            if (isset($metadata->columns[$field])) {
+                $data[$field] = Input::wireValue($value, $metadata->columns[$field], $field);
+            }
+
             if (($metadata->columns[$field]['date'] ?? false) && $value !== null) {
                 if (! is_string($value) && ! is_int($value) && ! is_float($value) && ! $value instanceof DateTimeInterface) {
                     Input::fail($field, 'Invalid normalized date.');

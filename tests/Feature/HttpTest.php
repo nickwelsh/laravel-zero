@@ -93,3 +93,33 @@ test('automatic publication synchronization skips SQLite migrations', function (
     \Illuminate\Support\Facades\Event::dispatch(new \Illuminate\Database\Events\MigrationsEnded('up'));
     $this->assertFalse(app()->resolved(\LaravelZero\Metadata\ModelRegistry::class));
 });
+
+test('react generation binds the contracts and preserves editable connection configuration', function (): void {
+    /** @var HttpTestCase $this */
+    $directory = sys_get_temp_dir().'/laravel-zero-react-'.uniqid();
+    $path = $directory.'/generated.ts';
+    try {
+        $command = $this->artisan('zero:generate', ['--output' => $path, '--react' => true]);
+        $this->assertInstanceOf(\Illuminate\Testing\PendingCommand::class, $command);
+        $command->assertSuccessful()->run();
+        expect(file_get_contents($directory.'/generated.react.ts'))->toContain('createZeroProvider(schema, mutators, options)', '"./generated"');
+        file_put_contents($directory.'/zero.config.ts', '// Application-owned options');
+        $command = $this->artisan('zero:generate', ['--output' => $path, '--react' => true]);
+        $this->assertInstanceOf(\Illuminate\Testing\PendingCommand::class, $command);
+        $command->assertSuccessful()->run();
+        expect(file_get_contents($directory.'/zero.config.ts'))->toBe('// Application-owned options');
+        $command = $this->artisan('zero:generate', ['--output' => $path, '--react' => true, '--check' => true]);
+        $this->assertInstanceOf(\Illuminate\Testing\PendingCommand::class, $command);
+        $command->assertSuccessful()->run();
+        file_put_contents($directory.'/generated.react.ts', '// drift');
+        $command = $this->artisan('zero:generate', ['--output' => $path, '--react' => true, '--check' => true]);
+        $this->assertInstanceOf(\Illuminate\Testing\PendingCommand::class, $command);
+        $command->assertFailed()->run();
+    } finally {
+        foreach (glob($directory.'/*') ?: [] as $file) {
+            unlink($file);
+        }
+
+        rmdir($directory);
+    }
+});

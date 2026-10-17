@@ -11,7 +11,7 @@ use LaravelZero\Metadata\ModelRegistry;
 
 final class GenerateCommand extends Command
 {
-    protected $signature = 'zero:generate {--output= : Generated TypeScript path} {--check : Fail if output is missing or out of date}';
+    protected $signature = 'zero:generate {--output= : Generated TypeScript path} {--react : Generate a sibling React provider} {--check : Fail if output is missing or out of date}';
 
     protected $description = 'Generate native Zero schemas, typed models, and automatic CRUD contracts';
 
@@ -25,6 +25,14 @@ final class GenerateCommand extends Command
         }
 
         $source = $generator->generate($registry);
+        $outputs = [$path => $source];
+        $react = $this->option('react') || config()->boolean('zero.react');
+        $config = dirname($path).'/zero.config.ts';
+        if ($react) {
+            $base = pathinfo($path, PATHINFO_FILENAME);
+            $outputs[dirname($path).'/'.$base.'.react.ts'] = $generator->generateReact('./'.$base, './zero.config');
+        }
+
         foreach ($registry->all() as $model) {
             foreach ($model->diagnostics as $diagnostic) {
                 $this->warn($diagnostic);
@@ -32,8 +40,18 @@ final class GenerateCommand extends Command
         }
 
         if ($this->option('check')) {
-            if (! $files->exists($path) || $files->get($path) !== $source) {
+            foreach ($outputs as $output => $content) {
+                if ($files->exists($output) && $files->get($output) === $content) {
+                    continue;
+                }
+
                 $this->error('Zero contracts are out of date. Run zero:generate.');
+
+                return self::FAILURE;
+            }
+
+            if ($react && ! $files->exists($config)) {
+                $this->error('Missing zero.config.ts connection options. Run zero:generate --react.');
 
                 return self::FAILURE;
             }
@@ -44,8 +62,15 @@ final class GenerateCommand extends Command
         }
 
         $files->ensureDirectoryExists(dirname($path));
-        $files->replace($path, $source);
-        $this->info("Generated {$path}.");
+        foreach ($outputs as $output => $content) {
+            $files->replace($output, $content);
+            $this->info("Generated {$output}.");
+        }
+
+        if ($react && ! $files->exists($config)) {
+            $files->replace($config, "import type {ProviderOptions} from '@laravel-zero/client/react';\n\n// Public connection options only; never put the cache API key here.\nexport const options = {cacheURL: 'http://localhost:4848'} satisfies ProviderOptions;\n");
+            $this->info("Created {$config}. Configure your public cache URL here; this file will not be overwritten.");
+        }
 
         return self::SUCCESS;
     }

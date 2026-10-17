@@ -138,3 +138,101 @@ test('form requests isolate operation data from transport query parameters', fun
     ], new ZeroContext(['user_id' => 'alice']), $user);
     $this->assertSame('Actual', Task::firstOrFail()->title);
 });
+
+class FieldPermissionTask extends Task
+{
+    public static function zero(): ZeroDefinition
+    {
+        return ZeroDefinition::make()->mutationRequests(['update' => UpdatePermissionTask::class]);
+    }
+}
+
+class UpdatePermissionTask extends FormRequest
+{
+    public function authorize(): bool
+    {
+        $task = $this->route('model');
+        $user = $this->user();
+        if (! $task instanceof Task || $user === null) {
+            return false;
+        }
+
+        $allowed = $task->user_id === $user->getAuthIdentifier() ? ['title', 'completed_at'] : ['completed_at'];
+
+        return array_diff(array_keys($this->except('id')), $allowed) === [];
+    }
+
+    /** @return array<string, list<string>> */
+    public function rules(): array
+    {
+        return ['title' => ['sometimes', 'required', 'string'], 'completed_at' => ['sometimes', 'nullable', 'date']];
+    }
+}
+
+test('policies authorize the original task and form requests restrict the submitted fields', function (): void {
+    Gate::define('update', fn (?\Illuminate\Contracts\Auth\Authenticatable $user): bool => $user instanceof \Illuminate\Contracts\Auth\Authenticatable && in_array($user->getAuthIdentifier(), ['alice', 'collaborator'], true));
+    $task = FieldPermissionTask::create(['user_id' => 'alice', 'title' => 'Original']);
+    $executor = new CrudExecutor(new ModelRegistry([FieldPermissionTask::class]));
+    $collaborator = (new User)->setKeyType('string')->forceFill(['id' => 'collaborator']);
+    $owner = (new User)->setKeyType('string')->forceFill(['id' => 'alice']);
+    $context = new ZeroContext(['user_id' => 'collaborator']);
+    app()->instance('request', Request::create('/zero/mutate', 'POST'));
+    // The HTTP controller has a real route, which the operation request clones.
+    $route = new \Illuminate\Routing\Route('POST', '/zero/mutate', fn (): null => null);
+    $route->bind(resolve('request'));
+
+    resolve('request')->setRouteResolver(fn (): \Illuminate\Routing\Route => $route);
+    $executor->execute('FieldPermissionTask.update', ['id' => $task->id, 'data' => ['completed_at' => 1700000000000], 'now' => 1], $context, $collaborator);
+    expect($task->fresh()?->title)->toBe('Original');
+    expect($task->fresh()?->completed_at)->not->toBeNull();
+    expect(fn () => $executor->execute('FieldPermissionTask.update', ['id' => $task->id, 'data' => ['title' => 'Forged', 'completed_at' => null], 'now' => 1], $context, $collaborator))->toThrow(\Illuminate\Auth\Access\AuthorizationException::class);
+    expect($task->fresh()?->title)->toBe('Original');
+    expect($task->fresh()?->completed_at)->not->toBeNull();
+
+    $executor->execute('FieldPermissionTask.update', ['id' => $task->id, 'data' => ['title' => 'Owner edit'], 'now' => 1], new ZeroContext(['user_id' => 'alice']), $owner);
+    expect($task->fresh()?->title)->toBe('Owner edit');
+    $stranger = (new User)->setKeyType('string')->forceFill(['id' => 'stranger']);
+    expect(fn () => $executor->execute('FieldPermissionTask.update', ['id' => $task->id, 'data' => ['completed_at' => null], 'now' => 1], $context, $stranger))->toThrow(\Illuminate\Auth\Access\AuthorizationException::class);
+});
+
+class JsonInputTask extends Task
+{
+    protected $fillable = ['title', 'options'];
+
+    public static function zero(): ZeroDefinition
+    {
+        return ZeroDefinition::make()->mutationRequests(['create' => StoreJsonTask::class]);
+    }
+
+    /** @return array<string, string> */
+    protected function casts(): array
+    {
+        return ['done' => 'boolean', 'options' => 'array'];
+    }
+}
+
+class StoreJsonTask extends FormRequest
+{
+    /** @return array<string, list<string>> */
+    public function rules(): array
+    {
+        return ['title' => ['required', 'string'], 'options' => ['required', 'array', 'max:2'], 'options.theme' => ['required', 'in:dark,light']];
+    }
+}
+
+test('JSON casts retain nested server validation and avoid double encoding text storage', function (): void {
+    \Illuminate\Support\Facades\Schema::table('tasks', function (\Illuminate\Database\Schema\Blueprint $table): void {
+        $table->text('options')->nullable();
+    });
+    Gate::define('create', fn (): bool => true);
+    $registry = new ModelRegistry([JsonInputTask::class]);
+    expect(implode(' ', $registry->get('JsonInputTask')->diagnostics))->toContain('nested JSON validation');
+    $executor = new CrudExecutor($registry);
+    $user = (new User)->setKeyType('string')->forceFill(['id' => 'alice']);
+    $context = new ZeroContext(['user_id' => 'alice']);
+    $executor->execute('JsonInputTask.create', ['id' => '019a0000-0000-7000-8000-000000000010', 'data' => ['title' => 'JSON', 'options' => '{"theme":"dark"}'], 'now' => 1], $context, $user);
+    expect(JsonInputTask::firstOrFail()->getAttribute('options'))->toBe(['theme' => 'dark']);
+    expect(fn () => $executor->execute('JsonInputTask.create', ['id' => '019a0000-0000-7000-8000-000000000011', 'data' => ['title' => 'JSON', 'options' => '{"theme":"invalid"}'], 'now' => 1], $context, $user))->toThrow(ValidationException::class);
+    expect(fn () => $executor->execute('JsonInputTask.create', ['id' => '019a0000-0000-7000-8000-000000000012', 'data' => ['title' => 'JSON', 'options' => '{broken'], 'now' => 1], $context, $user))->toThrow(ValidationException::class);
+    expect(JsonInputTask::count())->toBe(1);
+});

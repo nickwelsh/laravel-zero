@@ -82,6 +82,66 @@ final class Input
         return $value;
     }
 
+    /** @param Column $column */
+    public static function eloquentValue(mixed $value, array $column, string $path): mixed
+    {
+        if (is_string($value) && $column['type'] === 'string' && in_array($column['cast'] ?? null, ['array', 'object'], true)) {
+            try {
+                $value = json_decode($value, true, flags: JSON_THROW_ON_ERROR);
+            } catch (JsonException) {
+                self::fail($path, 'Expected valid JSON.');
+            }
+
+            if (! is_array($value)) {
+                self::fail($path, 'Expected a JSON array or object.');
+            }
+        }
+
+        if ($value === null) {
+            return null;
+        }
+
+        if (($column['type'] === 'json' || in_array($column['cast'] ?? null, ['array', 'object'], true)) && (is_array($value) || $value instanceof stdClass)) {
+            // Match Laravel's ordinary JSON request input, including nested objects.
+            $value = json_decode(json_encode($value, JSON_THROW_ON_ERROR), true, flags: JSON_THROW_ON_ERROR);
+        }
+
+        return match ($column['cast'] ?? null) {
+            'boolean' => (bool) $value,
+            'integer' => is_numeric($value) ? (int) $value : $value,
+            'float' => is_numeric($value) ? (float) $value : $value,
+            'string' => is_scalar($value) ? (string) $value : $value,
+            default => $value,
+        };
+    }
+
+    /** @param Column $column */
+    public static function wireValue(mixed $value, array $column, string $path): mixed
+    {
+        if ($value === null || ! isset($column['cast'])) {
+            return $value;
+        }
+
+        if (in_array($column['cast'], ['array', 'object'], true)) {
+            if (! is_array($value) && ! $value instanceof stdClass) {
+                self::fail($path, 'Expected a normalized JSON array or object.');
+            }
+
+            return $column['type'] === 'string' ? json_encode($value, JSON_THROW_ON_ERROR) : $value;
+        }
+
+        if (! is_scalar($value)) {
+            self::fail($path, 'Expected a normalized scalar.');
+        }
+
+        return match ($column['type']) {
+            'string' => is_bool($value) ? ($value ? '1' : '0') : (string) $value,
+            'number' => is_bool($value) ? ($value ? 1 : 0) : (is_numeric($value) ? $value + 0 : $value),
+            'boolean' => (bool) $value,
+            default => $value,
+        };
+    }
+
     public static function fail(string $path, string $message): never
     {
         throw ValidationException::withMessages([$path => $message]);
