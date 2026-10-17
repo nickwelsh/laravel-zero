@@ -68,7 +68,7 @@ final class GenerateCommand extends Command
         }
 
         if ($react && ! $files->exists($config)) {
-            $files->replace($config, "import type {ProviderOptions} from '@laravel-zero/client/react';\n\n// Public connection options only; never put the cache API key here.\nexport const options = {cacheURL: 'http://localhost:4848'} satisfies ProviderOptions;\n");
+            $files->replace($config, "import type {ProviderOptions} from '@nickwelsh/laravel-zero/react';\n\n// Public connection options only; never put the cache API key here.\nexport const options = {cacheURL: 'http://localhost:4848'} satisfies ProviderOptions;\n");
             $this->info("Created {$config}. Configure your public cache URL here; this file will not be overwritten.");
         }
 
