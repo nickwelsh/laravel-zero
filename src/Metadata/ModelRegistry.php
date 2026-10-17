@@ -72,6 +72,29 @@ final class ModelRegistry
 
         foreach ($this->models as $metadata) {
             $this->validateAuthorizationPath($metadata, []);
+            $this->validateNestedMutations($metadata);
+        }
+
+        // Relationship-owned inputs can have validation rules without being caller-writable.
+        $boundFields = [];
+        foreach ($this->models as $parent) {
+            foreach ($parent->definition->nestedMutations as $relations) {
+                foreach (array_keys($relations) as $name) {
+                    $relation = $parent->relations[$name];
+                    $belongsTo = ($relation['kind'] ?? null) === 'belongsTo';
+                    $dependent = $belongsTo ? $parent->name : $relation['model'];
+                    $boundFields[$dependent][] = $relation['path'][0][$belongsTo ? 'source' : 'dest'][0];
+                }
+            }
+        }
+
+        foreach ($this->models as $metadata) {
+            [$metadata->validation, $metadata->diagnostics] = (new RuleExtractor)->extract(
+                $metadata->definition->requests,
+                array_values(array_unique([...$metadata->writable, ...($boundFields[$metadata->name] ?? [])])),
+                $metadata->columns,
+                ['create', 'update', 'destroy', 'restore', 'force_delete'],
+            );
         }
     }
 
@@ -345,9 +368,7 @@ final class ModelRegistry
             }
         }
 
-        [$validation, $diagnostics] = (new RuleExtractor)->extract($definition->requests, $writable, $columns, $mutations);
-
-        $metadata = new ModelMetadata($class, $name, $model->getTable(), $model->getKeyName(), $columns, $queries, $mutations, $authorization, $fills, $writable, $generator, $created, $updated, $deleted, $definition, $validation, $diagnostics, $authorizationRelations);
+        $metadata = new ModelMetadata($class, $name, $model->getTable(), $model->getKeyName(), $columns, $queries, $mutations, $authorization, $fills, $writable, $generator, $created, $updated, $deleted, $definition, authorizationRelations: $authorizationRelations);
         foreach ($definition->filters as $filterName => $filter) {
             if (isset($filter['callback'])) {
                 $query = new \LaravelZero\Query\ZQLBuilder(new \LaravelZero\Query\ZeroOperator($metadata, fn () => throw new LogicException('Callback relationship predicates belong in an explicit server scope.')));
@@ -358,6 +379,37 @@ final class ModelRegistry
         }
 
         return $metadata;
+    }
+
+    private function validateNestedMutations(ModelMetadata $parent): void
+    {
+        foreach ($parent->definition->nestedMutations as $relations) {
+            foreach ($relations as $name => $operations) {
+                $relation = $parent->relations[$name];
+                $child = $this->get($relation['model']);
+                $hop = $relation['path'][0];
+                $belongsTo = ($relation['kind'] ?? null) === 'belongsTo';
+                $owner = $belongsTo ? $child : $parent;
+                $dependent = $belongsTo ? $parent : $child;
+                $key = $belongsTo ? $hop['dest'][0] : $hop['source'][0];
+                $foreignKey = $belongsTo ? $hop['source'][0] : $hop['dest'][0];
+                if ($key !== $owner->key || $foreignKey === $dependent->key || isset($dependent->serverFill[$foreignKey]) || in_array($foreignKey, [$dependent->createdAt, $dependent->updatedAt, $dependent->deletedAt], true)) {
+                    throw new LogicException("{$parent->name}.{$name}: nested mutations require primary-key relations and an unprotected foreign key.");
+                }
+
+                if (isset($operations['create'])) {
+                    $model = new $child->class;
+                    if ($child->idGenerator === null || $model->getIncrementing() || $child->columns[$child->key]['type'] !== 'string' || $model->uniqueIds() !== [$child->key]) {
+                        throw new LogicException("{$child->name}: nested create requires HasUuids or HasUlids and a string primary key.");
+                    }
+
+                    $source = (new ReflectionMethod($child->class, 'newUniqueId'))->getFileName();
+                    if (! str_contains(str_replace('\\', '/', $source ?: ''), '/Illuminate/Database/Eloquent/Concerns/')) {
+                        throw new LogicException("{$child->name}: custom newUniqueId is unsupported for nested create.");
+                    }
+                }
+            }
+        }
     }
 
     /** @return list<string> */
@@ -379,7 +431,7 @@ final class ModelRegistry
     {
         $model = new $metadata->class;
         $filters = array_filter($metadata->definition->filters, fn (array $f): bool => $f['kind'] === 'belongsTo');
-        foreach (array_unique(array_merge($metadata->definition->includes, $metadata->authorizationRelations, $metadata->definition->scopeRelations, array_column($filters, 'field'))) as $name) {
+        foreach (array_unique(array_merge($metadata->definition->includes, $metadata->authorizationRelations, $metadata->definition->scopeRelations, array_column($filters, 'field'), ...array_map(array_keys(...), array_values($metadata->definition->nestedMutations)))) as $name) {
             if (isset($metadata->columns[$name]) || $name === 'data' || in_array($name, array_diff($metadata->mutations, ['create']), true)) {
                 throw new LogicException("{$metadata->name}.{$name}: relation name conflicts with a model column or instance API.");
             }
@@ -459,7 +511,14 @@ final class ModelRegistry
                 }
             }
 
-            $metadata->relations[$name] = ['model' => $targetName, 'cardinality' => $cardinality, 'path' => $path];
+            $nested = array_filter($metadata->definition->nestedMutations, fn (array $relations): bool => isset($relations[$name])) !== [];
+            if ($nested && (! $relation instanceof BelongsTo && ! $relation instanceof HasOne && ! $relation instanceof HasMany)) {
+                throw new LogicException("{$metadata->name}.{$name}: nested mutations require a direct belongsTo, hasOne, or hasMany relation.");
+            }
+
+            $metadata->relations[$name] = ['model' => $targetName, 'cardinality' => $cardinality, 'path' => $path,
+                ...($nested ? ['kind' => $relation instanceof BelongsTo ? 'belongsTo' : ($relation instanceof HasMany ? 'hasMany' : 'hasOne')] : []),
+            ];
         }
     }
 

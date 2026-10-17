@@ -13,7 +13,7 @@ use stdClass;
 final class ModelMetadata
 {
     /**
-     * @var array<string, array{model: string, cardinality: string, path: list<array{source: list<string>, dest: list<string>, table: string}>}>
+     * @var array<string, array{model: string, cardinality: string, kind?: 'belongsTo'|'hasOne'|'hasMany', path: list<array{source: list<string>, dest: list<string>, table: string}>}>
      */
     public array $relations = [];
 
@@ -45,8 +45,8 @@ final class ModelMetadata
         public readonly ?string $updatedAt,
         public readonly ?string $deletedAt,
         public readonly ZeroDefinition $definition,
-        public readonly array $validation = [],
-        public readonly array $diagnostics = [],
+        public array $validation = [],
+        public array $diagnostics = [],
         public readonly array $authorizationRelations = [],
     ) {}
 
@@ -69,6 +69,10 @@ final class ModelMetadata
             'defaultOrder' => $this->definition->defaultOrder,
             'defaultLimit' => $this->definition->defaultLimit, 'maxLimit' => $this->definition->maxLimit,
             'relations' => (object) $this->relations,
+            ...($this->definition->nestedMutations === [] ? [] : ['nestedMutations' => (object) array_map(
+                fn (array $relations): stdClass => (object) array_map(array_keys(...), $relations),
+                $this->definition->nestedMutations,
+            )]),
         ];
     }
 }

@@ -54,6 +54,9 @@ final class ZeroDefinition
      */
     public array $requests = [];
 
+    /** @var array<string, array<string, array<string, NestedMutation>>> */
+    public array $nestedMutations = [];
+
     public int $defaultLimit = 50;
 
     public int $maxLimit = 1000;
@@ -61,6 +64,23 @@ final class ZeroDefinition
     public static function make(): self
     {
         return new self;
+    }
+
+    public function allowedNestedMutations(string $operation, NestedMutation ...$mutations): self
+    {
+        if (! in_array($operation, ['create', 'update'], true)) {
+            throw new LogicException('Nested mutations require a create or update parent operation.');
+        }
+
+        foreach ($mutations as $mutation) {
+            if (isset($this->nestedMutations[$operation][$mutation->relation][$mutation->operation])) {
+                throw new LogicException('Duplicate nested mutation declaration.');
+            }
+
+            $this->nestedMutations[$operation][$mutation->relation][$mutation->operation] = clone $mutation;
+        }
+
+        return $this;
     }
 
     public function publicReads(): self

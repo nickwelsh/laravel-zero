@@ -27,7 +27,7 @@ final class RuleExtractor
         $diagnostics = [];
         foreach ($requests as $operation => $class) {
             if (! in_array($operation, $operations, true) || ! is_subclass_of($class, FormRequest::class)) {
-                throw new LogicException("{$class}: mutationRequests must map enabled operations to FormRequest classes.");
+                throw new LogicException("{$class}: mutationRequests must map supported operations to FormRequest classes.");
             }
 
             $request = new $class;
