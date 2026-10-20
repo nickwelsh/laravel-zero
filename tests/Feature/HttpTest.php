@@ -6,6 +6,7 @@ namespace ZeroForLaravel\Tests\Feature;
 
 use Illuminate\Foundation\Auth\User;
 use Illuminate\Http\Request;
+use Illuminate\Support\Facades\File;
 use LogicException;
 use ZeroForLaravel\Http\ContextResolver;
 use ZeroForLaravel\Tests\HttpTestCase;
@@ -61,7 +62,7 @@ test('generation command writes verified contracts and can detect drift', functi
         $this->assertInstanceOf(\Illuminate\Testing\PendingCommand::class, $command);
         $command->assertFailed()->run();
     } finally {
-        @unlink($path);
+        File::delete($path);
     }
 });
 
@@ -117,7 +118,7 @@ test('react generation binds the contracts and preserves editable connection con
         $command->assertFailed()->run();
     } finally {
         foreach (glob($directory.'/*') ?: [] as $file) {
-            unlink($file);
+            File::delete($file);
         }
 
         rmdir($directory);

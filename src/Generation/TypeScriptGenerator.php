@@ -58,7 +58,8 @@ final class TypeScriptGenerator
 
             $variable = $names[$model->table].'Relations';
             $relations[] = $variable;
-            $lines[] = 'const '.$variable.' = relationships('.$names[$model->table].', ({one, many}) => ({';
+            $helpers = array_intersect(['one', 'many'], array_column($model->relations, 'cardinality'));
+            $lines[] = 'const '.$variable.' = relationships('.$names[$model->table].', ({'.implode(', ', $helpers).'}) => ({';
             foreach ($model->relations as $name => $relation) {
                 $connections = [];
                 foreach ($relation['path'] as $hop) {
